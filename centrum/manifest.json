@@ -1,0 +1,24 @@
+{
+  "name": "Strike Tech Lab – Centrum Dowodzenia",
+  "short_name": "STL Centrum",
+  "description": "Zlecenia, kalendarz, social media i finanse Strike Tech Lab.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "lang": "pl",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Zlecenia", "url": "./?tab=orders", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Social – do akceptacji", "url": "./?tab=social", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

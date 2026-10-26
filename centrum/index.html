@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>STL Centrum Dowodzenia</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#080808">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="STL Centrum">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss: http://127.0.0.1:54321 ws://127.0.0.1:54321; base-uri 'self'; object-src 'none'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<script src="config.js"></script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="360 190 540 750">
+    <polygon points="627,303 853,417 853,697 627,872 400,697 400,417" fill="none" stroke="#FFBB00" stroke-width="28"/>
+    <polygon points="778,212 474,624 655,583 472,918 778,512 612,546" fill="#FFBB00" stroke="#080808" stroke-width="34" paint-order="stroke" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-orders" viewBox="0 0 24 24"><path d="M9 4h6M9 4a2 2 0 0 0-2 2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1a2 2 0 0 0-2-2M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M8 12h8M8 16h5"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></symbol>
+  <symbol id="i-social" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></symbol>
+  <symbol id="i-fin" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/><path d="M16 7h4v4"/></symbol>
+</svg>
+
+<!-- ======================= LOGOWANIE ======================= -->
+<section id="login" class="login hidden" aria-labelledby="loginTitle">
+  <div class="login-card hud">
+    <svg class="login-logo" aria-hidden="true"><use href="#logo"/></svg>
+    <p class="eyebrow">STRIKE TECH LAB</p>
+    <h1 id="loginTitle">Centrum Dowodzenia</h1>
+    <p class="muted small">Dostęp tylko dla administratora.</p>
+    <form id="loginForm" novalidate>
+      <label class="field"><span>E-mail</span><input class="input" id="lMail" type="email" autocomplete="username" required></label>
+      <label class="field"><span>Hasło</span><input class="input" id="lPass" type="password" autocomplete="current-password" required></label>
+      <button class="btn btn-gold btn-block" type="submit" id="lBtn">Zaloguj</button>
+      <p class="form-msg" id="lMsg" role="status" aria-live="polite"></p>
+    </form>
+    <form id="mfaForm" class="hidden" novalidate>
+      <p class="small muted" style="margin:0 0 12px">Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej (logowanie dwuetapowe).</p>
+      <label class="field"><span>Kod 2FA</span><input class="input" id="mCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" style="font-family:var(--mono);font-size:1.4rem;letter-spacing:.3em;text-align:center"></label>
+      <button class="btn btn-gold btn-block" type="submit" id="mBtn">Potwierdź</button>
+      <button class="btn btn-ghost btn-block" type="button" id="mBack" style="margin-top:8px">Wyloguj</button>
+      <p class="form-msg" id="mMsg" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
+
+<!-- ======================= APLIKACJA ======================= -->
+<div id="app" class="hidden">
+  <header class="top">
+    <div class="brand"><svg aria-hidden="true"><use href="#logo"/></svg><span><b>STL</b> Centrum</span></div>
+    <div class="top-right">
+      <button class="chip-btn hidden" id="installBtn" type="button">Zainstaluj</button>
+      <span class="conn" id="conn" title="Połączenie"><i class="dot wait"></i><span id="connTxt">Łączenie</span></span>
+      <button class="icon-btn" id="logoutBtn" type="button" aria-label="Wyloguj">⏻</button>
+    </div>
+  </header>
+  <div class="offline hidden" id="offline" role="alert">Brak połączenia – dane mogą być nieaktualne. Ponawiam automatycznie.</div>
+
+  <main id="view" tabindex="-1">
+    <section data-view="orders" aria-label="Zlecenia">
+      <div class="view-head"><h2>Zlecenia</h2><button class="icon-btn" data-refresh="orders" aria-label="Odśwież">↻</button></div>
+      <div class="kpi-row" id="ordKpi"></div>
+      <div class="chips" id="ordChips" role="tablist" aria-label="Filtr zleceń"></div>
+      <input class="input search" id="ordSearch" type="search" placeholder="Szukaj: numer, klient, usługa" autocomplete="off">
+      <div id="ordList" class="list"></div>
+    </section>
+
+    <section data-view="calendar" aria-label="Kalendarz" hidden>
+      <div class="view-head"><h2>Kalendarz</h2><button class="icon-btn" data-refresh="calendar" aria-label="Odśwież">↻</button></div>
+      <div class="days" id="calDays" role="group" aria-label="Dzień"></div>
+      <div class="cal-actions">
+        <button class="btn btn-ghost btn-sm" id="blockDayBtn" type="button">Zablokuj ten dzień</button>
+        <button class="btn btn-ghost btn-sm" id="blockHoursBtn" type="button">Blokada godzin</button>
+        <button class="btn btn-gold btn-sm" id="vacationBtn" type="button">Urlop od–do</button>
+      </div>
+      <div id="calList" class="list"></div>
+    </section>
+
+    <section data-view="social" aria-label="Social media" hidden>
+      <div class="view-head"><h2>Social Media</h2><button class="icon-btn" data-refresh="social" aria-label="Odśwież">↻</button></div>
+      <div class="run-bar card" id="runBar"></div>
+      <div class="chips" id="socChips" role="tablist" aria-label="Filtr postów"></div>
+      <div id="socList" class="list"></div>
+    </section>
+
+    <section data-view="finance" aria-label="Finanse" hidden>
+      <div class="view-head"><h2>Finanse</h2><button class="icon-btn" data-refresh="finance" aria-label="Odśwież">↻</button></div>
+      <div id="finOut"></div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Sekcje">
+    <button type="button" data-tab="orders" aria-current="page"><svg><use href="#i-orders"/></svg><span>Zlecenia</span><b class="badge hidden" id="bOrders"></b></button>
+    <button type="button" data-tab="calendar"><svg><use href="#i-cal"/></svg><span>Kalendarz</span></button>
+    <button type="button" data-tab="social"><svg><use href="#i-social"/></svg><span>Social</span><b class="badge hidden" id="bSocial"></b></button>
+    <button type="button" data-tab="finance"><svg><use href="#i-fin"/></svg><span>Finanse</span></button>
+  </nav>
+</div>
+
+<dialog id="sheet" class="sheet" aria-labelledby="sheetTitle">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head"><h3 id="sheetTitle"></h3><button class="icon-btn" type="button" data-close aria-label="Zamknij">×</button></div>
+  <div class="sheet-body" id="sheetBody"></div>
+</dialog>
+
+<div id="toasts" aria-live="polite"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

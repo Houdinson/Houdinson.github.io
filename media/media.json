@@ -1,0 +1,48 @@
+{
+  "_info": "Wrzuć pliki do folderu web/media/ i wpisz tu ich nazwy (np. \"light.jpg\" albo \"zestawy/pulse.mp4\"). Puste \"\" = animowane miejsce zastępcze. Obsługiwane: .jpg .png .webp .gif .mp4 .webm. Instrukcja: media/CZYTAJ.txt",
+  "hero": "",
+  "zestawy": {
+    "strike-light": "",
+    "strike-value-champion": "",
+    "strike-pulse": "",
+    "strike-venom": "",
+    "strike-esport-beast": "",
+    "strike-forge": ""
+  },
+  "galeria": [
+    {
+      "plik": "galeria/warsztat-rgb.mp4",
+      "poster": "galeria/warsztat-rgb.jpg",
+      "opis": "Montaż z podświetleniem RGB"
+    },
+    {
+      "plik": "galeria/warsztat-bialy.mp4", 
+      "poster": "galeria/warsztat-bialy.jpg", 
+      "opis": "Montaż z podświetleniem RGB"
+    },
+    {
+      "plik": "",
+      "opis": ""
+    },
+    {
+      "plik": "",
+      "opis": ""
+    },
+    {
+      "plik": "",
+      "opis": ""
+    },
+    {
+      "plik": "",
+      "opis": ""
+    }
+  ],
+  "benchmark": {
+    "domyslny": "",
+    "cs2": "",
+    "val": "",
+    "fn": "",
+    "wz": "",
+    "apex": ""
+  }
+}
