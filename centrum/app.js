@@ -256,7 +256,8 @@ function orderSheet(id) {
     Object.keys(o.spec || {}).length ? [h('h4', { text: 'Specyfikacja' }), h('div', { class: 'kv' }, Object.entries(o.spec).map(([k, v]) => h('div', {}, h('span', { text: k }), h('b', { text: String(v) }))))] : null,
     o.order_number ? [h('h4', { text: 'Zmiana statusu' }), h('label', { class: 'field' }, status), h('label', { class: 'field' }, note), changeBtn] : null,
     !o.order_number && o.status === 'OCZEKUJE_NA_PLATNOSC' ? [h('h4', { text: 'Płatność' }),
-      h('button', { class: 'btn btn-ghost btn-block', type: 'button', text: 'Oznacz jako opłacone (gotówka / przelew)', onclick: (e) => { if (confirm('Potwierdzasz wpłatę poza Stripe?')) act(e.currentTarget, 'Oznacz jako opłacone (gotówka / przelew)', { action: 'mark_paid', order_id: o.id }, (d) => `Opłacone: ${d.order_number || ''}`); } })] : null,
+      h('div', { class: 'row2' }, [['gotowka', '💵 Gotówką'], ['przelew', '🏦 Przelewem']].map(([m, t]) => h('button', { class: 'btn btn-ghost', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} ${m === 'gotowka' ? 'gotówką' : 'przelewem'}?`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number || ''}`); } })))] : null,
+    paymentTools(o),
     o.user_id && o.order_number ? [h('h4', { text: 'Raport STRIKE PROOF' }),
       h('button', { class: 'btn btn-gold btn-block', type: 'button', text: '📊 Wpisz pomiary i utwórz raport PDF', onclick: () => reportSheet(o) })] : null,
     o.user_id ? [h('h4', { text: 'Zdjęcia przy przyjęciu' }), photoTools(o, thumbs)] : null,
@@ -578,6 +579,7 @@ function rejectSheet(p) {
 /* ================================================================== FINANSE */
 async function loadFinance() {
   const out = $('#finOut'); if (!S.fin) out.replaceChildren(h('div', { class: 'skeleton' }), h('div', { class: 'skeleton', style: 'height:180px;margin-top:10px' }));
+  loadLedgerBox();
   try { S.fin = await callFn('admin-finance', { days: 30 }); renderFinance(); }
   catch (e) { out.replaceChildren(h('div', { class: 'empty', text: e.message })); }
 }
@@ -634,10 +636,161 @@ function renderFinance() {
       : h('div', { class: 'empty', text: 'Brak opłaconych zleceń w tym miesiącu.' }),
     h('p', { class: 'sec-title', text: 'Do rozliczenia' }),
     h('div', { class: 'card kv' },
-      h('div', {}, h('span', { text: 'Dopłaty przy odbiorze (zaliczki)' }), h('b', { text: zl(s.outstanding) })),
       h('div', {}, h('span', { text: 'W realizacji' }), h('b', { text: String(Object.values(s.pipeline || {}).reduce((a, b) => a + b, 0)) })),
       h('div', {}, h('span', { text: 'Czeka na płatność' }), h('b', { text: String(s.pending_payment) }))),
     h('p', { class: 'free-note', text: `Zaktualizowano ${fmt(generated_at, { timeStyle: 'short' })} · kwoty brutto w PLN` }));
+}
+
+/* ================================================================== ROZLICZENIA: wydatki, limity, arkusz (migracja v10) */
+const EXP_CAT = { czesci: 'Części i materiały', narzedzia: 'Narzędzia i sprzęt', oprogramowanie: 'Programy i licencje', hosting: 'Domena, hosting, IT', reklama: 'Reklama i marketing', transport: 'Transport i wysyłka', biuro: 'Biuro i telefon', oplaty: 'Opłaty i prowizje', inne: 'Inne' };
+const PAY_METHOD = { karta: 'karta', blik: 'BLIK', p24: 'Przelewy24', przelew: 'przelew', gotowka: 'gotówka', inna: 'inna' };
+const MONTHS_PL = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
+const zl2 = (g) => (g / 100).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 2 });
+const pctTxt = (x) => `${(Math.round(x * 1000) / 10).toLocaleString('pl-PL')}%`;
+const parseZl = (v) => Math.round(parseFloat(String(v).replace(/\s/g, '').replace(',', '.')) * 100);
+function limitBar(pct) {
+  return h('div', { class: `limit-bar ${pct > 1 ? 'bad' : pct >= 0.8 ? 'warn' : ''}`, role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(pct * 100) }, h('i', { style: `width:${Math.min(100, pct * 100)}%` }));
+}
+async function loadLedgerBox() {
+  const box = $('#ledgerOut'); if (!box) return;
+  const [s, e] = await Promise.all([
+    callFn('admin', { action: 'ledger_summary' }).catch((err) => ({ error: err.message })),
+    sb.from('expenses').select('id,spent_on,category,description,vendor,amount_grosze,is_cost,receipt_path').order('spent_on', { ascending: false }).order('created_at', { ascending: false }).limit(8),
+  ]);
+  S.ledger = s; S.expenses = e.error ? null : e.data;
+  if (e.error && /does not exist|schema cache|relation/i.test(e.error.message)) { box.replaceChildren(h('div', { class: 'card muted small', text: 'Rozliczenia wymagają migracji v10 i nowej funkcji admin.' })); return; }
+  renderLedgerBox();
+}
+function renderLedgerBox() {
+  const box = $('#ledgerOut'); if (!box) return;
+  const s = S.ledger || {}, today = s.today || todayKey();
+  const curM = today.slice(0, 7), curQ = `${today.slice(0, 4)}-Q${Math.floor((+today.slice(5, 7) - 1) / 3) + 1}`;
+  const m = s.months?.find((x) => x.month === curM), q = s.quarters?.find((x) => x.quarter === curQ), y = s.years?.find((x) => x.year === today.slice(0, 4));
+  const qLimit = q?.limit || 1081350, qPct = (q?.net || 0) / qLimit;
+  const sh = s.sheet || {};
+  const kpi = (label, val, extra) => h('div', { class: 'kpi hud' }, h('span', { text: label }), h('b', { text: val }), extra || null);
+  box.replaceChildren(...[
+    s.error ? h('div', { class: 'card muted small', text: `Zestawienia niedostępne: ${s.error}` }) : [
+      h('div', { class: 'kpi-grid' },
+        kpi(`Przychód · ${MONTHS_PL[+curM.slice(5) - 1]}`, zl(m?.net ?? 0), h('span', { class: 'delta muted', text: `koszty ${zl(m?.costs ?? 0)}` })),
+        kpi('Dochód w miesiącu', zl(m?.profit ?? 0), h('span', { class: `delta ${(m?.profit ?? 0) < 0 ? 'down' : 'muted'}`, text: `${m?.count ?? 0} opłaconych zleceń` }))),
+      h('div', { class: 'card' },
+        h('div', { class: 'lim-h' }, h('span', { text: `Limit kwartału ${curQ.slice(5)} (nierejestrowana)` }), h('b', { text: pctTxt(qPct) })),
+        limitBar(qPct),
+        h('p', { class: `small ${q?.flag ? 'down' : 'muted'}`, style: 'margin:6px 0 0', text: q?.flag || `${zl2(q?.net || 0)} z ${zl2(qLimit)} · zostało ${zl2(Math.max(0, qLimit - (q?.net || 0)))}` }),
+        h('div', { class: 'lim-h', style: 'margin-top:12px' }, h('span', { text: `Rok ${today.slice(0, 4)}: osoby prywatne (kasa fiskalna)` }), h('b', { text: pctTxt((y?.b2c || 0) / 2000000) })),
+        limitBar((y?.b2c || 0) / 2000000),
+        h('p', { class: 'small muted', style: 'margin:6px 0 0', text: `Rok: przychód ${zl2(y?.net || 0)}, koszty ${zl2(y?.costs || 0)}, dochód ${zl2(y?.profit || 0)}` }))],
+    h('div', { class: 'post-actions' },
+      h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: '＋ Wydatek', onclick: () => expenseSheet() }),
+      sh.url ? h('a', { class: 'btn btn-ghost btn-sm', href: sh.url, target: '_blank', rel: 'noopener', text: '📄 Arkusz' }) : null,
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '⟳ Synchronizuj', onclick: async (e) => {
+        busy(e.currentTarget, true);
+        try { const d = await callFn('admin', { action: 'ledger_sync' }); toast(d.ok ? 'ok' : 'err', d.enabled === false ? d.error : d.ok ? 'Arkusz rozliczeń zaktualizowany.' : `Błąd arkusza: ${d.error}`); loadLedgerBox(); }
+        catch (err) { toast('err', err.message); } busy(e.currentTarget, false, '⟳ Synchronizuj');
+      } })),
+    h('p', { class: 'free-note', style: 'margin-top:4px', text: sh.enabled === false ? 'Arkusz Google nie jest skonfigurowany.' : sh.error ? `Arkusz: błąd – ${sh.error}` : sh.pending ? 'Arkusz: zmiany czekają na synchronizację (co 5 min).' : sh.synced_at ? `Arkusz aktualny · ${ago(sh.synced_at)}` : '' }),
+    h('p', { class: 'sec-title', text: 'Ostatnie wydatki' }),
+    S.expenses?.length ? h('div', { class: 'card exp-list' }, S.expenses.map((x) => h('div', { class: 'exp-row' },
+      h('div', { class: 'grow' }, h('b', { text: x.description }), h('span', { class: 'muted small', text: `${fmt(`${x.spent_on}T12:00:00Z`, { day: 'numeric', month: 'short' })} · ${EXP_CAT[x.category] || x.category}${x.vendor ? ` · ${x.vendor}` : ''}${x.is_cost ? '' : ' · nie koszt'}` })),
+      h('b', { class: 'nowrap', text: zl2(x.amount_grosze) }),
+      x.receipt_path ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Pokaż paragon', text: '🧾', onclick: () => openReceipt(x.receipt_path) }) : null,
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': `Usuń ${x.description}`, text: '×', onclick: async () => {
+        if (!confirm(`Usunąć wydatek „${x.description}” (${zl2(x.amount_grosze)})?`)) return;
+        const { error } = await sb.from('expenses').delete().eq('id', x.id);
+        if (error) return toast('err', error.message);
+        if (x.receipt_path) await sb.storage.from('receipts').remove([x.receipt_path]);
+        toast('ok', 'Wydatek usunięty.'); loadLedgerBox();
+      } }))))
+      : h('div', { class: 'empty', text: S.expenses ? 'Brak wydatków. Prowizje Stripe liczą się automatycznie.' : 'Nie udało się wczytać wydatków.' })].flat(Infinity).filter(Boolean));
+}
+async function openReceipt(path) {
+  const { data, error } = await sb.storage.from('receipts').createSignedUrl(path, 300);
+  if (error) return toast('err', error.message);
+  window.open(data.signedUrl, '_blank', 'noopener');
+}
+function expenseSheet() {
+  const date = h('input', { class: 'input', type: 'date', value: todayKey(), max: todayKey() });
+  const amount = h('input', { class: 'input', inputmode: 'decimal', placeholder: '0,00', 'aria-label': 'Kwota brutto w zł' });
+  const desc = h('input', { class: 'input', maxlength: 300, placeholder: 'np. pasta termoprzewodząca' });
+  const vendor = h('input', { class: 'input', maxlength: 120, placeholder: 'np. x-kom' });
+  const doc = h('input', { class: 'input', maxlength: 80, placeholder: 'opcjonalnie' });
+  const catSel = h('select', { class: 'input' }, Object.entries(EXP_CAT).map(([k, v]) => h('option', { value: k, text: v })));
+  const orderSel = h('select', { class: 'input' }, h('option', { value: '', text: '— bez zlecenia —' }),
+    S.orders.filter((o) => o.order_number).slice(0, 40).map((o) => h('option', { value: o.id, text: `${o.order_number} · ${o.service_name}` })));
+  const isCost = h('input', { type: 'checkbox', checked: true });
+  let file = null;
+  const prev = h('div', { class: 'rcpt-prev' });
+  const pick = (inp) => () => {
+    file = inp.files[0] || null; inp.value = '';
+    prev.replaceChildren(file ? (file.type === 'application/pdf' ? h('span', { class: 'small', text: `📄 ${file.name}` }) : h('img', { src: URL.createObjectURL(file), alt: 'Podgląd paragonu' })) : '',
+      file ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Usuń zdjęcie', onclick: () => { file = null; prev.replaceChildren(); } }) : '');
+  };
+  const cam = h('input', { type: 'file', accept: 'image/*', capture: 'environment', class: 'hidden' });
+  const gal = h('input', { type: 'file', accept: 'image/*,application/pdf', class: 'hidden' });
+  cam.addEventListener('change', pick(cam)); gal.addEventListener('change', pick(gal));
+  const save = h('button', { class: 'btn btn-gold btn-block', type: 'button', text: 'Zapisz wydatek', onclick: async () => {
+    const g = parseZl(amount.value);
+    if (!(g > 0)) { amount.focus(); return toast('err', 'Wpisz kwotę, np. 129,99.'); }
+    if (!desc.value.trim()) { desc.focus(); return toast('err', 'Wpisz, co zostało kupione.'); }
+    busy(save, true, 'Zapisuję…');
+    let path = null;
+    try {
+      if (file) {
+        const blob = file.type === 'application/pdf' ? file : await shrinkImage(file, 1800);
+        if (!blob) throw new Error('Nie da się odczytać zdjęcia.');
+        if (blob.size > 10 * 1024 * 1024) throw new Error('Plik jest większy niż 10 MB.');
+        const ext = blob.type === 'application/pdf' ? 'pdf' : 'jpg';
+        path = `${date.value.slice(0, 7)}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const up = await sb.storage.from('receipts').upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
+        if (up.error) { path = null; throw new Error(`Paragon: ${up.error.message}`); }
+      }
+      const { error } = await sb.from('expenses').insert({ spent_on: date.value || todayKey(), category: catSel.value, description: desc.value.trim(), vendor: vendor.value.trim() || null, doc_number: doc.value.trim() || null, amount_grosze: g, is_cost: isCost.checked, order_id: orderSel.value || null, receipt_path: path });
+      if (error) throw error;
+      toast('ok', `Wydatek ${zl2(g)} zapisany.`); vibrate(30); sheet.close(); loadLedgerBox();
+    } catch (err) {
+      if (path) await sb.storage.from('receipts').remove([path]);
+      toast('err', err.message); busy(save, false, 'Zapisz wydatek');
+    }
+  } });
+  openSheet('Nowy wydatek',
+    h('div', { class: 'row2' }, h('label', { class: 'field' }, h('span', { text: 'Kwota brutto (zł)' }), amount), h('label', { class: 'field' }, h('span', { text: 'Data' }), date)),
+    h('label', { class: 'field' }, h('span', { text: 'Co kupione' }), desc),
+    h('label', { class: 'field' }, h('span', { text: 'Kategoria' }), catSel),
+    h('div', { class: 'row2' }, h('label', { class: 'field' }, h('span', { text: 'Sklep / firma' }), vendor), h('label', { class: 'field' }, h('span', { text: 'Nr dokumentu' }), doc)),
+    h('label', { class: 'field' }, h('span', { text: 'Do zlecenia (np. części)' }), orderSel),
+    h('div', { class: 'post-actions', style: 'margin-top:0' }, cam, gal,
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '📷 Zdjęcie paragonu', onclick: () => cam.click() }),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '🖼 Plik / PDF', onclick: () => gal.click() })),
+    prev,
+    h('label', { class: 'chk-row' }, isCost, h('span', { text: 'Koszt uzyskania przychodu (zakup na potrzeby usług)' })),
+    save);
+  setTimeout(() => amount.focus(), 80);
+}
+/** Arkusz zlecenia: sposób płatności, prowizja, zwrot. */
+function paymentTools(o) {
+  const box = h('div');
+  if (!o.paid_at) return box;
+  sb.from('orders').select('pay_method,stripe_fee_grosze,refund_grosze,refunded_at').eq('id', o.id).maybeSingle().then(({ data: p, error }) => {
+    if (error || !p) return;   // przed migracją v10
+    const amt = h('input', { class: 'input', inputmode: 'decimal', placeholder: 'łączna kwota zwrotu', value: p.refund_grosze ? String(p.refund_grosze / 100).replace('.', ',') : '' });
+    const btn = h('button', { class: 'btn btn-ghost', type: 'button', text: 'Zapisz zwrot', onclick: async () => {
+      const g = amt.value.trim() ? parseZl(amt.value) : 0;
+      if (!(g >= 0)) return toast('err', 'Wpisz kwotę (0 = brak zwrotu).');
+      if (!confirm(g ? `Zapisać zwrot ${zl2(g)} (gotówką / przelewem)?` : 'Usunąć zapisany zwrot?')) return;
+      busy(btn, true);
+      try { await callFn('admin', { action: 'record_refund', order_id: o.id, amount_zl: g / 100 }); toast('ok', 'Zwrot zapisany w rozliczeniach.'); sheet.close(); loadOrders(); }
+      catch (err) { toast('err', err.message); } busy(btn, false, 'Zapisz zwrot');
+    } });
+    box.replaceChildren(h('h4', { text: 'Płatność' }),
+      h('div', { class: 'kv' },
+        h('div', {}, h('span', { text: 'Sposób' }), h('b', { text: PAY_METHOD[p.pay_method] || 'Stripe' })),
+        p.stripe_fee_grosze ? h('div', {}, h('span', { text: 'Prowizja Stripe' }), h('b', { text: `−${zl2(p.stripe_fee_grosze)}` })) : null,
+        p.refund_grosze ? h('div', {}, h('span', { text: 'Zwrot' }), h('b', { class: 'down', text: `−${zl2(p.refund_grosze)} · ${fmt(p.refunded_at, { dateStyle: 'medium' })}` })) : null),
+      h('div', { class: 'row2', style: 'margin-top:10px;grid-template-columns:1fr auto' }, amt, btn),
+      h('p', { class: 'hint', style: 'margin:6px 2px 0', text: 'Zwroty w Stripe zapisują się same – tu wpisuj tylko zwroty gotówką lub przelewem.' }));
+  });
+  return box;
 }
 
 /* ================================================================== DZIŚ */

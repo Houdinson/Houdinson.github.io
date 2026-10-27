@@ -2,7 +2,7 @@
    • powłoka aplikacji (HTML/CSS/JS/ikony) z pamięci → start natychmiast, także bez zasięgu
    • biblioteka supabase-js i czcionki: stale-while-revalidate
    • dane (Supabase API, Edge Functions, Storage) NIGDY nie są buforowane – zawsze świeże i prywatne */
-const VERSION = 'stl-centrum-v6';
+const VERSION = 'stl-centrum-v7';
 const SHELL = ['./', './index.html', './app.css', './app.js', './config.js', './stl-report.js', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 

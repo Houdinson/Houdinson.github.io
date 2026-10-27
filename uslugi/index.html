@@ -650,6 +650,20 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
 .rep-tbl td:last-child{display:flex;gap:6px;align-items:center}
 .rep-tbl .x-btn{background:none;border:1px solid var(--line-2);color:var(--muted);border-radius:8px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1.1rem}
 .rep-tbl .x-btn:hover,.rep-tbl .x-btn:focus-visible{color:var(--bad);border-color:var(--bad)}
+.fin-cards{margin-top:6px}
+.fin-card small{display:block;text-transform:uppercase;letter-spacing:.08em;font-size:.72rem}
+.fin-big{font-size:1.7rem;font-weight:800;margin:6px 0 0;font-variant-numeric:tabular-nums}
+.fin-dl{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin:12px 0 0;font-size:.86rem}
+.fin-dl dt{color:var(--muted)}.fin-dl dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.limit-bar{height:8px;border-radius:8px;background:rgba(255,255,255,.08);overflow:hidden;margin:6px 0}
+.limit-bar i{display:block;height:100%;border-radius:8px;background:var(--ok)}
+.limit-bar.warn i{background:var(--warn)}.limit-bar.bad i{background:var(--bad)}
+#financeOut .bad,.adm-detail .bad{color:var(--bad)}#financeOut .warn{color:var(--warn)}
+.fin-table td{font-variant-numeric:tabular-nums}.fin-table .q-row td{border-top:1px solid var(--line-2)}
+.fin-table .x-btn{background:none;border:1px solid var(--line-2);color:var(--muted);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:1.1rem;margin-left:6px;vertical-align:middle}
+.fin-table .x-btn:hover,.fin-table .x-btn:focus-visible{color:var(--bad);border-color:var(--bad)}
+.adm-detail .code-row input[type=date]{flex:0 0 150px}
+@media(max-width:600px){.adm-detail .code-row{flex-wrap:wrap}.fin-big{font-size:1.4rem}}
 .rep-checks{display:grid;gap:4px;margin-bottom:10px}
 .rep-prev:empty{display:none}
 .rep-pages{display:flex;gap:10px;overflow-x:auto;padding:4px 0}
@@ -1076,6 +1090,7 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
           <button class="tab" role="tab" aria-selected="false" data-tab="account" id="tab-account" aria-controls="pane-account" tabindex="-1">Konto</button>
           <button class="tab hidden" role="tab" aria-selected="false" data-tab="admin" id="adminTabBtn" aria-controls="pane-admin" tabindex="-1">Administracja</button>
           <button class="tab hidden" role="tab" aria-selected="false" data-tab="guides" id="guidesTabBtn" aria-controls="pane-guides" tabindex="-1">Instrukcje</button>
+          <button class="tab hidden" role="tab" aria-selected="false" data-tab="finance" id="financeTabBtn" aria-controls="pane-finance" tabindex="-1">Finanse</button>
         </div>
         <div data-pane="orders" id="pane-orders" role="tabpanel" aria-labelledby="tab-orders"><div id="ordersList"></div></div>
         <div data-pane="programs" id="pane-programs" role="tabpanel" aria-labelledby="tab-programs" class="hidden"><div id="programsOut"></div></div>
@@ -1083,6 +1098,7 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
         <div data-pane="account" id="pane-account" role="tabpanel" aria-labelledby="tab-account" class="hidden"><div id="accountOut"></div></div>
         <div data-pane="admin" id="pane-admin" role="tabpanel" aria-labelledby="adminTabBtn" class="hidden"><div id="adminOut"></div></div>
         <div data-pane="guides" id="pane-guides" role="tabpanel" aria-labelledby="guidesTabBtn" class="hidden"><div id="guidesOut"></div></div>
+        <div data-pane="finance" id="pane-finance" role="tabpanel" aria-labelledby="financeTabBtn" class="hidden"><div id="financeOut"></div></div>
       </div>
     </div>
   </section>
@@ -2345,9 +2361,10 @@ function renderPanel() {
   $('#panelLead').textContent = on ? 'Status zleceń zmienia się tu na żywo. Raporty i wyniki pomiarów pojawią się po testach.' : 'Status na żywo, raporty z pomiarów, kod polecający i dane konta.';
   $('#adminTabBtn').classList.toggle('hidden', !isAdmin);
   $('#guidesTabBtn').classList.toggle('hidden', !isAdmin);
+  $('#financeTabBtn').classList.toggle('hidden', !isAdmin);
   // Administrator nie składa zleceń sam sobie – zamiast „Zleceń” od razu widzi „Administrację”
   $('#panelTabs [data-tab=orders]').classList.toggle('hidden', isAdmin);
-  if (!isAdmin && (activeTab === 'admin' || activeTab === 'guides')) activeTab = 'orders';
+  if (!isAdmin && ['admin', 'guides', 'finance'].includes(activeTab)) activeTab = 'orders';
   if (isAdmin && activeTab === 'orders') activeTab = 'admin';
   showTab(activeTab);
 }
@@ -2360,6 +2377,7 @@ function showTab(t) {
   if (t === 'account') renderAccount();
   if (t === 'programs') renderPrograms();
   if (t === 'guides') loadGuides();
+  if (t === 'finance') loadFinance();
 }
 const ORDER_COLS = 'id,order_number,service_id,service_name,kind,status,express,base_grosze,discount_grosze,express_fee_grosze,total_grosze,amount_due_grosze,discount_code,referral_code_used,spec,handover,slot_conflict,created_at,paid_at,cancel_reason,calendar_slots(starts_at,ends_at,status,hold_expires_at),order_events(status,note,at),order_results(phase,metrics)';
 const ORDER_COLS_V1 = 'id,order_number,service_id,service_name,kind,status,base_grosze,discount_grosze,total_grosze,amount_due_grosze,referral_code_used,slot_conflict,created_at,paid_at,cancel_reason,calendar_slots(starts_at,ends_at,status,hold_expires_at)';
@@ -3002,7 +3020,14 @@ async function loadAdmin(silent = false) {
   let q = sb.from('orders').select(cat.hasV2 ? 'id,order_number,status,service_id,config,service_name,express,total_grosze,amount_due_grosze,created_at,paid_at,customer,slot_conflict,user_id,handover,city,customer_note,consents,spec,discount_code,referral_code_used,profiles(email,full_name,phone),calendar_slots(starts_at,ends_at,status),order_events(status,note,at),order_results(phase,metrics)' : 'id,order_number,status,service_name,total_grosze,amount_due_grosze,created_at,paid_at,slot_conflict,user_id,customer_note,profiles(email,full_name,phone),calendar_slots(starts_at,ends_at,status)')
     .order('created_at', { ascending: false }).limit(200);
   if (adm.filter) q = q.eq('status', adm.filter);
-  const { data, error } = await q; adm.loading = false;
+  let { data, error } = await q;
+  if (!error && cat.hasV2 && adm.v10 !== false) {
+    const ids = (data || []).filter((o) => o.paid_at).map((o) => o.id);
+    const p = ids.length ? await sb.from('orders').select('id,pay_method,stripe_fee_grosze,refund_grosze,refunded_at').in('id', ids) : { data: [] };
+    if (p.error) adm.v10 = !/column/i.test(p.error.message);
+    else { adm.v10 = true; const m = new Map(p.data.map((x) => [x.id, x])); data = data.map((o) => ({ ...o, ...(m.get(o.id) || {}) })); }
+  }
+  adm.loading = false;
   if (error) { box.replaceChildren(h('div', { class: 'banner err', text: `Błąd: ${error.message}` })); return; }
   adm.orders = data; renderAdmin();
 }
@@ -3014,7 +3039,7 @@ function renderAdmin() {
   const tools = h('div', { class: 'toolbar' }, filter, search,
     h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Odśwież zamówienia', onclick: () => loadAdmin() }),
     h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Eksport CSV', onclick: async (e) => { const b = e.currentTarget; setBusy(b, true); try { const d = await callFn('admin', { action: 'export_csv' }); download(`zamowienia-${todayKey()}.csv`, d.csv, 'text/csv;charset=utf-8'); } catch (err) { toast('err', err.message); } setBusy(b, false, 'Eksport CSV'); } }),
-    h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Synchronizuj Google Sheets', onclick: async (e) => { const b = e.currentTarget; setBusy(b, true); try { const d = await callFn('admin', { action: 'sheets_resync' }); toast(d.ok ? 'ok' : 'err', d.enabled === false ? d.error : `Zsynchronizowano: ${d.synced}${d.failed ? `, błędy: ${d.failed}` : ''}.${d.error ? ` Powód: ${d.error}` : ''}`); } catch (err) { toast('err', err.message); } setBusy(b, false, 'Synchronizuj Google Sheets'); } }));
+    h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Finanse i arkusz', onclick: () => showTab('finance') }));
   const table = h('div', { class: 'scroll-x' }, h('table', { class: 'adm' },
     h('thead', {}, h('tr', {}, ['Numer / data', 'Klient', 'Pozycja', 'Termin', 'Status', 'Kwota'].map((t) => h('th', { text: t })))),
     h('tbody', {}, list.length ? list.map((o) => {
@@ -3054,7 +3079,8 @@ function adminDetail(o) {
       h('div', {}, h('h4', { text: 'Status' }), h('div', { class: 'field' }, status), h('div', { class: 'field' }, note),
         h('div', { class: 'cta-row', style: 'margin:0' },
           h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Zmień status', onclick: (e) => act(e.currentTarget, 'Zmień status', { action: 'set_status', order_id: o.id, status: status.value, note: note.value }, () => 'Status zmieniony. Klient widzi go od razu (przy „Testy” i „Zakończone” dostaje maila).') }),
-          !o.order_number && o.status !== 'ANULOWANE' ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Oznacz jako opłacone', onclick: (e) => { if (confirm('Potwierdzasz wpłatę poza Stripe (gotówka / przelew)?')) act(e.currentTarget, 'Oznacz jako opłacone', { action: 'mark_paid', order_id: o.id }, (d) => `Opłacone: ${d.order_number}`); } }) : null),
+          !o.order_number && o.status !== 'ANULOWANE' ? [['gotowka', 'Opłacone gotówką'], ['przelew', 'Opłacone przelewem']].map(([m, t]) => h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} poza Stripe (${m === 'gotowka' ? 'gotówka' : 'przelew'})?`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number}`); } })) : null),
+        paymentBox(o),
         o.order_events?.length ? h('ul', { class: 'timeline', style: 'margin-top:14px' }, [...o.order_events].sort((a, b) => a.at.localeCompare(b.at)).map((ev) => h('li', {}, h('time', { text: fmt(ev.at) }), (STATUS[ev.status]?.[0] || ev.status) + (ev.note ? ` – ${ev.note}` : '')))) : null),
       h('div', {}, h('h4', { text: 'Raport STRIKE PROOF' }),
         cat.hasV2 ? reportEditor(o) : h('p', { class: 'note', text: 'Raporty wymagają migracji v2 w bazie.' }),
@@ -3097,6 +3123,191 @@ async function loadInquiries() {
     h('p', { style: 'white-space:pre-wrap;color:var(--text-2);margin:8px 0', text: q.message }),
     h('p', { class: 'small' }, h('a', { class: 'gold', href: `mailto:${q.email}?subject=${encodeURIComponent('Re: ' + (q.topic || 'Strike Tech Lab'))}`, text: q.email }), q.phone ? ` · ${q.phone}` : ''),
     h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: q.handled ? 'Oznacz jako nowe' : 'Oznacz jako obsłużone', onclick: async () => { await sb.from('inquiries').update({ handled: !q.handled }).eq('id', q.id); loadInquiries(); } }))));
+}
+
+/* ------------------------------------------------------------------ finanse: przychody, wydatki, limity, arkusz rozliczeń */
+const EXP_CAT = { czesci: 'Części i materiały', narzedzia: 'Narzędzia i sprzęt', oprogramowanie: 'Programy i licencje', hosting: 'Domena, hosting, usługi IT', reklama: 'Reklama i marketing', transport: 'Transport i wysyłka', biuro: 'Biuro i telefon', oplaty: 'Opłaty i prowizje', inne: 'Inne' };
+const PAY_METHOD = { karta: 'karta', blik: 'BLIK', p24: 'Przelewy24', przelew: 'przelew', gotowka: 'gotówka', inna: 'inna' };
+const MONTHS_PL = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
+const monthName = (m) => `${MONTHS_PL[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`;
+const pctTxt = (x) => `${(Math.round(x * 1000) / 10).toLocaleString('pl-PL')}%`;
+const zlFull = (g) => (g / 100).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 2 });
+const fin = { sum: null, exp: [], loading: false, err: '', exErr: '' };
+
+/** Zdjęcie paragonu -> JPEG maks. 1800 px (mniejszy plik, poprawny obrót); PDF bez zmian. */
+async function shrinkImage(file, max = 1800) {
+  if (file.type === 'application/pdf') return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = h('canvas', { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); bmp.close?.();
+    return await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('jpeg'))), 'image/jpeg', 0.82));
+  } catch { return ['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ? file : null; }
+}
+async function uploadReceipt(file, day) {
+  const blob = await shrinkImage(file);
+  if (!blob) throw new Error('Nie da się odczytać tego zdjęcia. Zrób zdjęcie jako JPG albo wgraj PDF.');
+  if (blob.size > 10 * 1024 * 1024) throw new Error('Plik paragonu jest większy niż 10 MB.');
+  const ext = blob.type === 'application/pdf' ? 'pdf' : blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
+  const path = `${day.slice(0, 7)}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await sb.storage.from('receipts').upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
+  if (error) throw new Error(`Nie udało się wgrać paragonu: ${error.message}`);
+  return path;
+}
+async function openReceipt(path) {
+  const w = window.open('', '_blank');
+  const { data, error } = await sb.storage.from('receipts').createSignedUrl(path, 300);
+  if (error) { w?.close(); return toast('err', error.message); }
+  if (w) w.location.href = data.signedUrl; else location.href = data.signedUrl;
+}
+
+async function loadFinance(force) {
+  const out = $('#financeOut'); if (!out || !isAdmin || !sb || fin.loading) return;
+  const { data: lvl } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (lvl?.currentLevel !== 'aal2') { out.replaceChildren(h('div', { class: 'banner info', text: 'Finanse widzi tylko administrator po logowaniu dwuetapowym. Wejdź w zakładkę Administracja, potwierdź kod z aplikacji i wróć tutaj.' })); return; }
+  if (fin.sum && !force) { renderFinance(); return; }
+  fin.loading = true; if (!out.childElementCount) out.replaceChildren(h('p', { class: 'muted', text: 'Liczę przychody i wydatki…' }));
+  try {
+    const [s, e] = await Promise.all([
+      callFn('admin', { action: 'ledger_summary' }).then((d) => { fin.err = ''; return d; }, (err) => { fin.err = err.message; return null; }),
+      sb.from('expenses').select('id,spent_on,category,description,vendor,doc_number,amount_grosze,is_cost,receipt_path,order_id').order('spent_on', { ascending: false }).order('created_at', { ascending: false }).limit(200),
+    ]);
+    fin.sum = s;
+    fin.exErr = e.error ? (/does not exist|schema cache|relation/i.test(e.error.message) ? 'missing' : e.error.message) : '';
+    fin.exp = e.data || [];
+  } finally { fin.loading = false; }
+  renderFinance();
+}
+
+function limitBar(pct, warnAt = 0.8) {
+  const tone = pct > 1 ? 'bad' : pct >= warnAt ? 'warn' : 'ok';
+  return h('div', { class: `limit-bar ${tone}`, role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(pct * 100) }, h('i', { style: `width:${Math.min(100, pct * 100)}%` }));
+}
+function finCard(title, s, extra) {
+  return h('div', { class: 'card fin-card' }, h('small', { class: 'muted', text: title }),
+    h('div', { class: 'fin-big', text: zlFull(s?.net ?? 0) }), h('div', { class: 'muted small', text: 'przychód (wpłaty − zwroty)' }),
+    h('dl', { class: 'fin-dl' },
+      h('dt', { text: 'Zleceń opłaconych' }), h('dd', { text: String(s?.count ?? 0) }),
+      h('dt', { text: 'Zwroty' }), h('dd', { text: zlFull(s?.refunds ?? 0) }),
+      h('dt', { text: 'Koszty' }), h('dd', { text: zlFull(s?.costs ?? 0) }),
+      h('dt', { text: 'Dochód' }), h('dd', { class: (s?.profit ?? 0) < 0 ? 'bad' : 'gold', text: zlFull(s?.profit ?? 0) })),
+    extra || null);
+}
+
+function renderFinance() {
+  const out = $('#financeOut'); if (!out) return;
+  const S = fin.sum;
+  if (fin.exErr === 'missing') { out.replaceChildren(h('div', { class: 'banner err', text: 'Brak tabeli wydatków – uruchom migrację v10 (npx supabase db push --linked) i wdróż funkcje admin, cron i stripe-webhook.' })); return; }
+  const today = S?.today || todayKey();
+  const curM = today.slice(0, 7), curQ = `${today.slice(0, 4)}-Q${Math.floor((+today.slice(5, 7) - 1) / 3) + 1}`, curY = today.slice(0, 4);
+  const m = S?.months?.find((x) => x.month === curM), q = S?.quarters?.find((x) => x.quarter === curQ), y = S?.years?.find((x) => x.year === curY);
+  const qLimit = q?.limit || 1081350;
+  const sheet = S?.sheet || {};
+  const syncBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Synchronizuj arkusz', onclick: async (e) => {
+    const b = e.currentTarget; setBusy(b, true);
+    try { const d = await callFn('admin', { action: 'ledger_sync' }); toast(d.ok ? 'ok' : 'err', d.enabled === false ? d.error : d.ok ? `Arkusz zaktualizowany: ${d.incomes} wpisów przychodu, ${d.expenses} wydatków.` : `Błąd arkusza: ${d.error}`); loadFinance(true); }
+    catch (err) { toast('err', err.message); } setBusy(b, false, 'Synchronizuj arkusz');
+  } });
+  const head = h('div', { class: 'toolbar' },
+    h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Odśwież', onclick: () => loadFinance(true) }), syncBtn,
+    sheet.url ? h('a', { class: 'btn btn-ghost btn-sm', href: sheet.url, target: '_blank', rel: 'noopener', text: 'Otwórz arkusz Google' }) : null,
+    h('span', { class: 'muted small', text: !S ? '' : sheet.enabled === false ? 'Arkusz Google nie jest skonfigurowany.' : sheet.error ? `Arkusz: błąd – ${sheet.error}` : sheet.pending ? 'Arkusz: zmiany czekają (cron co 5 min)' : sheet.synced_at ? `Arkusz aktualny · ${fmt(sheet.synced_at)}` : '' }));
+  const cards = S ? h('div', { class: 'grid g3 fin-cards' },
+    finCard(`Miesiąc: ${monthName(curM)}`, m),
+    finCard(`Kwartał: ${curQ.replace('-', ' ')}`, q, h('div', { style: 'margin-top:12px' },
+      h('div', { class: 'small', text: `Limit działalności nierejestrowanej: ${pctTxt((q?.net || 0) / qLimit)} z ${zlFull(qLimit)}` }), limitBar((q?.net || 0) / qLimit),
+      h('div', { class: `small ${q?.flag ? 'bad' : 'muted'}`, text: q?.flag || `Zostało ${zlFull(Math.max(0, qLimit - (q?.net || 0)))} do końca kwartału.` }))),
+    finCard(`Rok ${curY}`, y, h('div', { style: 'margin-top:12px' },
+      h('div', { class: 'small', text: `Sprzedaż dla osób prywatnych: ${zlFull(y?.b2c || 0)} z ${zlFull(2000000)} (zwolnienie z kasy fiskalnej)` }), limitBar((y?.b2c || 0) / 2000000)))) :
+    h('div', { class: 'banner err', text: `Nie udało się policzyć zestawień: ${fin.err || 'brak danych'}. Sprawdź, czy wdrożona jest migracja v10 i nowa funkcja admin.` });
+  const months = S ? h('details', { class: 'more', open: false }, h('summary', { text: 'Miesiące i kwartały' }),
+    h('div', { class: 'scroll-x' }, h('table', { class: 'adm fin-table' },
+      h('thead', {}, h('tr', {}, ['Okres', 'Wpłaty', 'Zwroty', 'Przychód', 'Koszty', 'Dochód', 'Limit'].map((t) => h('th', { text: t })))),
+      h('tbody', {}, [...S.quarters].reverse().flatMap((qq) => [
+        h('tr', { class: 'q-row' }, h('td', {}, h('b', { text: qq.quarter.replace('-', ' ') })), h('td', { text: zlFull(qq.income) }), h('td', { text: zlFull(qq.refunds) }), h('td', {}, h('b', { text: zlFull(qq.net) })), h('td', { text: zlFull(qq.costs) }), h('td', { text: zlFull(qq.profit) }), h('td', { class: qq.pct > 1 ? 'bad' : qq.pct >= 0.8 ? 'warn' : '', text: qq.limit ? pctTxt(qq.pct) : '–' })),
+        ...S.months.filter((mm) => `${mm.month.slice(0, 4)}-Q${Math.floor((+mm.month.slice(5, 7) - 1) / 3) + 1}` === qq.quarter).reverse().map((mm) =>
+          h('tr', {}, h('td', { class: 'muted', text: monthName(mm.month) }), h('td', { text: zlFull(mm.income) }), h('td', { text: zlFull(mm.refunds) }), h('td', { text: zlFull(mm.net) }), h('td', { text: zlFull(mm.costs) }), h('td', { text: zlFull(mm.profit) }), h('td')))]))))) : null;
+  out.replaceChildren(head, cards, months, expenseForm(), expenseList(),
+    h('p', { class: 'note', style: 'margin-top:18px', text: 'Przychód liczony jest w dniu wpłaty (opłacone zlecenie), zwrot w dniu zwrotu. Prowizje Stripe dopisują się same jako koszt. Arkusz Google zawiera ewidencję sprzedaży (dzień po dniu, narastająco w miesiącu), zestawienia miesięczne, kwartalne i roczne – bez danych osobowych klientów. To pomoc w rozliczeniu, nie porada podatkowa.' }));
+}
+
+function expenseForm() {
+  const date = h('input', { class: 'input', type: 'date', value: todayKey(), max: todayKey(), required: true });
+  const catSel = h('select', { class: 'select' }, Object.entries(EXP_CAT).map(([k, v]) => h('option', { value: k, text: v })));
+  const amount = h('input', { class: 'input', inputmode: 'decimal', placeholder: 'np. 129,99', required: true });
+  const desc = h('input', { class: 'input', maxlength: 300, placeholder: 'Co kupione, np. pasta termoprzewodząca Arctic MX-6', required: true });
+  const vendor = h('input', { class: 'input', maxlength: 120, placeholder: 'Sklep / firma (opcj.)' });
+  const doc = h('input', { class: 'input', maxlength: 80, placeholder: 'Nr paragonu / faktury (opcj.)' });
+  const isCost = h('input', { type: 'checkbox', checked: true });
+  const orderSel = h('select', { class: 'select' }, h('option', { value: '', text: 'Bez powiązania ze zleceniem' }),
+    (adm.orders || []).filter((o) => o.order_number).slice(0, 60).map((o) => h('option', { value: o.id, text: `${o.order_number} · ${o.service_name}` })));
+  const file = h('input', { class: 'input', type: 'file', accept: 'image/*,application/pdf', style: 'padding:9px' });
+  const btn = h('button', { class: 'btn btn-gold btn-sm', type: 'submit', text: 'Dodaj wydatek' });
+  return h('form', { class: 'card', style: 'margin-top:22px', onsubmit: async (e) => {
+    e.preventDefault();
+    const g = Math.round(parseFloat(amount.value.replace(/\s/g, '').replace(',', '.')) * 100);
+    if (!(g > 0)) return toast('err', 'Wpisz kwotę, np. 129,99.');
+    if (!desc.value.trim()) return toast('err', 'Wpisz, co zostało kupione.');
+    setBusy(btn, true, 'Zapisuję…');
+    try {
+      const receipt_path = file.files[0] ? await uploadReceipt(file.files[0], date.value) : null;
+      const { error } = await sb.from('expenses').insert({ spent_on: date.value, category: catSel.value, description: desc.value.trim(), vendor: vendor.value.trim() || null, doc_number: doc.value.trim() || null, amount_grosze: g, is_cost: isCost.checked, order_id: orderSel.value || null, receipt_path });
+      if (error) { if (receipt_path) await sb.storage.from('receipts').remove([receipt_path]); throw error; }
+      toast('ok', 'Wydatek zapisany – arkusz zaktualizuje się w ciągu kilku minut.'); loadFinance(true);
+    } catch (err) { toast('err', err.message); setBusy(btn, false, 'Dodaj wydatek'); }
+  } }, h('h3', { text: 'Dodaj wydatek' }),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, h('label', { text: 'Data zakupu' }), date), h('div', { class: 'field' }, h('label', { text: 'Kwota brutto (zł)' }), amount)),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, h('label', { text: 'Kategoria' }), catSel), h('div', { class: 'field' }, h('label', { text: 'Zlecenie' }), orderSel)),
+    h('div', { class: 'field' }, h('label', { text: 'Opis' }), desc),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, vendor), h('div', { class: 'field' }, doc)),
+    h('div', { class: 'field' }, h('label', { text: 'Zdjęcie paragonu lub faktura PDF (opcj.)' }), file),
+    h('label', { class: 'check' }, isCost, h('span', { text: 'Koszt uzyskania przychodu (zakup na potrzeby usług). Odznacz dla wydatków prywatnych.' })), btn);
+}
+
+function expenseList() {
+  const box = h('div', { class: 'card', style: 'margin-top:18px' }, h('h3', { text: `Wydatki (${fin.exp.length})` }));
+  if (fin.exErr) { box.append(h('p', { class: 'bad', text: fin.exErr })); return box; }
+  if (!fin.exp.length) { box.append(h('p', { class: 'muted', text: 'Nie ma jeszcze wydatków. Prowizje Stripe liczą się automatycznie i nie trzeba ich dopisywać.' })); return box; }
+  box.append(h('div', { class: 'scroll-x' }, h('table', { class: 'adm fin-table' },
+    h('thead', {}, h('tr', {}, ['Data', 'Opis', 'Kategoria', 'Kwota', ''].map((t) => h('th', { text: t })))),
+    h('tbody', {}, fin.exp.map((x) => h('tr', {},
+      h('td', { text: fmt(`${x.spent_on}T12:00:00Z`, { dateStyle: 'medium' }) }),
+      h('td', {}, x.description, x.vendor || x.doc_number ? h('div', { class: 'muted small', text: [x.vendor, x.doc_number].filter(Boolean).join(' · ') }) : null, x.is_cost ? null : h('span', { class: 'pill ghost', text: 'nie koszt' })),
+      h('td', { class: 'small', text: EXP_CAT[x.category] || x.category }),
+      h('td', { style: 'white-space:nowrap', text: zlFull(x.amount_grosze) }),
+      h('td', { style: 'white-space:nowrap' },
+        x.receipt_path ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Paragon', onclick: () => openReceipt(x.receipt_path) }) : null,
+        h('button', { class: 'x-btn', type: 'button', 'aria-label': `Usuń wydatek ${x.description}`, text: '×', onclick: async () => {
+          if (!confirm(`Usunąć wydatek „${x.description}” (${zlFull(x.amount_grosze)})?`)) return;
+          const { error } = await sb.from('expenses').delete().eq('id', x.id);
+          if (error) return toast('err', error.message);
+          if (x.receipt_path) await sb.storage.from('receipts').remove([x.receipt_path]);
+          toast('ok', 'Wydatek usunięty.'); loadFinance(true);
+        } }))))))));
+  return box;
+}
+
+/** Szczegóły zlecenia: sposób płatności, prowizja, zwrot. */
+function paymentBox(o) {
+  if (!o.paid_at) return null;
+  const amt = h('input', { class: 'input', inputmode: 'decimal', placeholder: 'kwota zł', value: o.refund_grosze ? String(o.refund_grosze / 100).replace('.', ',') : '' });
+  const day = h('input', { class: 'input', type: 'date', value: todayKey(), max: todayKey() });
+  const btn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Zapisz zwrot', onclick: async () => {
+    const v = parseFloat(amt.value.replace(/\s/g, '').replace(',', '.') || '0');
+    if (!(v >= 0)) return toast('err', 'Wpisz kwotę zwrotu (0 = brak zwrotu).');
+    if (!confirm(v ? `Zapisać łączny zwrot ${zlFull(Math.round(v * 100))}? Zwroty kartą/BLIK w Stripe zapisują się same.` : 'Usunąć zapisany zwrot?')) return;
+    setBusy(btn, true);
+    try { await callFn('admin', { action: 'record_refund', order_id: o.id, amount_zl: v, date: day.value }); toast('ok', 'Zwrot zapisany w rozliczeniach.'); fin.sum = null; await loadAdmin(true); }
+    catch (err) { toast('err', err.message); } setBusy(btn, false, 'Zapisz zwrot');
+  } });
+  const has = 'refund_grosze' in o;
+  return h('div', { style: 'margin-top:16px' }, h('h4', { text: 'Płatność i zwrot' }),
+    h('p', { class: 'small' }, `Wpłata ${zlFull(o.amount_due_grosze)} · ${fmt(o.paid_at)}`,
+      has ? ` · ${PAY_METHOD[o.pay_method] || 'Stripe'}${o.stripe_fee_grosze ? ` · prowizja ${zlFull(o.stripe_fee_grosze)}` : ''}` : '',
+      has && o.refund_grosze ? h('b', { class: 'bad', text: ` · zwrot ${zlFull(o.refund_grosze)} (${fmt(o.refunded_at, { dateStyle: 'medium' })})` }) : null),
+    has ? h('div', { class: 'code-row' }, amt, day, btn) : h('p', { class: 'note', text: 'Zwroty wymagają migracji v10.' }),
+    has ? h('p', { class: 'muted small', text: 'Kwota łączna zwrotu. Zwrot zrobiony w Stripe zapisuje się automatycznie – tutaj wpisuj tylko zwroty gotówką lub przelewem.' }) : null);
 }
 
 /* ------------------------------------------------------------------ kontakt */
