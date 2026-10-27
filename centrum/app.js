@@ -49,7 +49,7 @@ function vibrate(ms = 12) { try { navigator.vibrate?.(ms); } catch { /* */ } }
 /* ------------------------------------------------------------------ stan */
 let sb = null, session = null;
 const S = {
-  tab: 'orders',
+  tab: 'today',
   orders: [], ordFilter: 'active', ordQ: '',
   cal: { day: todayKey(), slots: [], ordersById: new Map(), from: null },
   posts: [], socFilter: 'review', lastRun: null,
@@ -134,7 +134,7 @@ async function showLoginOrApp() {
   }
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
   const want = new URLSearchParams(location.search).get('tab');
-  openTab(['orders', 'calendar', 'social', 'finance'].includes(want) ? want : (store.get('stl_tab') || 'orders'));
+  openTab(TABS.includes(want) ? want : 'today');
   heartbeat(); subscribe(); refreshBadges();
 }
 $('#loginForm').addEventListener('submit', async (e) => {
@@ -163,6 +163,7 @@ $('#mBack').addEventListener('click', () => sb.auth.signOut());
 $('#logoutBtn').addEventListener('click', async () => { if (confirm('Wylogować z Centrum?')) await sb.auth.signOut(); });
 
 /* ------------------------------------------------------------------ zakładki */
+const TABS = ['today', 'orders', 'calendar', 'social', 'finance'];
 function openTab(tab) {
   S.tab = tab; store.set('stl_tab', tab);
   $$('[data-view]').forEach((v) => { v.hidden = v.dataset.view !== tab; });
@@ -174,7 +175,7 @@ $$('.tabbar button').forEach((b) => b.addEventListener('click', () => { vibrate(
 $$('[data-refresh]').forEach((b) => b.addEventListener('click', () => { vibrate(); reloadActive(); }));
 function reloadActive() {
   if (!session) return;
-  ({ orders: loadOrders, calendar: loadCalendar, social: loadSocial, finance: loadFinance })[S.tab]?.();
+  ({ today: loadToday, orders: loadOrders, calendar: loadCalendar, social: loadSocial, finance: loadFinance })[S.tab]?.();
 }
 
 /* ------------------------------------------------------------------ arkusz (bottom sheet) */
@@ -187,10 +188,10 @@ function openSheet(title, ...content) {
 sheet.addEventListener('click', (e) => { if (e.target === sheet || e.target.closest('[data-close]')) sheet.close(); });
 
 /* ================================================================== ZLECENIA */
-const ORD_COLS = 'id,order_number,status,service_id,service_name,express,total_grosze,amount_due_grosze,created_at,paid_at,customer,slot_conflict,user_id,handover,city,customer_note,spec,discount_code,referral_code_used,profiles(email,full_name,phone),calendar_slots(starts_at,ends_at,status,hold_expires_at),order_events(status,note,at)';
+const ORD_COLS = 'id,order_number,status,service_id,service_name,express,total_grosze,amount_due_grosze,created_at,paid_at,customer,slot_conflict,user_id,handover,city,customer_note,spec,discount_code,referral_code_used,profiles(email,full_name,phone),calendar_slots(starts_at,ends_at,status,hold_expires_at),order_events(status,note,at),order_results(phase,metrics)';
 async function loadOrders() {
   const box = $('#ordList'); if (!S.orders.length) box.replaceChildren(h('div', { class: 'skeleton' }), h('div', { class: 'skeleton' }));
-  const { data, error } = await sb.from('orders').select(ORD_COLS).order('created_at', { ascending: false }).limit(200);
+  const { data, error } = await sb.from('orders').select(ORD_COLS).order('created_at', { ascending: false }).limit(500);
   if (error) { box.replaceChildren(h('div', { class: 'empty', text: `Błąd: ${error.message}` })); return; }
   S.orders = data; renderOrders();
 }
@@ -211,7 +212,7 @@ function renderOrders() {
   if (!list.length) { box.replaceChildren(h('div', { class: 'empty', text: 'Brak zleceń w tym widoku.' })); return; }
   box.replaceChildren(...list.map((o) => {
     const slot = o.calendar_slots?.[0], [lbl, tone] = STATUS[o.status] || [o.status, ''];
-    return h('button', { class: 'card ord', type: 'button', onclick: () => orderSheet(o.id) },
+    const card = h('button', { class: 'card ord', type: 'button', onclick: () => { if (card._swiped) { card._swiped = false; return; } orderSheet(o.id); } },
       h('div', { class: 'ord-h' }, h('span', { class: 'ord-num', text: o.order_number || 'bez numeru' }), h('span', { class: `pill ${tone}`, text: lbl })),
       h('h4', { text: o.service_name + (o.express ? ' + Express' : '') }),
       h('div', { class: 'ord-meta' },
@@ -219,6 +220,7 @@ function renderOrders() {
         h('span', { text: slot ? `${fmt(slot.starts_at, { weekday: 'short', day: 'numeric', month: 'short' })} ${hm(slot.starts_at)}` : 'bez terminu' }),
         h('span', { text: o.amount_due_grosze < o.total_grosze ? `${zl(o.amount_due_grosze)} / ${zl(o.total_grosze)}` : zl(o.total_grosze) }),
         o.slot_conflict ? h('span', { class: 'flag', text: '⚠ konflikt terminu' }) : null));
+    return swipeable(card, o);
   }));
 }
 $('#ordSearch').addEventListener('input', debounce((e) => { S.ordQ = e.target.value.trim().toLowerCase(); renderOrders(); }, 200));
@@ -230,6 +232,7 @@ function orderSheet(id) {
   const status = h('select', { class: 'select', 'aria-label': 'Nowy status' }, ADMIN_STATUSES.map((k) => h('option', { value: k, text: STATUS[k][0], selected: k === o.status })));
   const note = h('input', { class: 'input', maxlength: 500, placeholder: 'Notatka dla klienta (opcjonalnie)' });
   const files = h('div', { class: 'files' }, h('span', { class: 'muted small', text: 'Ładuję pliki…' }));
+  const thumbs = h('div', { class: 'thumbs' });
   const fileIn = h('input', { class: 'input', type: 'file', accept: 'application/pdf,.pdf,image/png,image/jpeg' });
   const act = async (btn, label, body, ok) => { busy(btn, true); try { const d = await callFn('admin', body); toast('ok', ok(d)); vibrate(20); sheet.close(); await loadOrders(); } catch (e) { toast('err', e.message); busy(btn, false, label); } };
   const changeBtn = h('button', { class: 'btn btn-gold btn-block', type: 'button', text: 'Zmień status', onclick: (e) => {
@@ -247,27 +250,34 @@ function orderSheet(id) {
       o.discount_code || o.referral_code_used ? h('div', {}, h('span', { text: 'Kod' }), h('b', { text: o.discount_code || o.referral_code_used })) : null),
     h('div', { class: 'post-actions' },
       phone ? h('a', { class: 'btn btn-ghost btn-sm', href: `tel:${String(phone).replace(/\s/g, '')}`, text: '📞 Zadzwoń' }) : null,
-      email ? h('a', { class: 'btn btn-ghost btn-sm', href: `mailto:${email}?subject=${encodeURIComponent(`${o.order_number || 'Zlecenie'} – Strike Tech Lab`)}`, text: '✉ E-mail' }) : null),
+      email ? h('a', { class: 'btn btn-ghost btn-sm', href: `mailto:${email}?subject=${encodeURIComponent(`${o.order_number || 'Zlecenie'} – Strike Tech Lab`)}`, text: '✉ E-mail' }) : null,
+      phone || email ? h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: '💬 Wiadomość z szablonu', onclick: () => messageSheet(o) }) : null),
     o.customer_note ? [h('h4', { text: 'Uwagi klienta' }), h('p', { class: 'small', style: 'white-space:pre-wrap;margin:0', text: o.customer_note })] : null,
     Object.keys(o.spec || {}).length ? [h('h4', { text: 'Specyfikacja' }), h('div', { class: 'kv' }, Object.entries(o.spec).map(([k, v]) => h('div', {}, h('span', { text: k }), h('b', { text: String(v) }))))] : null,
     o.order_number ? [h('h4', { text: 'Zmiana statusu' }), h('label', { class: 'field' }, status), h('label', { class: 'field' }, note), changeBtn] : null,
     !o.order_number && o.status === 'OCZEKUJE_NA_PLATNOSC' ? [h('h4', { text: 'Płatność' }),
       h('button', { class: 'btn btn-ghost btn-block', type: 'button', text: 'Oznacz jako opłacone (gotówka / przelew)', onclick: (e) => { if (confirm('Potwierdzasz wpłatę poza Stripe?')) act(e.currentTarget, 'Oznacz jako opłacone (gotówka / przelew)', { action: 'mark_paid', order_id: o.id }, (d) => `Opłacone: ${d.order_number || ''}`); } })] : null,
-    o.user_id ? [h('h4', { text: 'Raporty STRIKE PROOF i pliki' }), files,
+    o.user_id && o.order_number ? [h('h4', { text: 'Raport STRIKE PROOF' }),
+      h('button', { class: 'btn btn-gold btn-block', type: 'button', text: '📊 Wpisz pomiary i utwórz raport PDF', onclick: () => reportSheet(o) })] : null,
+    o.user_id ? [h('h4', { text: 'Zdjęcia przy przyjęciu' }), photoTools(o, thumbs)] : null,
+    o.user_id ? [h('h4', { text: 'Pliki klienta' }), files,
       h('div', { class: 'row2', style: 'margin-top:10px;grid-template-columns:1fr auto' }, fileIn,
         h('button', { class: 'btn btn-gold', type: 'button', text: 'Wgraj', onclick: (e) => uploadReport(o, fileIn, files, e.currentTarget) }))] : null,
     o.order_events?.length ? [h('h4', { text: 'Historia' }), h('ul', { class: 'timeline' }, [...o.order_events].sort((a, b) => a.at.localeCompare(b.at)).map((ev) => h('li', {}, h('time', { text: fmt(ev.at) }), (STATUS[ev.status]?.[0] || ev.status) + (ev.note ? ` – ${ev.note}` : ''))))] : null);
-  if (o.user_id) loadReportFiles(o, files);
+  if (o.user_id) loadReportFiles(o, files, thumbs);
 }
-async function loadReportFiles(o, box) {
+async function loadReportFiles(o, box, thumbs) {
   const folder = `${o.user_id}/${o.id}`;
   const { data, error } = await sb.storage.from('reports').list(folder, { sortBy: { column: 'created_at', order: 'asc' } });
   if (error) { box.replaceChildren(h('span', { class: 'muted small', text: error.message })); return; }
-  const list = (data || []).filter((f) => f.name && !f.name.startsWith('.'));
+  const all = (data || []).filter((f) => f.name && f.id && !f.name.startsWith('.'));
+  const photos = thumbs ? all.filter((f) => /Przyjecie/i.test(f.name) && /\.(jpe?g|png)$/i.test(f.name)) : [];
+  const list = all.filter((f) => !photos.includes(f));
+  if (thumbs) renderThumbs(folder, photos, thumbs);
   box.replaceChildren(...(list.length ? list.map((f) => h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: `⬇ ${f.name.replace(/^\d{10,}-/, '')}`, onclick: async () => {
     const { data: s, error: err } = await sb.storage.from('reports').createSignedUrl(`${folder}/${f.name}`, 120);
     if (err) return toast('err', 'Nie udało się otworzyć pliku.'); window.open(s.signedUrl, '_blank', 'noopener');
-  } })) : [h('span', { class: 'muted small', text: 'Brak plików. Wgraj raport PDF – klient zobaczy go w Strefie Klienta.' })]));
+  } })) : [h('span', { class: 'muted small', text: 'Brak plików. Raport PDF utworzysz przyciskiem powyżej albo wgrasz gotowy plik.' })]));
 }
 async function uploadReport(o, input, box, btn) {
   const f = input.files[0]; if (!f) return toast('err', 'Wybierz plik.');
@@ -523,7 +533,8 @@ function postCard(p) {
     p.media_url ? h('div', { class: 'media-box' }, p.media_type === 'video' ? h('video', { src: p.media_url, controls: true, playsinline: true, preload: 'metadata' }) : h('img', { src: p.media_url, alt: 'Materiał do posta', loading: 'lazy' })) : null,
     editable ? h('div', { class: 'post-actions', style: 'margin:4px 0 10px' }, fileIn,
       h('button', { class: `btn ${needsMedia && !p.media_url ? 'btn-gold' : 'btn-ghost'} btn-sm`, type: 'button', text: p.media_url ? 'Zmień plik' : needsMedia ? '🎬 Dodaj nagrany film' : '🖼 Dodaj zdjęcie (opcjonalnie)', onclick: () => fileIn.click() }),
-      needsMedia && !p.media_url ? h('span', { class: 'muted small', style: 'align-self:center', text: 'Nagraj wg scenariusza i dodaj plik' }) : null) : null,
+      needsMedia && p.script?.length ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '🎞 Zrób film z napisów', onclick: () => videoSheet(p) }) : null,
+      needsMedia && !p.media_url ? h('span', { class: 'muted small', style: 'align-self:center', text: 'Nagraj wg scenariusza albo zrób film z napisów' }) : null) : null,
     h('label', { class: 'field' }, h('span', { text: 'Opis' }), caption),
     h('label', { class: 'field' }, h('span', { text: 'Hashtagi' }), tags),
     editable ? h('label', { class: 'field' }, h('span', { text: 'Termin publikacji (puste = ręcznie)' }), when) : p.scheduled_for ? h('p', { class: 'note-line', text: `Termin: ${fmt(p.scheduled_for)}` }) : null,
@@ -535,16 +546,20 @@ function postCard(p) {
 }
 async function uploadMedia(p, input) {
   const f = input.files[0]; if (!f) return;
-  const ok = ['video/mp4', 'video/quicktime', 'image/jpeg', 'image/png'];
-  if (!ok.includes(f.type)) return toast('err', 'Dozwolone: MP4, MOV, JPG, PNG.');
+  return attachMedia(p, f);
+}
+async function attachMedia(p, f) {
+  const type = String(f.type || '').split(';')[0];
+  const ok = ['video/mp4', 'video/quicktime', 'video/webm', 'image/jpeg', 'image/png'];
+  if (!ok.includes(type)) return toast('err', 'Dozwolone: MP4, MOV, WEBM, JPG, PNG.');
   if (f.size > 50 * 1024 * 1024) return toast('err', 'Plik większy niż 50 MB – skompresuj go (np. 1080p, 30 kl./s).');
   toast('info', 'Wysyłam plik…', 3000);
-  const ext = { 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'image/jpeg': 'jpg', 'image/png': 'png' }[f.type];
+  const ext = { 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm', 'image/jpeg': 'jpg', 'image/png': 'png' }[type];
   const path = `${p.id}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-  const { error } = await sb.storage.from('social-media').upload(path, f, { contentType: f.type, upsert: false });
+  const { error } = await sb.storage.from('social-media').upload(path, f, { contentType: type, upsert: false });
   if (error) return toast('err', `Nie udało się wgrać: ${error.message}`);
   const { data: pub } = sb.storage.from('social-media').getPublicUrl(path);
-  const { error: e2 } = await sb.from('ai_posts').update({ media_path: path, media_url: pub.publicUrl, media_type: f.type.startsWith('video') ? 'video' : 'image' }).eq('id', p.id);
+  const { error: e2 } = await sb.from('ai_posts').update({ media_path: path, media_url: pub.publicUrl, media_type: type.startsWith('video') ? 'video' : 'image' }).eq('id', p.id);
   if (e2) { await sb.storage.from('social-media').remove([path]); return toast('err', postErr(e2)); }
   if (p.media_path) sb.storage.from('social-media').remove([p.media_path]);
   toast('ok', 'Plik dodany.'); vibrate(20); loadSocial();
@@ -625,6 +640,574 @@ function renderFinance() {
     h('p', { class: 'free-note', text: `Zaktualizowano ${fmt(generated_at, { timeStyle: 'short' })} · kwoty brutto w PLN` }));
 }
 
+/* ================================================================== DZIŚ */
+async function loadToday() {
+  $('#todayDate').textContent = new Date().toLocaleDateString('pl-PL', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' });
+  const out = $('#todayOut'); if (!out.childElementCount) out.replaceChildren(h('div', { class: 'skeleton' }), h('div', { class: 'skeleton' }));
+  const day = todayKey();
+  const [slots, fin, posts, inq] = await Promise.all([
+    sb.from('calendar_slots').select('id,starts_at,ends_at,status,order_id')
+      .gte('starts_at', `${addDays(day, -1)}T12:00:00Z`).lt('starts_at', `${addDays(day, 1)}T12:00:00Z`)
+      .in('status', ['ZAKONCZONA_REZERWACJA', 'ZABLOKOWANA']).order('starts_at'),
+    sb.rpc('admin_finance_stats', { p_days: 7 }),
+    sb.from('ai_posts').select('id', { head: true, count: 'exact' }).eq('status', 'DO_AKCEPTACJI'),
+    sb.from('inquiries').select('id,kind,name,email,phone,topic,message,created_at').eq('handled', false).order('created_at', { ascending: false }).limit(10),
+    loadOrders(),
+  ]);
+  const todays = (slots.data || []).filter((s) => dayKeyOf(new Date(s.starts_at)) === day);
+  const newOrders = S.orders.filter((o) => o.status === 'OPLACONE');
+  const inWork = S.orders.filter((o) => ['W_REALIZACJI', 'TESTY'].includes(o.status));
+  const st = fin.data || {};
+  const tile = (icon, val, label, tab, filter) => h('button', { type: 'button', onclick: () => { if (filter) S.ordFilter = filter; openTab(tab); if (tab === 'orders') renderOrders(); } }, h('b', { text: icon }), h('span', { class: 'gold', style: 'font-size:.95rem;font-weight:800', text: val }), label);
+  const now = Date.now();
+  const schedule = todays.length ? todays.map((s) => {
+    const o = S.orders.find((x) => x.id === s.order_id);
+    const live = new Date(s.starts_at) <= now && new Date(s.ends_at) > now;
+    return h('div', { class: `card slot ${s.status}${live ? ' now-line' : ''}`, style: o ? 'cursor:pointer' : '', onclick: o ? () => orderSheet(o.id) : null },
+      h('time', { text: hm(s.starts_at) }, h('span', { text: hm(s.ends_at) })),
+      h('div', {}, h('h4', { text: o ? o.service_name : 'Blokada' }),
+        h('p', { text: o ? `${o.order_number || ''} · ${o.customer?.name || o.profiles?.full_name || ''}` : 'niedostępne dla klientów' }),
+        live ? h('span', { class: 'pill ok', text: 'teraz' }) : null),
+      o ? h('span', { class: 'go gold', text: '›' }) : h('span'));
+  }) : [h('div', { class: 'empty', text: 'Brak terminów na dziś.' })];
+  const alerts = [];
+  if (newOrders.length) alerts.push(h('div', { class: 'card alert-card', onclick: () => { S.ordFilter = 'active'; openTab('orders'); renderOrders(); } },
+    h('span', { class: 'big', text: String(newOrders.length) }), h('div', {}, h('b', { text: 'Nowe opłacone zlecenia' }), h('p', { text: 'Przyjmij je – przesuń kartę w prawo.' })), h('span', { class: 'go', text: '›' })));
+  if (posts.count) alerts.push(h('div', { class: 'card alert-card', onclick: () => { S.socFilter = 'review'; openTab('social'); } },
+    h('span', { class: 'big', text: String(posts.count) }), h('div', {}, h('b', { text: 'Posty do akceptacji' }), h('p', { text: 'Sprawdź i zatwierdź w zakładce Social.' })), h('span', { class: 'go', text: '›' })));
+  out.replaceChildren(...[
+    h('div', { class: 'quick' },
+      tile('💰', zl(st.today?.paid ?? 0), 'dziś', 'finance'),
+      tile('🆕', String(newOrders.length), 'nowe', 'orders', 'active'),
+      tile('🔧', String(inWork.length), 'w realizacji', 'orders', 'active'),
+      tile('📣', String(posts.count || 0), 'posty', 'social')),
+    alerts,
+    h('div', { class: 'section-h' }, h('h3', { text: `Terminy dziś (${todays.length})` }), h('button', { type: 'button', text: 'Kalendarz ›', onclick: () => { S.cal.day = day; openTab('calendar'); } })),
+    h('div', { class: 'list' }, schedule),
+    (inq.data || []).length ? [h('div', { class: 'section-h' }, h('h3', { text: `Zapytania i wiadomości (${inq.data.length})` })),
+      h('div', { class: 'list' }, inq.data.map((q) => h('button', { class: 'card client', type: 'button', onclick: () => inquirySheet(q) },
+        h('div', { class: 'ord-h' }, h('span', { class: `pill ${q.kind === 'quote' ? 'info' : 'ghost'}`, text: q.kind === 'quote' ? 'Wycena PC' : 'Kontakt' }), h('span', { class: 'muted small', text: ago(q.created_at) })),
+        h('h4', { style: 'margin-top:6px', text: q.name }), h('p', { class: 'small muted', style: 'margin:0', text: q.topic || q.message.slice(0, 80) }))))] : null,
+    h('p', { class: 'free-note', text: `7 dni: ${zl(st.last7?.paid ?? 0)} · ten miesiąc: ${zl(st.month?.paid ?? 0)}` })].flat(Infinity).filter(Boolean));
+}
+function inquirySheet(q) {
+  openSheet(q.kind === 'quote' ? 'Zapytanie o wycenę' : 'Wiadomość',
+    h('div', { class: 'kv' }, h('div', {}, h('span', { text: 'Od' }), h('b', { text: q.name })), h('div', {}, h('span', { text: 'E-mail' }), h('b', { text: q.email })),
+      q.phone ? h('div', {}, h('span', { text: 'Telefon' }), h('b', { text: q.phone })) : null, h('div', {}, h('span', { text: 'Kiedy' }), h('b', { text: fmt(q.created_at) }))),
+    q.topic ? h('h4', { text: q.topic }) : null,
+    h('p', { class: 'small', style: 'white-space:pre-wrap', text: q.message }),
+    h('div', { class: 'post-actions' },
+      h('a', { class: 'btn btn-gold btn-sm', href: `mailto:${q.email}?subject=${encodeURIComponent('Re: ' + (q.topic || 'Strike Tech Lab'))}`, text: '✉ Odpowiedz' }),
+      q.phone ? h('a', { class: 'btn btn-ghost btn-sm', href: `tel:${q.phone.replace(/\s/g, '')}`, text: '📞 Zadzwoń' }) : null,
+      h('button', { class: 'btn btn-ok btn-sm', type: 'button', text: '✓ Obsłużone', onclick: async () => {
+        const { error } = await sb.from('inquiries').update({ handled: true }).eq('id', q.id);
+        if (error) return toast('err', error.message); sheet.close(); toast('ok', 'Oznaczono jako obsłużone.'); loadToday();
+      } })));
+}
+
+/* ================================================================== PRZESUNIĘCIE = KOLEJNY ETAP */
+const NEXT_STATUS = { OPLACONE: 'W_REALIZACJI', W_REALIZACJI: 'TESTY', TESTY: 'ZAKONCZONE' };
+function swipeable(card, o) {
+  const next = NEXT_STATUS[o.status]; if (!next) return card;
+  const bg = h('div', { class: 'swipe-bg', style: 'opacity:0' }, h('span', { text: `→ ${STATUS[next][0]}` }));
+  const wrap = h('div', { class: 'swipe-wrap' }, bg, card);
+  let x0 = null, y0 = 0, dx = 0, locked = false;
+  card.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse' && e.button !== 0) return; x0 = e.clientX; y0 = e.clientY; dx = 0; locked = false; });
+  card.addEventListener('pointermove', (e) => {
+    if (x0 === null) return;
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if (!locked) {
+      if (Math.abs(my) > 12 && Math.abs(my) > Math.abs(mx)) { x0 = null; return; }
+      if (mx < 12) return;
+      locked = true; card.classList.add('dragging'); try { card.setPointerCapture(e.pointerId); } catch { /* */ }
+    }
+    dx = Math.max(0, mx); card.style.transform = `translateX(${dx}px)`; bg.style.opacity = String(Math.min(1, dx / 110));
+  });
+  const end = () => {
+    if (x0 === null) return; x0 = null; card.classList.remove('dragging');
+    if (!locked) return;
+    card._swiped = true; setTimeout(() => { card._swiped = false; }, 400);
+    if (dx > wrap.clientWidth * 0.35) { card.style.transform = `translateX(${wrap.clientWidth}px)`; vibrate(25); queueStatus(o, next, wrap); }
+    else { card.style.transform = ''; bg.style.opacity = '0'; }
+  };
+  card.addEventListener('pointerup', end); card.addEventListener('pointercancel', end);
+  return wrap;
+}
+function queueStatus(o, next, wrap) {
+  let cancelled = false;
+  const t = h('div', { class: 'toast info', role: 'status' }, h('span', { text: `${o.order_number || 'Zlecenie'} → ${STATUS[next][0]}` }),
+    h('button', { class: 'undo', type: 'button', text: 'Cofnij', onclick: () => { cancelled = true; t.remove(); renderOrders(); } }));
+  $('#toasts').append(t);
+  setTimeout(async () => {
+    t.remove(); if (cancelled) return;
+    try { await callFn('admin', { action: 'set_status', order_id: o.id, status: next, note: '' }); toast('ok', `${o.order_number}: ${STATUS[next][0]}`); }
+    catch (e) { toast('err', e.message); }
+    await loadOrders(); if (S.tab === 'today') loadToday();
+  }, 4000);
+}
+
+/* ================================================================== ZDJĘCIA PRZY PRZYJĘCIU */
+function photoTools(o, thumbs) {
+  const cam = h('input', { type: 'file', accept: 'image/*', capture: 'environment', class: 'hidden' });
+  const gal = h('input', { type: 'file', accept: 'image/*', multiple: true, class: 'hidden' });
+  const go = (inp) => async () => { if (inp.files.length) await uploadPhotos(o, [...inp.files], thumbs); inp.value = ''; };
+  cam.addEventListener('change', go(cam)); gal.addEventListener('change', go(gal));
+  return [h('div', { class: 'post-actions', style: 'margin-top:0' }, cam, gal,
+    h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: '📷 Zrób zdjęcie', onclick: () => cam.click() }),
+    h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '🖼 Z galerii', onclick: () => gal.click() })),
+  h('p', { class: 'hint', style: 'margin:6px 2px 0', text: 'Stan obudowy, numer seryjny, uszkodzenia. Klient też je zobaczy – to chroni obie strony.' }), thumbs];
+}
+async function shrinkImage(file, max = 1600, q = 0.82) {
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); bmp.close?.();
+  return await new Promise((r) => c.toBlob(r, 'image/jpeg', q));
+}
+async function uploadPhotos(o, files, thumbs) {
+  toast('info', `Wysyłam ${files.length} ${files.length === 1 ? 'zdjęcie' : 'zdjęć'}…`, 3000);
+  let ok = 0;
+  for (const [i, f] of files.entries()) {
+    try {
+      const blob = await shrinkImage(f);
+      const { error } = await sb.storage.from('reports').upload(`${o.user_id}/${o.id}/${Date.now()}-Przyjecie-${i + 1}.jpg`, blob, { contentType: 'image/jpeg', upsert: false });
+      if (error) throw error; ok++;
+    } catch (e) { toast('err', `Zdjęcie ${i + 1}: ${e.message}`); }
+  }
+  if (ok) { toast('ok', `Dodano zdjęcia: ${ok}.`); vibrate(20); }
+  loadReportFiles(o, thumbs.parentElement?.querySelector('.files') || h('div'), thumbs);
+}
+async function renderThumbs(folder, photos, box) {
+  if (!photos.length) { box.replaceChildren(); return; }
+  const { data } = await sb.storage.from('reports').createSignedUrls(photos.map((f) => `${folder}/${f.name}`), 600);
+  box.replaceChildren(...(data || []).filter((x) => x.signedUrl).map((x) => h('img', { src: x.signedUrl, alt: 'Zdjęcie przy przyjęciu', loading: 'lazy', onclick: () => window.open(x.signedUrl, '_blank', 'noopener') })));
+}
+
+/* ================================================================== KLIENCI */
+function clientsIndex() {
+  const map = new Map();
+  for (const o of S.orders) {
+    const key = o.user_id || o.customer?.email || o.profiles?.email; if (!key) continue;
+    const c = map.get(key) || { key, user_id: o.user_id, name: '', email: '', phone: '', orders: [], paid: 0, last: '' };
+    c.name ||= o.customer?.name || o.profiles?.full_name || ''; c.email ||= o.profiles?.email || o.customer?.email || ''; c.phone ||= o.customer?.phone || o.profiles?.phone || '';
+    c.orders.push(o); if (o.paid_at && o.status !== 'ANULOWANE') c.paid += o.amount_due_grosze || 0;
+    if (o.created_at > c.last) c.last = o.created_at;
+    map.set(key, c);
+  }
+  return [...map.values()].sort((a, b) => b.last.localeCompare(a.last));
+}
+async function clientsSheet() {
+  if (!S.orders.length) await loadOrders();
+  const all = clientsIndex();
+  const list = h('div', { class: 'list' });
+  const search = h('input', { class: 'input search', type: 'search', placeholder: `Szukaj wśród ${all.length} klientów`, oninput: (e) => draw(e.target.value.trim().toLowerCase()) });
+  const draw = (q = '') => list.replaceChildren(...all.filter((c) => !q || `${c.name} ${c.email} ${c.phone}`.toLowerCase().includes(q)).slice(0, 100).map((c) =>
+    h('button', { class: 'card client', type: 'button', onclick: () => clientSheet(c) },
+      h('h4', { text: c.name || c.email || 'Klient' }),
+      h('div', { class: 'ord-meta' }, h('span', { text: `${c.orders.length} ${c.orders.length === 1 ? 'zlecenie' : 'zleceń'}` }), h('span', {}, h('b', { class: 'gold', text: zl(c.paid) })), h('span', { text: `ostatnio ${fmt(c.last, { day: 'numeric', month: 'short' })}` })))));
+  draw();
+  openSheet(`Klienci (${all.length})`, search, list);
+}
+async function clientSheet(c) {
+  const refs = c.user_id ? await sb.from('referrals').select('id,status', { count: 'exact' }).eq('referrer_id', c.user_id) : { count: 0 };
+  const paidOrders = c.orders.filter((o) => o.paid_at && o.status !== 'ANULOWANE');
+  openSheet(c.name || c.email || 'Klient',
+    h('div', { class: 'kv' },
+      c.email ? h('div', {}, h('span', { text: 'E-mail' }), h('b', { text: c.email })) : null,
+      c.phone ? h('div', {}, h('span', { text: 'Telefon' }), h('b', { text: c.phone })) : null,
+      h('div', {}, h('span', { text: 'Wydał łącznie' }), h('b', { class: 'gold', text: zl(c.paid) })),
+      h('div', {}, h('span', { text: 'Opłacone zlecenia' }), h('b', { text: String(paidOrders.length) })),
+      paidOrders.length ? h('div', {}, h('span', { text: 'Średnia wartość' }), h('b', { text: zl(Math.round(c.paid / paidOrders.length)) })) : null,
+      h('div', {}, h('span', { text: 'Polecił klientów' }), h('b', { text: String(refs.count ?? 0) }))),
+    h('div', { class: 'post-actions' },
+      c.phone ? h('a', { class: 'btn btn-ghost btn-sm', href: `tel:${c.phone.replace(/\s/g, '')}`, text: '📞 Zadzwoń' }) : null,
+      c.email ? h('a', { class: 'btn btn-ghost btn-sm', href: `mailto:${c.email}`, text: '✉ E-mail' }) : null,
+      c.orders[0] ? h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: '💬 Szablon', onclick: () => messageSheet(c.orders[0]) }) : null),
+    h('h4', { text: 'Historia zleceń' }),
+    h('div', { class: 'list' }, c.orders.map((o) => h('button', { class: 'card ord', type: 'button', onclick: () => orderSheet(o.id) },
+      h('div', { class: 'ord-h' }, h('span', { class: 'ord-num', text: o.order_number || 'bez numeru' }), h('span', { class: `pill ${STATUS[o.status]?.[1] || ''}`, text: STATUS[o.status]?.[0] || o.status })),
+      h('h4', { text: o.service_name }), h('div', { class: 'ord-meta' }, h('span', { text: fmt(o.created_at, { dateStyle: 'medium' }) }), h('span', { text: zl(o.total_grosze) }))))));
+}
+$('#clientsBtn').addEventListener('click', () => { vibrate(); clientsSheet(); });
+
+/* ================================================================== SZABLONY WIADOMOŚCI */
+const TPL_DEFAULT = [
+  { id: 'remind', name: 'Przypomnienie o terminie', text: 'Dzień dobry {imie}, przypominam o terminie {termin} – {usluga}. Przy usłudze zdalnej proszę mieć zainstalowany AnyDesk. Do zobaczenia! Strike Tech Lab' },
+  { id: 'start', name: 'Rozpoczęcie prac', text: 'Dzień dobry {imie}, zaczynamy pracę nad zleceniem {numer}. Postęp widać na bieżąco w Strefie Klienta na striketechlab.com. Strike Tech Lab' },
+  { id: 'quote', name: 'Prośba o akceptację wyceny', text: 'Dzień dobry {imie}, przy zleceniu {numer} potrzebna jest dodatkowa praca lub część: [OPIS] – koszt [KWOTA] zł. Czy mogę to wykonać? Bez Pana/Pani zgody nic nie robię. Strike Tech Lab' },
+  { id: 'ready', name: 'Sprzęt gotowy do odbioru', text: 'Dzień dobry {imie}, zlecenie {numer} ({usluga}) jest gotowe do odbioru. Raport z pomiarów jest w Strefie Klienta na striketechlab.com. Kiedy będzie Panu/Pani pasował odbiór? Strike Tech Lab' },
+  { id: 'thanks', name: 'Podziękowanie + polecenia', text: 'Dziękuję za zlecenie {numer}! Jeśli jest Pan/Pani zadowolony/a – znajomi z Pana/Pani kodem polecającym (Strefa Klienta) dostaną 10% rabatu. Strike Tech Lab' },
+];
+const templates = () => { const t = store.get('stl_tpl'); return Array.isArray(t) && t.length ? t : TPL_DEFAULT; };
+function fillTpl(text, o) {
+  const name = (o.customer?.name || o.profiles?.full_name || '').trim().split(/\s+/)[0] || '';
+  const slot = o.calendar_slots?.[0];
+  const v = { imie: name, numer: o.order_number || '', usluga: o.service_name || '', termin: slot ? `${fmt(slot.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })}, godz. ${hm(slot.starts_at)}` : '' };
+  return text.replace(/\{(imie|numer|usluga|termin)\}/g, (_, k) => v[k]).replace(/Dzień dobry ,/g, 'Dzień dobry,').replace(/\s{2,}/g, ' ').trim();
+}
+function messageSheet(o) {
+  const phone = (o.customer?.phone || o.profiles?.phone || '').replace(/[^\d+]/g, '');
+  const email = o.profiles?.email || o.customer?.email || '';
+  let ch = phone ? 'sms' : 'mail';
+  const seg = h('div', { class: 'seg2' });
+  const list = h('div');
+  const drawSeg = () => seg.replaceChildren(...[['sms', 'SMS', !phone], ['wa', 'WhatsApp', !phone], ['mail', 'E-mail', !email]].map(([k, t, dis]) =>
+    h('button', { type: 'button', 'aria-pressed': String(k === ch), disabled: dis, text: t, onclick: () => { ch = k; drawSeg(); } })));
+  const send = (text) => {
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const wa = phone.startsWith('+') ? phone.slice(1) : phone.length === 9 ? `48${phone}` : phone;
+    const url = ch === 'sms' ? `sms:${phone}${ios ? '&' : '?'}body=${encodeURIComponent(text)}`
+      : ch === 'wa' ? `https://wa.me/${wa}?text=${encodeURIComponent(text)}`
+        : `mailto:${email}?subject=${encodeURIComponent(`${o.order_number || 'Zlecenie'} – Strike Tech Lab`)}&body=${encodeURIComponent(text)}`;
+    location.href = url;
+  };
+  list.replaceChildren(...templates().map((t) => {
+    const text = fillTpl(t.text, o);
+    return h('button', { class: 'tpl', type: 'button', onclick: () => {
+      if (/\[(OPIS|KWOTA)\]/.test(text)) {
+        const ta = h('textarea', { class: 'textarea' }); ta.value = text;
+        openSheet(t.name, h('p', { class: 'hint', text: 'Uzupełnij pola w nawiasach kwadratowych.' }), ta,
+          h('button', { class: 'btn btn-gold btn-block', type: 'button', text: 'Wyślij', onclick: () => send(ta.value) }));
+      } else send(text);
+    } }, h('b', { text: t.name }), h('span', { text }));
+  }));
+  drawSeg();
+  openSheet('Wiadomość do klienta', seg, list, h('p', { class: 'hint', text: 'Otworzy się aplikacja SMS / WhatsApp / poczta z gotowym tekstem – sprawdź i wyślij. Szablony zmienisz w ⚙ Ustawieniach.' }));
+}
+
+/* ================================================================== USTAWIENIA + POWIADOMIENIA PUSH */
+const b64ToBytes = (s) => { const p = '='.repeat((4 - (s.length % 4)) % 4); const r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, (c) => c.charCodeAt(0)); };
+async function pushState() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return { ok: false, why: /iphone|ipad/i.test(navigator.userAgent) ? 'Na iPhonie powiadomienia działają po instalacji z Safari (Do ekranu początkowego) i iOS 16.4+.' : 'Ta przeglądarka nie obsługuje powiadomień.' };
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+  return { ok: true, reg, sub, perm: Notification.permission };
+}
+async function enablePush() {
+  const st = await pushState(); if (!st.ok) return toast('err', st.why, 8000);
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') return toast('err', 'Brak zgody na powiadomienia. Włączysz ją w ustawieniach przeglądarki/telefonu.', 8000);
+  try {
+    // klucz publiczny tworzy serwer przy pierwszym włączeniu (funkcja notify-push) – nic nie trzeba konfigurować
+    const { publicKey } = await callFn('notify-push', { action: 'key' });
+    let sub = st.sub;
+    if (sub && b64ToBytes(publicKey).join() !== new Uint8Array(sub.options?.applicationServerKey || []).join()) { await sub.unsubscribe(); sub = null; }
+    sub ||= await st.reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(publicKey) });
+    const device = /android/i.test(navigator.userAgent) ? 'Android' : /iphone|ipad/i.test(navigator.userAgent) ? 'iPhone' : 'Komputer';
+    await callFn('notify-push', { action: 'subscribe', subscription: sub.toJSON(), device });
+    toast('ok', 'Powiadomienia włączone na tym urządzeniu.'); vibrate(20);
+  } catch (e) { toast('err', `Nie udało się włączyć: ${e.message}`, 8000); }
+}
+async function disablePush() {
+  const st = await pushState(); if (!st.ok || !st.sub) return;
+  try { await callFn('notify-push', { action: 'unsubscribe', endpoint: st.sub.endpoint }); } catch { /* */ }
+  await st.sub.unsubscribe(); toast('ok', 'Powiadomienia wyłączone na tym urządzeniu.');
+}
+async function settingsSheet() {
+  const st = await pushState();
+  const on = st.ok && st.sub && st.perm === 'granted';
+  const push = h('div', {},
+    h('div', { class: 'switch-row' }, h('div', {}, h('b', { text: 'Powiadomienia push' }), h('p', { text: st.ok ? (on ? 'Włączone: nowe opłacone zlecenia i zapytania.' : 'Dostaniesz powiadomienie nawet przy zamkniętej aplikacji.') : st.why })),
+      st.ok ? h('button', { class: `btn ${on ? 'btn-ghost' : 'btn-gold'} btn-sm`, type: 'button', text: on ? 'Wyłącz' : 'Włącz', onclick: async () => { on ? await disablePush() : await enablePush(); settingsSheet(); } }) : null),
+    on ? h('button', { class: 'btn btn-ghost btn-sm', style: 'margin-top:10px', type: 'button', text: 'Wyślij powiadomienie testowe', onclick: async (e) => {
+      const b = e.currentTarget; busy(b, true);
+      try { const d = await callFn('notify-push', { action: 'test' }); toast(d.sent ? 'ok' : 'err', d.sent ? `Wysłano na ${d.sent} ${d.sent === 1 ? 'urządzenie' : 'urządzenia'}.` : 'Nie wysłano – włącz powiadomienia ponownie.'); } catch (err) { toast('err', err.message, 8000); }
+      busy(b, false, 'Wyślij powiadomienie testowe');
+    } }) : null);
+  const tpls = templates().map((t) => ({ ...t }));
+  const editors = tpls.map((t) => { const n = h('input', { class: 'input', value: t.name, maxlength: 60 }); const ta = h('textarea', { class: 'textarea', style: 'min-height:90px' }); ta.value = t.text; return { t, n, ta }; });
+  openSheet('Ustawienia', push,
+    h('h4', { text: 'Szablony wiadomości' }),
+    h('p', { class: 'hint', text: 'Pola: {imie} {numer} {usluga} {termin}. [OPIS] i [KWOTA] uzupełniasz przy wysyłce. Szablony są zapisane na tym urządzeniu.' }),
+    editors.map(({ n, ta }) => h('div', { class: 'card', style: 'margin-bottom:8px' }, h('label', { class: 'field' }, n), ta)),
+    h('div', { class: 'post-actions' },
+      h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Zapisz szablony', onclick: () => { store.set('stl_tpl', editors.map(({ t, n, ta }) => ({ id: t.id, name: n.value.trim() || t.name, text: ta.value.trim() }))); toast('ok', 'Szablony zapisane.'); } }),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '+ Nowy szablon', onclick: () => { store.set('stl_tpl', [...templates(), { id: `t${Date.now()}`, name: 'Nowy szablon', text: 'Dzień dobry {imie}, ' }]); settingsSheet(); } }),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Przywróć domyślne', onclick: () => { if (confirm('Przywrócić domyślne szablony?')) { store.set('stl_tpl', null); settingsSheet(); } } })),
+    h('p', { class: 'free-note', text: 'STL Centrum v6' }));
+}
+$('#settingsBtn').addEventListener('click', () => { vibrate(); settingsSheet(); });
+
+/* ================================================================== GRAFIKA: logo, tekst */
+const HEXP = [[627, 303], [853, 417], [853, 697], [627, 872], [400, 697], [400, 417]];
+const BOLTP = [[778, 212], [474, 624], [655, 583], [472, 918], [778, 512], [612, 546]];
+function drawLogo(ctx, cx, cy, hgt) {
+  const k = hgt / 750, P = (pts) => pts.map(([x, y]) => [cx + (x - 630) * k, cy + (y - 565) * k]);
+  ctx.save(); ctx.lineJoin = 'miter';
+  ctx.shadowColor = 'rgba(255,187,0,.55)'; ctx.shadowBlur = hgt * 0.08;
+  ctx.strokeStyle = '#FFBB00'; ctx.lineWidth = 28 * k; ctx.beginPath(); P(HEXP).forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.stroke();
+  ctx.shadowBlur = 0; ctx.beginPath(); P(BOLTP).forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+  ctx.lineWidth = 34 * k; ctx.strokeStyle = '#080808'; ctx.lineJoin = 'round'; ctx.stroke(); ctx.fillStyle = '#FFBB00'; ctx.fill();
+  ctx.restore();
+}
+function wrapLines(ctx, text, maxW) {
+  const out = [];
+  for (const para of String(text || '').split('\n')) {
+    let line = '';
+    for (const w of para.split(/\s+/).filter(Boolean)) {
+      const t = line ? `${line} ${w}` : w;
+      if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t;
+    }
+    out.push(line);
+  }
+  return out;
+}
+const FONT = "'Plus Jakarta Sans', system-ui, sans-serif";
+async function fontsReady() { try { await Promise.all([document.fonts.load(`800 40px ${FONT}`), document.fonts.load(`500 20px ${FONT}`)]); } catch { /* */ } }
+
+/* ================================================================== RAPORT STRIKE PROOF (PDF) */
+const METRIC_PRESETS = [['fps_avg', 'FPS średnio'], ['fps_1low', '1% low FPS'], ['cpu_temp', 'Temp. CPU (°C)'], ['gpu_temp', 'Temp. GPU (°C)'], ['latency_ms', 'Opóźnienie (ms)'], ['noise_db', 'Hałas (dB)']];
+const METRIC_LBL = Object.fromEntries(METRIC_PRESETS);
+const lowerBetter = (k) => /temp|latency|lag|noise|db|boot|time|_ms$|_s$/.test(k);
+const slug = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
+function reportSheet(o) {
+  const before = (o.order_results || []).find((r) => r.phase === 'before')?.metrics || {};
+  const after = (o.order_results || []).find((r) => r.phase === 'after')?.metrics || {};
+  const keys = [...new Set([...METRIC_PRESETS.map(([k]) => k), ...Object.keys(before), ...Object.keys(after)])];
+  const rows = h('div');
+  const addRow = (k, label) => {
+    const b = h('input', { class: 'input', inputmode: 'decimal', value: before[k] ?? '' }), a = h('input', { class: 'input', inputmode: 'decimal', value: after[k] ?? '' });
+    const lbl = k ? h('span', { class: 'lbl', text: label || METRIC_LBL[k] || k.replace(/_/g, ' ') }) : h('input', { class: 'input', placeholder: 'Nazwa, np. Cinebench', style: 'font-size:14px' });
+    const row = h('div', { class: 'metric', dataset: { key: k || '' } }, lbl, b, a, h('button', { class: 'x-btn', type: 'button', 'aria-label': 'Usuń', text: '×', onclick: () => row.remove() }));
+    rows.append(row);
+  };
+  keys.forEach((k) => addRow(k));
+  const done = h('textarea', { class: 'textarea', placeholder: 'Jedna praca w linii, np.\nCzyszczenie i nowa pasta na CPU\nUndervolting GPU – krzywa V/F' });
+  const rec = h('textarea', { class: 'textarea', style: 'min-height:70px', placeholder: 'Zalecenia dla klienta (opcjonalnie)' });
+  const prev = h('div');
+  // zapisany wcześniej opis prac i zalecenia (tabela order_reports, migracja v6)
+  sb.from('order_reports').select('works,recommendations').eq('order_id', o.id).maybeSingle().then(({ data }) => {
+    if (data && !done.value) done.value = data.works || '';
+    if (data && !rec.value) rec.value = data.recommendations || '';
+  });
+  openSheet(`Raport ${o.order_number}`,
+    h('div', { class: 'metric-h' }, h('span', { text: 'Pomiar' }), h('span', { text: 'Przed' }), h('span', { text: 'Po' }), h('span')),
+    rows, h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '+ Własny pomiar', onclick: () => addRow('') }),
+    h('h4', { text: 'Wykonane prace' }), done, h('h4', { text: 'Zalecenia' }), rec,
+    h('button', { class: 'btn btn-gold btn-block', style: 'margin-top:12px', type: 'button', text: 'Zapisz pomiary i utwórz PDF', onclick: async (e) => {
+      const btn = e.currentTarget;
+      const num = (v) => { const t = String(v).trim().replace(',', '.'); return t === '' ? undefined : isNaN(+t) ? t : +t; };
+      const mb = {}, ma = {}, labels = {};
+      for (const r of rows.children) {
+        const [l, bi, ai] = r.children; let k = r.dataset.key;
+        if (!k) { const name = l.value.trim(); if (!name) continue; k = slug(name); labels[k] = name; } else labels[k] = l.textContent;
+        const vb = num(bi.value), va = num(ai.value);
+        if (vb !== undefined) mb[k] = vb; if (va !== undefined) ma[k] = va;
+      }
+      if (!Object.keys(mb).length && !Object.keys(ma).length) return toast('err', 'Wpisz przynajmniej jeden pomiar.');
+      busy(btn, true, 'Zapisuję pomiary…');
+      try {
+        if (Object.keys(mb).length) await callFn('admin', { action: 'save_results', order_id: o.id, phase: 'before', metrics: mb });
+        if (Object.keys(ma).length) await callFn('admin', { action: 'save_results', order_id: o.id, phase: 'after', metrics: ma });
+        const { error: repErr } = await sb.from('order_reports').upsert({ order_id: o.id, works: done.value.trim().slice(0, 4000) || null, recommendations: rec.value.trim().slice(0, 2000) || null });
+        if (repErr) console.warn('order_reports', repErr.message);   // raport i tak powstanie
+        busy(btn, true, 'Tworzę PDF…');
+        const pages = await renderReport(o, mb, ma, labels, done.value, rec.value);
+        const pdf = jpegPdf(pages);
+        const path = `${o.user_id}/${o.id}/${Date.now()}-STRIKE-PROOF-${o.order_number}.pdf`;
+        const { error } = await sb.storage.from('reports').upload(path, pdf, { contentType: 'application/pdf', upsert: false });
+        if (error) throw error;
+        const url = URL.createObjectURL(pdf);
+        prev.replaceChildren(h('img', { class: 'report-prev', src: pages[0].preview, alt: 'Podgląd raportu' }),
+          h('div', { class: 'post-actions' }, h('a', { class: 'btn btn-ghost btn-sm', href: url, target: '_blank', rel: 'noopener', text: 'Otwórz PDF' }),
+            o.status !== 'TESTY' && o.status !== 'ZAKONCZONE' ? h('button', { class: 'btn btn-ok btn-sm', type: 'button', text: 'Zmień status na „Testy i raport”', onclick: async (ev) => {
+              busy(ev.currentTarget, true); try { await callFn('admin', { action: 'set_status', order_id: o.id, status: 'TESTY', note: 'Raport STRIKE PROOF gotowy' }); toast('ok', 'Status zmieniony.'); sheet.close(); loadOrders(); } catch (err) { toast('err', err.message); }
+            } }) : null));
+        toast('ok', 'Raport zapisany – klient widzi go w Strefie Klienta.', 7000); vibrate(30);
+        busy(btn, false, 'Utwórz ponownie');
+        prev.scrollIntoView({ behavior: 'smooth' }); loadOrders();
+      } catch (err) { toast('err', err.message); busy(btn, false, 'Zapisz pomiary i utwórz PDF'); }
+    } }), prev);
+}
+async function renderReport(o, mb, ma, labels, doneTxt, recTxt) {
+  await fontsReady();
+  const W = 1240, H = 1754, M = 90, pages = [];
+  let c, x, y;
+  const newPage = () => {
+    c = document.createElement('canvas'); c.width = W; c.height = H; x = c.getContext('2d');
+    x.fillStyle = '#0a0a0b'; x.fillRect(0, 0, W, H);
+    const g = x.createRadialGradient(W, 0, 10, W, 0, 900); g.addColorStop(0, 'rgba(255,187,0,.16)'); g.addColorStop(1, 'rgba(255,187,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.strokeStyle = 'rgba(255,187,0,.6)'; x.lineWidth = 4;
+    [[30, 30, 1, 1], [W - 30, H - 30, -1, -1]].forEach(([px, py, sx, sy]) => { x.beginPath(); x.moveTo(px, py + 60 * sy); x.lineTo(px, py); x.lineTo(px + 60 * sx, py); x.stroke(); });
+    x.fillStyle = '#7d7d86'; x.font = `500 20px ${FONT}`; x.textAlign = 'left';
+    x.fillText('striketechlab.com · Raport STRIKE PROOF · pomiary w tych samych warunkach przed i po', M, H - 52);
+    x.textAlign = 'right'; x.fillText(`${o.order_number} · str. ${pages.length + 1}`, W - M, H - 52); x.textAlign = 'left';
+    y = M;
+  };
+  const flush = () => { pages.push(c); };
+  const need = (hh) => { if (y + hh > H - 120) { flush(); newPage(); } };
+  newPage();
+  // nagłówek
+  drawLogo(x, M + 45, y + 60, 120);
+  x.fillStyle = '#FFBB00'; x.font = `800 30px ${FONT}`; x.fillText('STRIKE TECH LAB', M + 120, y + 42);
+  x.fillStyle = '#fff'; x.font = `800 74px ${FONT}`; x.fillText('STRIKE PROOF', M + 116, y + 118);
+  y += 190;
+  x.fillStyle = '#a3a3ab'; x.font = `500 26px ${FONT}`; x.fillText('Raport z pomiarów przed i po', M, y); y += 50;
+  const info = [['Zlecenie', o.order_number], ['Usługa', o.service_name], ['Klient', o.customer?.name || o.profiles?.full_name || '–'], ['Data raportu', new Date().toLocaleDateString('pl-PL', { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' })]];
+  x.font = `500 24px ${FONT}`;
+  info.forEach(([k, v], i) => {
+    const cx = M + (i % 2) * 540, cy = y + Math.floor(i / 2) * 78;
+    x.fillStyle = '#7d7d86'; x.font = `600 20px ${FONT}`; x.fillText(k.toUpperCase(), cx, cy);
+    x.fillStyle = '#fff'; x.font = `700 28px ${FONT}`; x.fillText(String(v).slice(0, 34), cx, cy + 36);
+  });
+  y += 180;
+  // tabela
+  const keys = [...new Set([...Object.keys(mb), ...Object.keys(ma)])];
+  x.fillStyle = '#FFBB00'; x.font = `800 22px ${FONT}`; x.fillText('POMIARY', M, y); y += 22;
+  const cols = [M, M + 520, M + 720, M + 900];
+  x.fillStyle = 'rgba(255,255,255,.06)'; x.fillRect(M - 16, y, W - 2 * M + 32, 56);
+  x.fillStyle = '#a3a3ab'; x.font = `700 22px ${FONT}`;
+  ['Pomiar', 'Przed', 'Po', 'Zmiana'].forEach((t, i) => x.fillText(t, cols[i], y + 37)); y += 56;
+  for (const k of keys) {
+    need(130);
+    const b = mb[k], a = ma[k];
+    x.fillStyle = '#fff'; x.font = `600 26px ${FONT}`; x.fillText((labels[k] || METRIC_LBL[k] || k).slice(0, 30), cols[0], y + 44);
+    x.fillStyle = '#c9c9cf'; x.font = `600 28px ${FONT}`; x.fillText(b ?? '–', cols[1], y + 44);
+    x.fillStyle = '#FFBB00'; x.font = `800 28px ${FONT}`; x.fillText(a ?? '–', cols[2], y + 44);
+    if (typeof b === 'number' && typeof a === 'number' && b !== 0) {
+      const p = Math.round((a - b) / Math.abs(b) * 1000) / 10, good = p !== 0 && (p > 0) !== lowerBetter(k);
+      x.fillStyle = p === 0 ? '#a3a3ab' : good ? '#3ddc84' : '#ff6b5e'; x.font = `800 28px ${FONT}`;
+      x.fillText(`${p > 0 ? '+' : ''}${p}%`, cols[3], y + 44);
+      const max = Math.max(Math.abs(a), Math.abs(b)) || 1, bw = W - 2 * M;
+      x.fillStyle = 'rgba(255,255,255,.12)'; x.fillRect(cols[0], y + 66, bw * Math.abs(b) / max, 10);
+      x.fillStyle = '#FFBB00'; x.fillRect(cols[0], y + 82, bw * Math.abs(a) / max, 10);
+    }
+    x.strokeStyle = 'rgba(255,255,255,.08)'; x.lineWidth = 2; x.beginPath(); x.moveTo(M - 16, y + 112); x.lineTo(W - M + 16, y + 112); x.stroke();
+    y += 118;
+  }
+  x.fillStyle = '#7d7d86'; x.font = `500 19px ${FONT}`; x.fillText('Pasek szary – przed, złoty – po. Zielony wynik oznacza poprawę (dla temperatur, hałasu i opóźnień – spadek).', M, y + 30); y += 70;
+  const section = (title, text) => {
+    const lines = String(text || '').split('\n').map((s) => s.trim()).filter(Boolean); if (!lines.length) return;
+    need(110); x.fillStyle = '#FFBB00'; x.font = `800 22px ${FONT}`; x.fillText(title, M, y); y += 46;
+    x.font = `500 26px ${FONT}`;
+    for (const l of lines) for (const [i, w] of wrapLines(x, l, W - 2 * M - 40).entries()) {
+      need(40); x.fillStyle = '#FFBB00'; if (i === 0) x.fillText('▸', M, y); x.fillStyle = '#e4e4e8'; x.fillText(w, M + 36, y); y += 40;
+    }
+    y += 24;
+  };
+  section('WYKONANE PRACE', doneTxt); section('ZALECENIA', recTxt);
+  flush();
+  return Promise.all(pages.map(async (cv) => {
+    const blob = await new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.88));
+    return { bytes: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, preview: cv.toDataURL('image/jpeg', 0.5) };
+  }));
+}
+/** Minimalny PDF z obrazów JPEG (jedna strona A4 = jeden obraz). Bez bibliotek. */
+function jpegPdf(pages, PW = 595.28, PH = 841.89) {
+  const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
+  const put = (v) => { const b = typeof v === 'string' ? enc.encode(v) : v; parts.push(b); len += b.length; };
+  const obj = (id, ...body) => { offs[id] = len; put(`${id} 0 obj\n`); body.forEach(put); put('\nendobj\n'); };
+  put('%PDF-1.4\n%âãÏÓ\n');
+  const n = pages.length;
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, `<< /Type /Pages /Kids [${pages.map((_, i) => `${3 + i * 3} 0 R`).join(' ')}] /Count ${n} >>`);
+  pages.forEach((p, i) => {
+    const pid = 3 + i * 3, iid = pid + 1, cid = pid + 2, content = `q ${PW} 0 0 ${PH} 0 0 cm /Im0 Do Q`;
+    obj(pid, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${iid} 0 R >> >> /Contents ${cid} 0 R >>`);
+    obj(iid, `<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.bytes.length} >>\nstream\n`, p.bytes, '\nendstream');
+    obj(cid, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  });
+  const total = 3 + n * 3, xref = len;
+  put(`xref\n0 ${total}\n0000000000 65535 f \n`);
+  for (let i = 1; i < total; i++) put(`${String(offs[i]).padStart(10, '0')} 00000 n \n`);
+  put(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+
+/* ================================================================== FILM Z NAPISÓW (9:16) */
+function sceneSeconds(czas) {
+  const m = String(czas || '').match(/(\d+(?:[.,]\d+)?)\s*[–—-]\s*(\d+(?:[.,]\d+)?)/);
+  const d = m ? parseFloat(m[2].replace(',', '.')) - parseFloat(m[1].replace(',', '.')) : 4;
+  return Math.min(7, Math.max(2.5, d || 4));
+}
+function buildScenes(p) {
+  const s = [];
+  if (p.hook) s.push({ kind: 'hook', dur: 2.6, big: p.hook });
+  for (const sc of p.script || []) s.push({ kind: 'scene', dur: sceneSeconds(sc.czas), big: sc.napis || '', small: sc.lektor || '' });
+  s.push({ kind: 'end', dur: 3, big: 'STRIKE TECH LAB', small: (p.cta || 'striketechlab.com').replace(/https?:\/\//, '') });
+  let t = 0; for (const x of s) { x.t0 = t; t += x.dur; }
+  return { scenes: s, total: t };
+}
+function drawFrame(ctx, W, H, plan, t) {
+  const { scenes, total } = plan;
+  const sc = scenes.find((x) => t >= x.t0 && t < x.t0 + x.dur) || scenes[scenes.length - 1];
+  const lt = t - sc.t0, idx = scenes.indexOf(sc);
+  const ease = (v) => 1 - Math.pow(1 - Math.min(1, Math.max(0, v)), 3);
+  ctx.fillStyle = '#060607'; ctx.fillRect(0, 0, W, H);
+  const gx = W * (0.5 + 0.35 * Math.sin(t * 0.6)), gy = H * (0.3 + 0.15 * Math.cos(t * 0.45));
+  const g = ctx.createRadialGradient(gx, gy, 10, gx, gy, W * 0.95); g.addColorStop(0, 'rgba(255,187,0,.22)'); g.addColorStop(1, 'rgba(255,187,0,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,.045)'; ctx.lineWidth = 1; const step = W / 9, off = (t * 30) % step;
+  for (let gx2 = -step + off; gx2 < W + step; gx2 += step) { ctx.beginPath(); ctx.moveTo(gx2, 0); ctx.lineTo(gx2, H); ctx.stroke(); }
+  for (let gy2 = off; gy2 < H; gy2 += step) { ctx.beginPath(); ctx.moveTo(0, gy2); ctx.lineTo(W, gy2); ctx.stroke(); }
+  const hud = W * 0.06, pad = W * 0.05; ctx.strokeStyle = 'rgba(255,187,0,.75)'; ctx.lineWidth = W * 0.006;
+  [[pad, pad, 1, 1], [W - pad, pad, -1, 1], [pad, H - pad, 1, -1], [W - pad, H - pad, -1, -1]].forEach(([x, y, sx, sy]) => { ctx.beginPath(); ctx.moveTo(x, y + hud * sy); ctx.lineTo(x, y); ctx.lineTo(x + hud * sx, y); ctx.stroke(); });
+  const a = ease(lt / 0.45), out = sc.kind !== 'end' && lt > sc.dur - 0.25 ? ease((sc.dur - lt) / 0.25) : 1;
+  ctx.globalAlpha = a * out; ctx.textAlign = 'center';
+  if (sc.kind === 'end') {
+    drawLogo(ctx, W / 2, H * 0.38, W * 0.34 * (0.9 + 0.1 * a));
+    ctx.fillStyle = '#fff'; ctx.font = `800 ${W * 0.075}px ${FONT}`; ctx.fillText('STRIKE TECH LAB', W / 2, H * 0.58);
+    ctx.fillStyle = '#FFBB00'; ctx.font = `700 ${W * 0.042}px ${FONT}`;
+    wrapLines(ctx, sc.small, W * 0.8).slice(0, 3).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.64 + i * W * 0.058));
+  } else {
+    const big = sc.kind === 'hook' ? sc.big : sc.big.toUpperCase();
+    let fs = W * (sc.kind === 'hook' ? 0.085 : 0.12); ctx.font = `800 ${fs}px ${FONT}`;
+    let lines = wrapLines(ctx, big, W * 0.82);
+    while ((lines.length > 4 || lines.some((l) => ctx.measureText(l).width > W * 0.86)) && fs > W * 0.05) { fs *= 0.9; ctx.font = `800 ${fs}px ${FONT}`; lines = wrapLines(ctx, big, W * 0.82); }
+    const lh = fs * 1.12, yb = H * 0.44 - (lines.length - 1) * lh / 2 + (1 - a) * W * 0.06;
+    ctx.shadowColor = 'rgba(255,187,0,.55)'; ctx.shadowBlur = W * 0.03;
+    ctx.fillStyle = sc.kind === 'hook' ? '#fff' : '#FFBB00';
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, yb + i * lh));
+    ctx.shadowBlur = 0;
+    if (sc.small) {
+      const sa = ease((lt - 0.35) / 0.5); ctx.globalAlpha = sa * out;
+      ctx.fillStyle = '#e8e8ec'; ctx.font = `600 ${W * 0.048}px ${FONT}`;
+      wrapLines(ctx, sc.small, W * 0.8).slice(0, 4).forEach((l, i) => ctx.fillText(l, W / 2, yb + lines.length * lh + W * 0.06 + i * W * 0.064));
+    }
+    if (sc.kind === 'scene') { ctx.globalAlpha = 0.8 * a; ctx.fillStyle = '#FFBB00'; ctx.font = `700 ${W * 0.032}px ${FONT}`; ctx.fillText(`${String(idx).padStart(2, '0')} / ${String(scenes.length - 2).padStart(2, '0')}`, W / 2, H * 0.14); }
+  }
+  ctx.globalAlpha = 1; ctx.textAlign = 'left';
+  drawLogo(ctx, W * 0.1, H * 0.93, W * 0.07);
+  ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = `700 ${W * 0.03}px ${FONT}`; ctx.fillText('STRIKE TECH LAB', W * 0.15, H * 0.94);
+  ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.fillRect(0, H - W * 0.012, W, W * 0.012);
+  ctx.fillStyle = '#FFBB00'; ctx.fillRect(0, H - W * 0.012, W * Math.min(1, t / total), W * 0.012);
+}
+const REC_TYPES = ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+async function videoSheet(p) {
+  await fontsReady();
+  const W = 720, H = 1280, plan = buildScenes(p);
+  const cv = h('canvas', { class: 'video-prev', width: W, height: H }); const ctx = cv.getContext('2d');
+  const bar = h('i'), prog = h('div', { class: 'progress' }, bar);
+  const result = h('div');
+  let raf = 0, t0 = performance.now(), recording = false;
+  const loop = (now) => { if (!cv.isConnected) return; const t = ((now - t0) / 1000) % plan.total; drawFrame(ctx, W, H, plan, t); bar.style.width = `${(t / plan.total) * 100}%`; raf = requestAnimationFrame(loop); };
+  const mime = window.MediaRecorder ? REC_TYPES.find((m) => MediaRecorder.isTypeSupported(m)) : null;
+  const recBtn = h('button', { class: 'btn btn-gold btn-block', type: 'button', disabled: !mime || !cv.captureStream, text: mime ? `Nagraj film (${Math.round(plan.total)} s)` : 'Ta przeglądarka nie nagrywa wideo', onclick: async () => {
+    if (recording) return; recording = true; busy(recBtn, true, 'Nagrywam – nie wyłączaj ekranu…'); result.replaceChildren();
+    const stream = cv.captureStream(30); const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 }); const chunks = [];
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    const done = new Promise((r) => { rec.onstop = r; });
+    cancelAnimationFrame(raf); t0 = performance.now(); rec.start(250); raf = requestAnimationFrame(loop);
+    await new Promise((r) => setTimeout(r, plan.total * 1000 + 150)); rec.stop(); await done;
+    stream.getTracks().forEach((tr) => tr.stop());
+    const type = mime.split(';')[0], blob = new Blob(chunks, { type });
+    const url = URL.createObjectURL(blob), ext = type === 'video/mp4' ? 'mp4' : 'webm';
+    recording = false; busy(recBtn, false, 'Nagraj ponownie');
+    result.replaceChildren(
+      h('video', { class: 'video-prev', src: url, controls: true, playsinline: true }),
+      ext === 'webm' && p.platform === 'instagram' ? h('p', { class: 'note-line err', text: 'Ta przeglądarka nagrała WebM – Instagram wymaga MP4. Nagraj w Chrome na Androidzie albo w Safari na iPhonie.' }) : null,
+      h('div', { class: 'post-actions' },
+        h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Podepnij do posta', onclick: async () => { sheet.close(); await attachMedia(p, new File([blob], `film.${ext}`, { type })); } }),
+        h('a', { class: 'btn btn-ghost btn-sm', href: url, download: `STL-${slug(p.topic)}.${ext}`, text: '⬇ Pobierz' })),
+      h('p', { class: 'hint', text: 'Muzykę z biblioteki TikToka/Instagrama dodasz w aplikacji przy publikacji.' }));
+    vibrate(30);
+  } });
+  openSheet('Film z napisów', h('p', { class: 'hint', style: 'margin-top:0', text: `Podgląd na żywo: hook, ${plan.scenes.length - 2} scen i plansza końcowa. Napisy i lektor biorą się ze scenariusza – popraw je w poście, jeśli chcesz.` }),
+    cv, prog, recBtn, result);
+  raf = requestAnimationFrame(loop);
+  sheet.addEventListener('close', () => cancelAnimationFrame(raf), { once: true });
+}
+
 /* ================================================================== na żywo + odznaki */
 let channel = null; const seenPaid = new Set();
 const liveReload = debounce(() => { reloadActive(); refreshBadges(); }, 600);
@@ -636,7 +1219,7 @@ function subscribe() {
       if (o.order_number && o.paid_at && Date.now() - new Date(o.paid_at) < 120000 && !seenPaid.has(o.id)) {
         seenPaid.add(o.id); toast('info', `💰 Nowe opłacone zlecenie ${o.order_number} – ${o.service_name}`, 9000); vibrate([30, 60, 30]);
       }
-      if (S.tab === 'orders' || S.tab === 'finance') liveReload(); else refreshBadges();
+      if (['orders', 'finance', 'today'].includes(S.tab)) liveReload(); else refreshBadges();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_slots' }, () => { if (S.tab === 'calendar') liveReload(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_posts' }, () => { if (S.tab === 'social') liveReload(); else refreshBadges(); })

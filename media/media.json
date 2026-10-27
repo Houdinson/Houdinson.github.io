@@ -1,13 +1,14 @@
 {
   "_info": "Wrzuć pliki do folderu web/media/ i wpisz tu ich nazwy (np. \"light.jpg\" albo \"zestawy/pulse.mp4\"). Puste \"\" = animowane miejsce zastępcze. Obsługiwane: .jpg .png .webp .gif .mp4 .webm. Instrukcja: media/CZYTAJ.txt",
   "hero": "",
+  "hero_pc": "hero-pc.jpg",
   "zestawy": {
-    "strike-light": "",
-    "strike-value-champion": "",
-    "strike-pulse": "",
-    "strike-venom": "",
-    "strike-esport-beast": "",
-    "strike-forge": ""
+    "strike-light": "zestawy/strike-light.svg",
+    "strike-value-champion": "zestawy/strike-value-champion.svg",
+    "strike-pulse": "zestawy/strike-pulse.svg",
+    "strike-venom": "zestawy/strike-venom.svg",
+    "strike-esport-beast": "zestawy/strike-esport-beast.svg",
+    "strike-forge": "zestawy/strike-forge.svg"
   },
   "galeria": [
     {

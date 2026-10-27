@@ -2,7 +2,7 @@
    • powłoka aplikacji (HTML/CSS/JS/ikony) z pamięci → start natychmiast, także bez zasięgu
    • biblioteka supabase-js i czcionki: stale-while-revalidate
    • dane (Supabase API, Edge Functions, Storage) NIGDY nie są buforowane – zawsze świeże i prywatne */
-const VERSION = 'stl-centrum-v3';
+const VERSION = 'stl-centrum-v5';
 const SHELL = ['./', './index.html', './app.css', './app.js', './config.js', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
@@ -50,3 +50,22 @@ self.addEventListener('fetch', (e) => {
 });
 
 self.addEventListener('message', (e) => { if (e.data === 'skip-waiting') self.skipWaiting(); });
+
+/* ---------- powiadomienia push ---------- */
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = { title: 'STL Centrum', body: e.data?.text() || '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'STL Centrum', {
+    body: d.body || '', icon: './icons/icon-192.png', badge: './icons/icon-192.png',
+    tag: d.tag || 'stl', renotify: true, vibrate: [40, 60, 40], data: { url: d.url || './' },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const target = new URL(e.notification.data?.url || './', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    for (const c of list) if (c.url.startsWith(self.registration.scope)) { c.navigate(target).catch(() => {}); return c.focus(); }
+    return self.clients.openWindow(target);
+  }));
+});

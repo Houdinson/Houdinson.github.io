@@ -30,6 +30,7 @@
   <symbol id="i-orders" viewBox="0 0 24 24"><path d="M9 4h6M9 4a2 2 0 0 0-2 2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1a2 2 0 0 0-2-2M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M8 12h8M8 16h5"/></symbol>
   <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></symbol>
   <symbol id="i-social" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></symbol>
+  <symbol id="i-today" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
   <symbol id="i-fin" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/><path d="M16 7h4v4"/></symbol>
 </svg>
 
@@ -63,14 +64,21 @@
     <div class="top-right">
       <button class="chip-btn hidden" id="installBtn" type="button">Zainstaluj</button>
       <span class="conn" id="conn" title="Połączenie"><i class="dot wait"></i><span id="connTxt">Łączenie</span></span>
+      <button class="icon-btn" id="settingsBtn" type="button" aria-label="Ustawienia">⚙</button>
       <button class="icon-btn" id="logoutBtn" type="button" aria-label="Wyloguj">⏻</button>
     </div>
   </header>
   <div class="offline hidden" id="offline" role="alert">Brak połączenia – dane mogą być nieaktualne. Ponawiam automatycznie.</div>
 
   <main id="view" tabindex="-1">
-    <section data-view="orders" aria-label="Zlecenia">
-      <div class="view-head"><h2>Zlecenia</h2><button class="icon-btn" data-refresh="orders" aria-label="Odśwież">↻</button></div>
+    <section data-view="today" aria-label="Dziś">
+      <div class="view-head"><div><p class="eyebrow" id="todayDate"></p><h2>Dziś</h2></div><button class="icon-btn" data-refresh="today" aria-label="Odśwież">↻</button></div>
+      <div id="todayOut"></div>
+    </section>
+
+    <section data-view="orders" aria-label="Zlecenia" hidden>
+      <div class="view-head"><h2>Zlecenia</h2><div class="head-btns"><button class="btn btn-ghost btn-sm" id="clientsBtn" type="button">👥 Klienci</button><button class="icon-btn" data-refresh="orders" aria-label="Odśwież">↻</button></div></div>
+      <p class="hint" id="swipeHint">Przesuń kartę w prawo, aby przejść do kolejnego etapu.</p>
       <div class="kpi-row" id="ordKpi"></div>
       <div class="chips" id="ordChips" role="tablist" aria-label="Filtr zleceń"></div>
       <input class="input search" id="ordSearch" type="search" placeholder="Szukaj: numer, klient, usługa" autocomplete="off">
@@ -102,7 +110,8 @@
   </main>
 
   <nav class="tabbar" aria-label="Sekcje">
-    <button type="button" data-tab="orders" aria-current="page"><svg><use href="#i-orders"/></svg><span>Zlecenia</span><b class="badge hidden" id="bOrders"></b></button>
+    <button type="button" data-tab="today" aria-current="page"><svg><use href="#i-today"/></svg><span>Dziś</span></button>
+    <button type="button" data-tab="orders"><svg><use href="#i-orders"/></svg><span>Zlecenia</span><b class="badge hidden" id="bOrders"></b></button>
     <button type="button" data-tab="calendar"><svg><use href="#i-cal"/></svg><span>Kalendarz</span></button>
     <button type="button" data-tab="social"><svg><use href="#i-social"/></svg><span>Social</span><b class="badge hidden" id="bSocial"></b></button>
     <button type="button" data-tab="finance"><svg><use href="#i-fin"/></svg><span>Finanse</span></button>

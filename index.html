@@ -178,6 +178,10 @@ p{margin:0 0 1em}
 .props svg{width:20px;height:20px;color:var(--gold);flex:none}
 .cta-row{display:flex;flex-wrap:wrap;gap:12px;margin:26px 0 0}
 /* Konsola na żywo – jedyny „efektowny” element strony */
+.hero-pc{margin:0;aspect-ratio:4/5;max-height:560px;width:100%;justify-self:end;border-radius:22px;border:1px solid var(--line-2);box-shadow:0 30px 80px rgba(0,0,0,.65),0 0 70px rgba(255,187,0,.10);background:#0b0b0d}
+.hero-pc img,.hero-pc video{filter:grayscale(1) contrast(1.12) brightness(.92)}
+.hero-pc::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 55%,rgba(8,8,8,.55)),radial-gradient(120% 80% at 100% 0,rgba(255,187,0,.10),transparent 55%);border-radius:inherit}
+@media(max-width:940px){.hero-pc{justify-self:stretch;aspect-ratio:16/10;max-height:380px;margin-top:8px}}
 .console{background:rgba(10,10,10,.85);border:1px solid var(--line-2);border-radius:18px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(255,187,0,.08)}
 .console-bar{display:flex;gap:6px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
 .console-bar i{width:10px;height:10px;border-radius:50%;background:#333}
@@ -574,6 +578,24 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
 .prog-pick label{font-weight:600;color:var(--text-2)}
 .prog-pick .select{max-width:420px}
 .prog-grid{align-items:start}
+.guide-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:18px}
+.guide-bar .grow{flex:1;min-width:160px}
+.guide-progress{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-top:6px}
+.guide-progress i{display:block;height:100%;background:var(--gold)}
+.guide-sec{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);margin-bottom:12px}
+.guide-sec>summary{cursor:pointer;padding:14px 16px;font-weight:700;display:flex;justify-content:space-between;gap:12px;list-style:none}
+.guide-sec>summary::-webkit-details-marker{display:none}
+.guide-sec>summary small{color:var(--muted);font-weight:500;white-space:nowrap}
+.guide-sec[open]>summary{border-bottom:1px solid var(--line)}
+.guide-steps{list-style:none;margin:0;padding:12px 16px 14px;display:grid;gap:12px}
+.guide-steps label{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+.guide-steps input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:#FFBB00}
+.guide-steps b{font-weight:600}
+.guide-steps .gd{display:block;color:var(--muted);font-size:.9rem;margin-top:3px;line-height:1.5}
+.guide-steps .warn b{color:var(--warn)}
+.guide-steps .warn b::before{content:"⚠ ";}
+.guide-steps .done b,.guide-steps .done .gd{opacity:.5;text-decoration:line-through}
+.guide-edit{min-height:460px!important;font-family:var(--mono);font-size:.84rem;line-height:1.55}
 .soft-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .soft{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02)}
 .soft>div:first-child{flex:1 1 240px;min-width:0}
@@ -631,7 +653,7 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
     <div class="wrap">
       <div class="hero-grid">
         <div>
-          <span class="live-badge" id="liveBadge"><span class="dot wait" id="liveDot"></span><span id="liveTxt">Sprawdzam kalendarz…</span></span>
+          <span class="live-badge" id="liveBadge"><span class="dot wait" id="liveDot"></span><span id="liveTxt">Łączenie z serwerami…</span></span>
           <h1>Optymalizacja i&nbsp;serwis&nbsp;PC. <span class="gold">Z pomiarem przed&nbsp;i&nbsp;po.</span></h1>
           <p class="lead">Optymalizujemy Windows, BIOS i kartę graficzną, serwisujemy i składamy komputery. Termin wybierasz w kalendarzu, płacisz online, a status i raport z pomiarów masz w Strefie Klienta.</p>
           <ul class="props">
@@ -644,18 +666,7 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
             <a class="btn btn-ghost" href="/uslugi" data-link>Zobacz usługi i ceny</a>
           </div>
         </div>
-        <div class="console" role="region" aria-label="Stan systemu rezerwacji na żywo">
-          <div class="console-bar"><i></i><i></i><i></i><span>strike-diagnostics · live</span></div>
-          <div class="console-body">
-            <div class="c-row"><span>&gt; system.status</span><b id="cStatus" class="wait">ŁĄCZENIE</b></div>
-            <div class="c-row"><span>&gt; server.ping</span><b id="cPing">–</b></div>
-            <div class="c-spark" id="cSpark" aria-hidden="true"></div>
-            <div class="c-row"><span>&gt; calendar.next_free</span><b id="cNext" class="g">–</b></div>
-            <div class="c-row"><span>&gt; catalog.items</span><b id="cItems">–</b></div>
-            <div class="c-row"><span>&gt; live_updates</span><b id="cRealtime">–</b></div>
-            <div class="c-log" id="cLog" aria-live="off"></div>
-          </div>
-        </div>
+        <figure class="media hero-pc" data-media="hero_pc" data-alt="Wnętrze komputera do gier – zdjęcie czarno-białe"></figure>
       </div>
       <div class="kpis">
         <div class="kpi hud"><b>Pomiar</b><span>FPS, temperatury i opóźnienia przed i po – na Twoim sprzęcie</span></div>
@@ -954,8 +965,8 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
           <ol class="howto">
             <li>Odpowiadamy mailem z pytaniami albo propozycją.</li>
             <li>Dostajesz listę części z cenami w Twoim budżecie.</li>
-            <li>Akceptujesz wycenę i wpłacasz zaliczkę 20%.</li>
-            <li>Składamy, testujemy i dajemy raport. Resztę płacisz przy odbiorze.</li>
+            <li>Akceptujesz wycenę i płacisz całą kwotę z góry.</li>
+            <li>Składamy, testujemy i dajemy raport.</li>
           </ol>
           <div class="sum-due"><span>Teraz płacisz</span><b>0 zł</b></div>
           <button class="btn btn-gold btn-block" id="pcSend" type="submit">Wyślij zapytanie o wycenę</button>
@@ -1003,12 +1014,14 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
           <button class="tab" role="tab" aria-selected="false" data-tab="refs" id="tab-refs" aria-controls="pane-refs" tabindex="-1">Polecenia i kody</button>
           <button class="tab" role="tab" aria-selected="false" data-tab="account" id="tab-account" aria-controls="pane-account" tabindex="-1">Konto</button>
           <button class="tab hidden" role="tab" aria-selected="false" data-tab="admin" id="adminTabBtn" aria-controls="pane-admin" tabindex="-1">Administracja</button>
+          <button class="tab hidden" role="tab" aria-selected="false" data-tab="guides" id="guidesTabBtn" aria-controls="pane-guides" tabindex="-1">Instrukcje</button>
         </div>
         <div data-pane="orders" id="pane-orders" role="tabpanel" aria-labelledby="tab-orders"><div id="ordersList"></div></div>
         <div data-pane="programs" id="pane-programs" role="tabpanel" aria-labelledby="tab-programs" class="hidden"><div id="programsOut"></div></div>
         <div data-pane="refs" id="pane-refs" role="tabpanel" aria-labelledby="tab-refs" class="hidden"><div id="refsOut"></div></div>
         <div data-pane="account" id="pane-account" role="tabpanel" aria-labelledby="tab-account" class="hidden"><div id="accountOut"></div></div>
         <div data-pane="admin" id="pane-admin" role="tabpanel" aria-labelledby="adminTabBtn" class="hidden"><div id="adminOut"></div></div>
+        <div data-pane="guides" id="pane-guides" role="tabpanel" aria-labelledby="guidesTabBtn" class="hidden"><div id="guidesOut"></div></div>
       </div>
     </div>
   </section>
@@ -1230,8 +1243,8 @@ const SVC = {
   'strike-custom-assembly': { cat: 'service', mode: 'workshop', dur: 60, price: 19900, pct: 100, forWho: 'Dla osób, które mają części (własne lub powierzone) i chcą profesjonalnego montażu.', summary: 'Montaż z części własnych lub powierzonych wraz z cable management.', includes: ['Weryfikacja kompatybilności części przed montażem', 'Montaż, aktualizacja BIOS i włączenie XMP/EXPO', 'Cable management i przepływ powietrza', 'Instalacja Windows i sterowników (opcjonalnie)', 'Testy stabilności i temperatur przed wydaniem'], note: 'Części liczone osobno według wyceny, jeśli to my je zamawiamy.' },
   'strike-thermal-shield': { cat: 'service', mode: 'workshop', dur: 60, price: 29900, pct: 100, forWho: 'Dla komputerów z wysokimi temperaturami, throttlingiem lub głośnym chłodzeniem.', summary: 'Regeneracja układów chłodzenia, delid i ciecz termoprzewodząca.', includes: ['Czyszczenie radiatorów i wentylatorów, kontrola docisku', 'Wymiana pasty lub, po akceptacji, ciekły metal dobrany do radiatora', 'Delid procesora (opcjonalnie, tylko za pisemną zgodą – zabieg nieodwracalny, zwykle oznacza utratę gwarancji producenta)', 'Optymalizacja przepływu powietrza w obudowie', 'Pomiar temperatur w obciążeniu przed i po'], note: 'Delid i ciekły metal wykonujemy tylko po potwierdzeniu zgodności podzespołów.' },
   'strike-revival': { cat: 'service', mode: 'workshop', dur: 60, price: 14900, pct: 100, fromLabel: 'za diagnostykę', forWho: 'Dla sprzętu, który nie startuje, restartuje się, daje artefakty lub został uszkodzony.', summary: 'Zaawansowana diagnostyka i naprawa uszkodzonego sprzętu.', includes: ['Diagnostyka: zasilanie, płyta główna, RAM, GPU, dyski', 'Testy na podzespołach referencyjnych', 'Pisemna diagnoza z kosztorysem naprawy', 'Naprawa po akceptacji kosztorysu', 'Wstępna ocena możliwości odzysku danych'], note: 'Online płacisz tylko diagnostykę. Koszt naprawy poznasz z kosztorysu.' },
-  'strike-business-web': { cat: 'solutions', mode: 'project', dur: 60, price: 99000, pct: 30, forWho: 'Dla firm lokalnych i e-commerce, które potrzebują nowoczesnej, szybkiej strony.', summary: 'Projekt i wykonanie strony WWW dla biznesu.', includes: ['Responsywny projekt dopasowany do marki', 'SEO techniczne i szybkość (Core Web Vitals)', 'Formularze, mapy i integracje (kalendarz, płatności)', 'Mechanizmy pod RODO i cookies (treść dokumentów prawnych weryfikuje prawnik klienta)', 'Domena, SSL i szkolenie z obsługi'], note: 'Rezerwujesz rozmowę startową. Zaliczka 30% zaliczana na poczet ceny końcowej.' },
-  'strike-smart-automation': { cat: 'solutions', mode: 'project', dur: 60, price: 120000, pct: 30, forWho: 'Dla firm, które tracą czas na ręczne przepisywanie danych i powtarzalne zadania.', summary: 'Automatyzacja procesów firmowych i przepływu danych.', includes: ['Audyt procesów i wybór zadań do automatyzacji', 'Integracje: formularze, CRM, arkusze, e-mail, płatności', 'Automatyczne przepływy danych (n8n, Make lub Apps Script)', 'Powiadomienia i raporty wysyłane automatycznie', 'Dokumentacja i szkolenie zespołu'], note: 'Rezerwujesz rozmowę startową. Zaliczka 30% zaliczana na poczet ceny końcowej.' },
+  'strike-business-web': { cat: 'solutions', mode: 'project', dur: 60, price: 99000, pct: 100, forWho: 'Dla firm lokalnych i e-commerce, które potrzebują nowoczesnej, szybkiej strony.', summary: 'Projekt i wykonanie strony WWW dla biznesu.', includes: ['Responsywny projekt dopasowany do marki', 'SEO techniczne i szybkość (Core Web Vitals)', 'Formularze, mapy i integracje (kalendarz, płatności)', 'Mechanizmy pod RODO i cookies (treść dokumentów prawnych weryfikuje prawnik klienta)', 'Domena, SSL i szkolenie z obsługi'], note: 'Rezerwujesz rozmowę startową. Płatność 100% z góry, przed rozpoczęciem prac.' },
+  'strike-smart-automation': { cat: 'solutions', mode: 'project', dur: 60, price: 120000, pct: 100, forWho: 'Dla firm, które tracą czas na ręczne przepisywanie danych i powtarzalne zadania.', summary: 'Automatyzacja procesów firmowych i przepływu danych.', includes: ['Audyt procesów i wybór zadań do automatyzacji', 'Integracje: formularze, CRM, arkusze, e-mail, płatności', 'Automatyczne przepływy danych (n8n, Make lub Apps Script)', 'Powiadomienia i raporty wysyłane automatycznie', 'Dokumentacja i szkolenie zespołu'], note: 'Rezerwujesz rozmowę startową. Płatność 100% z góry, przed rozpoczęciem prac.' },
 };
 /* Zestawy PC – treści 1:1 z catalog.json / realizacje.html (ceny i dopłaty w groszach; bazę cen i tak liczy serwer) */
 /* Zestawy poglądowe – części i ceny z list x-kom użytkownika (stan cen: 26.10.2026).
@@ -1461,7 +1474,7 @@ const SETS = [
 const FORGE = { id: 'strike-forge', num: '06', name: 'STRIKE Forge', badge: 'Stacja robocza', kicker: 'Do pracy twórczej',
   desc: 'Stacja robocza do renderowania 3D, montażu wideo i obliczeń na GPU – konfigurowana pod Twoje programy.', priceFrom: 1350000,
   parts: [['CPU', 'AMD Ryzen 9 9950X'], ['GPU', 'NVIDIA GeForce RTX 5080 16 GB lub RTX 5090 32 GB'], ['RAM', '64–128 GB DDR5'], ['Dysk', '1 TB PCIe Gen5 + 4 TB PCIe Gen4']] };
-const SET_NOTE = `Zestawy są poglądowe – pokazują, co zwykle mieści się w danym budżecie. Ostateczny dobór części ustalamy po rozmowie z Tobą, a ceny sprawdzamy w dniu wyceny (podane: x-kom, ${PRICES_AT}). Wartość części nie obejmuje złożenia i testów (od 199 zł), systemu operacyjnego, monitora ani peryferiów. Zamówienie: zaliczka 20% po akceptacji wyceny, reszta przy odbiorze. Ceny brutto.`;
+const SET_NOTE = `Zestawy są poglądowe – pokazują, co zwykle mieści się w danym budżecie. Ostateczny dobór części ustalamy po rozmowie z Tobą, a ceny sprawdzamy w dniu wyceny (podane: x-kom, ${PRICES_AT}). Wartość części nie obejmuje złożenia i testów (od 199 zł), systemu operacyjnego, monitora ani peryferiów. Zamówienie: płatność 100% z góry po akceptacji wyceny. Ceny brutto.`;
 const isHiddenService = (s) => s.id === 'strike-ai-local-deploy' || /\bAI\b/.test(s.name || '');
 
 const STATUS = {
@@ -1500,23 +1513,24 @@ function log(text) {
 function setConn(state, info) {
   const prev = conn.state; conn.state = state;
   const map = {
-    online: ['ok', 'Online', 'ONLINE', 'ok', 'Kalendarz i płatności działają'],
-    slow: ['wait', 'Wolne łącze', 'DEGRADED', 'wait', 'Połączenie wolne, ale działa'],
-    connecting: ['wait', 'Łączenie…', 'ŁĄCZENIE', 'wait', 'Łączę z systemem rezerwacji…'],
-    offline: ['bad', 'Kalendarz niedostępny', 'OFFLINE', 'bad', 'Kalendarz chwilowo niedostępny'],
+    online: ['ok', 'Online', 'ONLINE', 'ok', 'Serwery online'],
+    slow: ['wait', 'Wolne łącze', 'DEGRADED', 'wait', 'Serwery online · wolne łącze'],
+    connecting: ['wait', 'Łączenie…', 'ŁĄCZENIE', 'wait', 'Łączenie z serwerami…'],
+    offline: ['bad', 'Serwery niedostępne', 'OFFLINE', 'bad', 'Serwery chwilowo niedostępne'],
     config: ['bad', 'Tryb katalogu', 'BRAK KONFIGURACJI', 'bad', 'Rezerwacje online wyłączone (brak konfiguracji)'],
   }[state];
   $('#connDot').className = `dot ${map[0]}`; $('#connTxt').textContent = map[1];
   $('#connChip').title = info || map[4];
   $('#liveDot').className = `dot ${map[0]}`; $('#liveTxt').textContent = map[4];
   $('#liveBadge').className = `live-badge ${map[0] === 'ok' ? 'ok' : map[0] === 'bad' ? 'bad' : ''}`;
-  const cs = $('#cStatus'); cs.textContent = map[2]; cs.className = map[3];
+  const cs = $('#cStatus'); if (cs) { cs.textContent = map[2]; cs.className = map[3]; }
   const bar = $('#offlineBar');
   if (state === 'offline') { bar.textContent = info || 'Kalendarz rezerwacji jest chwilowo niedostępny. Spróbujemy ponownie automatycznie – możesz też napisać do nas.'; bar.classList.remove('hidden'); }
   else bar.classList.add('hidden');
   if (prev !== state) log(`status: ${map[2]}`);
 }
 function renderConsole() {
+  if (!$('#cPing')) return;   // panel diagnostyczny usunięty ze strony głównej (v9)
   $('#cPing').textContent = conn.ping === null ? '–' : `${conn.ping} ms`;
   $('#cPing').className = conn.ping === null ? '' : conn.ping < 400 ? 'ok' : conn.ping < 1500 ? 'wait' : 'bad';
   const spark = $('#cSpark'); spark.replaceChildren(...conn.hist.slice(-28).map((p) => h('i', { class: p < 0 ? 'fail' : '', style: `height:${p < 0 ? 100 : Math.max(8, Math.min(100, p / 8))}%` })));
@@ -1747,7 +1761,7 @@ function renderSets() {
   const grid = $('#setsGrid'); if (!grid) return;
   const card = (m, price, btn) => h('article', { class: `card hud set${m.featured ? ' featured' : ''}`, id: m.id },
     m.ribbon ? h('span', { class: 'ribbon', text: m.ribbon }) : null,
-    h('figure', { class: 'media set-media', dataset: { media: `zestawy.${m.id}`, alt: `Komputer ${m.name}` } }),
+    h('figure', { class: 'media set-media', dataset: { media: `zestawy.${m.id}`, alt: `Ilustracja poglądowa komputera ${m.name}` } }),
     h('div', { class: 'set-top' }, h('span', { class: 'set-num', text: m.num }), h('span', { class: 'pill', text: m.badge })),
     h('h3', { class: 'set-name', text: m.name }), h('span', { class: 'set-kicker', text: m.kicker }), h('p', { class: 'set-desc', text: m.desc }),
     ...partsList(m.parts), price, btn);
@@ -2257,9 +2271,10 @@ function renderPanel() {
   $('#panelTitle').textContent = on ? `Cześć${profile?.full_name ? ', ' + profile.full_name.split(' ')[0] : ''}!` : 'Twoje zlecenia w jednym miejscu';
   $('#panelLead').textContent = on ? 'Status zleceń zmienia się tu na żywo. Raporty i wyniki pomiarów pojawią się po testach.' : 'Status na żywo, raporty z pomiarów, kod polecający i dane konta.';
   $('#adminTabBtn').classList.toggle('hidden', !isAdmin);
+  $('#guidesTabBtn').classList.toggle('hidden', !isAdmin);
   // Administrator nie składa zleceń sam sobie – zamiast „Zleceń” od razu widzi „Administrację”
   $('#panelTabs [data-tab=orders]').classList.toggle('hidden', isAdmin);
-  if (!isAdmin && activeTab === 'admin') activeTab = 'orders';
+  if (!isAdmin && (activeTab === 'admin' || activeTab === 'guides')) activeTab = 'orders';
   if (isAdmin && activeTab === 'orders') activeTab = 'admin';
   showTab(activeTab);
 }
@@ -2271,6 +2286,7 @@ function showTab(t) {
   if (t === 'refs') loadRefs();
   if (t === 'account') renderAccount();
   if (t === 'programs') renderPrograms();
+  if (t === 'guides') loadGuides();
 }
 const ORDER_COLS = 'id,order_number,service_id,service_name,kind,status,express,base_grosze,discount_grosze,express_fee_grosze,total_grosze,amount_due_grosze,discount_code,referral_code_used,spec,handover,slot_conflict,created_at,paid_at,cancel_reason,calendar_slots(starts_at,ends_at,status,hold_expires_at),order_events(status,note,at),order_results(phase,metrics)';
 const ORDER_COLS_V1 = 'id,order_number,service_id,service_name,kind,status,base_grosze,discount_grosze,total_grosze,amount_due_grosze,referral_code_used,slot_conflict,created_at,paid_at,cancel_reason,calendar_slots(starts_at,ends_at,status,hold_expires_at)';
@@ -2459,6 +2475,97 @@ function renderPrograms() {
       h('div', { class: 'card' }, h('h3', { text: 'Przygotowanie' }),
         h('ul', { class: 'check-list' }, p.prep.map((t) => h('li', { text: t }))),
         p.need.includes('anydesk') ? h('details', { class: 'parts-more' }, h('summary', { text: 'Zasady sesji zdalnej' }), h('ul', { class: 'check-list' }, GENERAL_PREP.map((t) => h('li', { text: t })))) : null)) : null);
+}
+
+/* ------------------------------------------------------------------ instrukcje serwisowe (tylko admin; treść w bazie: service_guides, migracja v8) */
+const gd = { list: null, sel: '', edit: false, loading: false, err: '' };
+const guideKey = (id) => `stl-guide-${id}`;
+function guideChecks(id) { return new Set(store.get(guideKey(id), localStorage) || []); }
+function saveGuideChecks(id, set) { set.size ? store.set(guideKey(id), [...set], localStorage) : store.del(guideKey(id), localStorage); }
+async function loadGuides(force) {
+  const out = $('#guidesOut'); if (!out || !isAdmin || !sb || gd.loading) return;
+  if (gd.list && !force) { renderGuides(); return; }
+  gd.loading = true; out.replaceChildren(h('p', { class: 'muted', text: 'Wczytuję instrukcje…' }));
+  try {
+    const r = await sb.from('service_guides').select('service_id,title,body,updated_at');
+    if (r.error) { gd.err = /does not exist|schema cache|relation/i.test(r.error.message) ? 'missing' : r.error.message; gd.list = []; }
+    else { gd.err = ''; const order = Object.keys(SVC); gd.list = (r.data || []).sort((a, b) => (order.indexOf(a.service_id) + 1 || 99) - (order.indexOf(b.service_id) + 1 || 99)); }
+  } catch (e) { gd.err = String(e?.message || e); gd.list = []; }
+  finally { gd.loading = false; }
+  renderGuides();
+}
+/* Edycja w zwykłym tekście: "# Sekcja", "- Krok :: szczegóły", "! Krok z ostrzeżeniem :: szczegóły". */
+function guideToText(body) {
+  return (body || []).map((s) => [`# ${s.t}`, ...(s.steps || []).map((st) => `${st.w ? '!' : '-'} ${st.t}${st.d ? ` :: ${st.d}` : ''}`)].join('\n')).join('\n\n');
+}
+function textToGuide(txt) {
+  const out = [];
+  for (const raw of txt.split(/\r?\n/)) {
+    const line = raw.trim(); if (!line) continue;
+    if (line.startsWith('#')) { out.push({ t: line.replace(/^#+\s*/, ''), steps: [] }); continue; }
+    if (!out.length) out.push({ t: 'Kroki', steps: [] });
+    const sec = out[out.length - 1];
+    const m = line.match(/^([-!*])\s*(.*)$/);
+    if (m) { const [t, ...d] = m[2].split(' :: '); const st = { t: t.trim() }; if (d.length) st.d = d.join(' :: ').trim(); if (m[1] === '!') st.w = true; if (st.t) sec.steps.push(st); }
+    else if (sec.steps.length) { const st = sec.steps[sec.steps.length - 1]; st.d = st.d ? `${st.d} ${line}` : line; }
+    else sec.steps.push({ t: line });
+  }
+  return out.filter((s) => s.t || s.steps.length);
+}
+function updateGuideProgress() {
+  const out = $('#guidesOut'); const all = $$('.guide-steps input', out), on = all.filter((x) => x.checked).length;
+  const lbl = $('.guide-bar .muted', out); if (lbl) lbl.textContent = lbl.textContent.replace(/^\d+ z \d+/, `${on} z ${all.length}`);
+  const bar = $('.guide-progress i', out); if (bar) bar.style.width = `${all.length ? Math.round(on / all.length * 100) : 0}%`;
+  $$('.guide-sec', out).forEach((s) => { const x = $$('input', s); $('summary small', s).textContent = `${x.filter((i) => i.checked).length}/${x.length}`; });
+  const clr = $('#guideClear', out); if (clr) clr.disabled = !on;
+}
+function renderGuides() {
+  const out = $('#guidesOut'); if (!out) return;
+  if (gd.err === 'missing') { out.replaceChildren(h('div', { class: 'banner info', text: 'Brak tabeli z instrukcjami w bazie. Uruchom w oknie do komend Supabase: npx supabase db push --linked (migracja v8), a potem odśwież stronę.' })); return; }
+  if (gd.err) { out.replaceChildren(h('div', { class: 'banner err', text: `Nie udało się wczytać instrukcji: ${gd.err}` })); return; }
+  if (!gd.list?.length) { out.replaceChildren(h('div', { class: 'banner info', text: 'Instrukcje widzi tylko administrator po logowaniu dwuetapowym. Wejdź w zakładkę Administracja, potwierdź kod z aplikacji i wróć tutaj.' }), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Wczytaj ponownie', onclick: () => loadGuides(true) })); return; }
+  if (!gd.list.some((g) => g.service_id === gd.sel)) gd.sel = gd.list[0].service_id;
+  const g = gd.list.find((x) => x.service_id === gd.sel);
+  const checks = guideChecks(g.service_id);
+  const total = (g.body || []).reduce((n, s) => n + (s.steps?.length || 0), 0);
+  const done = [...checks].filter((k) => { const [i, j] = k.split('.').map(Number); return g.body?.[i]?.steps?.[j]; }).length;
+  const pick = h('div', { class: 'prog-pick' }, h('label', { for: 'guideSvc', text: 'Usługa' }),
+    h('select', { class: 'select', id: 'guideSvc', onchange: (e) => { gd.sel = e.target.value; gd.edit = false; renderGuides(); } },
+      gd.list.map((x) => h('option', { value: x.service_id, selected: x.service_id === gd.sel, text: svcOf(x.service_id)?.name || nameOf(x.service_id) || x.service_id }))));
+  const bar = h('div', { class: 'guide-bar' },
+    h('div', { class: 'grow' }, h('b', { text: g.title }), h('div', { class: 'muted small', text: `${done} z ${total} kroków · zmieniono ${fmt(g.updated_at)}` }), h('div', { class: 'guide-progress', 'aria-hidden': 'true' }, h('i', { style: `width:${total ? Math.round(done / total * 100) : 0}%` }))),
+    gd.edit ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', id: 'guideClear', text: 'Nowe zlecenie – wyczyść', disabled: !done, onclick: () => { saveGuideChecks(g.service_id, new Set()); renderGuides(); } }),
+    gd.edit ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Edytuj instrukcję', onclick: () => { gd.edit = true; renderGuides(); } }));
+  if (gd.edit) {
+    const title = h('input', { class: 'input', id: 'guideTitle', value: g.title, maxlength: '160' });
+    const ta = h('textarea', { class: 'textarea guide-edit', id: 'guideText', spellcheck: 'true', 'aria-describedby': 'guideHelp' }); ta.value = guideToText(g.body);
+    const save = h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Zapisz', onclick: async () => {
+      const body = textToGuide(ta.value);
+      if (!body.length) { toast('err', 'Instrukcja jest pusta – dodaj co najmniej jedną sekcję z krokami.'); return; }
+      save.disabled = true;
+      const r = await sb.from('service_guides').update({ title: title.value.trim() || g.title, body, updated_at: new Date().toISOString() }).eq('service_id', g.service_id).select('service_id,title,body,updated_at');
+      save.disabled = false;
+      if (r.error || !r.data?.length) { toast('err', `Nie zapisano: ${r.error?.message || 'brak uprawnień (wymagane logowanie dwuetapowe)'}`); return; }
+      Object.assign(g, r.data[0]); saveGuideChecks(g.service_id, new Set()); gd.edit = false; toast('ok', 'Instrukcja zapisana.'); renderGuides();
+    } });
+    out.replaceChildren(pick, bar, h('div', { class: 'card' },
+      h('div', { class: 'field' }, h('label', { for: 'guideTitle', text: 'Tytuł' }), title),
+      h('div', { class: 'field' }, h('label', { for: 'guideText', text: 'Kroki' }), ta,
+        h('p', { class: 'muted small', id: 'guideHelp', text: 'Format: „# Nazwa sekcji”, „- Krok :: szczegóły”, „! Krok z ostrzeżeniem :: szczegóły”. Linia bez znaku na początku dopisuje się do szczegółów poprzedniego kroku. Zapis czyści zaznaczenia na tej usłudze.' })),
+      h('div', { class: 'row-actions', style: 'display:flex;gap:10px;flex-wrap:wrap' }, save, h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Anuluj', onclick: () => { gd.edit = false; renderGuides(); } }))));
+    return;
+  }
+  out.replaceChildren(pick, bar, ...(g.body || []).map((s, i) => {
+    const n = s.steps?.length || 0, d = (s.steps || []).filter((_, j) => checks.has(`${i}.${j}`)).length;
+    return h('details', { class: 'guide-sec', open: d < n },
+      h('summary', {}, h('span', { text: s.t }), h('small', { text: `${d}/${n}` })),
+      h('ol', { class: 'guide-steps' }, (s.steps || []).map((st, j) => {
+        const key = `${i}.${j}`, on = checks.has(key);
+        // bez przerysowania całej listy – fokus klawiatury zostaje na polu
+        const cb = h('input', { type: 'checkbox', checked: on, onchange: (e) => { const c = guideChecks(g.service_id); e.target.checked ? c.add(key) : c.delete(key); saveGuideChecks(g.service_id, c); e.target.closest('li').classList.toggle('done', e.target.checked); updateGuideProgress(); } });
+        return h('li', { class: `${st.w ? 'warn' : ''}${on ? ' done' : ''}` }, h('label', {}, cb, h('span', {}, h('b', { text: st.t }), st.d ? h('span', { class: 'gd', text: st.d }) : null)));
+      })));
+  }));
 }
 
 /* ------------------------------------------------------------------ administracja */
@@ -2667,9 +2774,9 @@ async function findNextFree() {
     const day = addDays(todayKey(), i); if (wday(day) === 0) continue;
     const { data, error } = await sb.rpc('get_available_slots', { p_service_id: id, p_day: day });
     if (error) return;
-    if (data?.length) { $('#cNext').textContent = `${fmt(data[0].starts_at, { weekday: 'short', day: 'numeric', month: 'short' })} ${hm(data[0].starts_at)}`; return; }
+    if (data?.length) { $('#cNext') && ($('#cNext').textContent = `${fmt(data[0].starts_at, { weekday: 'short', day: 'numeric', month: 'short' })} ${hm(data[0].starts_at)}`); return; }
   }
-  $('#cNext').textContent = 'brak w 14 dni';
+  $('#cNext') && ($('#cNext').textContent = 'brak w 14 dni');
 }
 setInterval(() => { if (document.visibilityState === 'visible') findNextFree(); }, 300000);
 
@@ -2689,7 +2796,7 @@ function renderCompany() {
   const box = $('#companyInfo'); if (!box) return;
   box.innerHTML = `Sprzedawca: ${SELLER}`;
 }
-const SETS_TERMS = '<h4>§6 Komputery na zamówienie</h4><p>Zestawy pokazane na stronie są przykładowe, a ich ceny orientacyjne – zależą od aktualnych cen i dostępności części. Zapytanie o wycenę jest bezpłatne i do niczego nie zobowiązuje. Wiążącą ofertę z pełną listą części i ceną przesyłamy mailowo; umowa zostaje zawarta po jej akceptacji i wpłacie zaliczki 20%, a resztę płacisz przy odbiorze. Zmiana podzespołu po zawarciu umowy jest możliwa wyłącznie za Twoją zgodą; jeśli jej nie wyrazisz, możesz zrezygnować z zamówienia i otrzymasz zwrot całej wpłaty. Komputer odbierasz osobiście albo wysyłamy go kurierem – koszt wysyłki podajemy w ofercie.</p>';
+const SETS_TERMS = '<h4>§6 Komputery na zamówienie</h4><p>Zestawy pokazane na stronie są przykładowe, a ich ceny orientacyjne – zależą od aktualnych cen i dostępności części. Zapytanie o wycenę jest bezpłatne i do niczego nie zobowiązuje. Wiążącą ofertę z pełną listą części i ceną przesyłamy mailowo; umowa zostaje zawarta po jej akceptacji i wpłacie całej ceny z góry. Zmiana podzespołu po zawarciu umowy jest możliwa wyłącznie za Twoją zgodą; jeśli jej nie wyrazisz, możesz zrezygnować z zamówienia i otrzymasz zwrot całej wpłaty. Komputer odbierasz osobiście albo wysyłamy go kurierem – koszt wysyłki podajemy w ofercie.</p>';
 const LEGAL = {
   privacy: { t: 'Polityka Prywatności', h: DRAFT_NOTE +
     `<p class="note">Wersja z ${LEGAL_VERSION}.</p>` +
@@ -2727,8 +2834,8 @@ const LEGAL = {
     `<p class="note">Wersja z ${LEGAL_VERSION}.</p>` +
     `<h4>§1 Sprzedawca i definicje</h4><p>Serwis striketechlab.com (Strike Tech Lab) prowadzi ${SELLER} („Sprzedawca”). <b>Klient</b> – osoba lub firma korzystająca z serwisu. <b>Konsument</b> – osoba fizyczna zawierająca umowę niezwiązaną bezpośrednio z jej działalnością gospodarczą lub zawodową. <b>Przedsiębiorca na prawach konsumenta</b> – osoba fizyczna prowadząca jednoosobową działalność, dla której umowa nie ma charakteru zawodowego (art. 38a ustawy o prawach konsumenta); ma ona prawa konsumenta opisane w §7 i §8.</p>` +
     '<h4>§2 Usługi elektroniczne i wymagania techniczne</h4><p>Bezpłatnie udostępniamy: konto w Strefie Klienta, formularz rezerwacji, formularz kontaktowy i program poleceń. Potrzebujesz urządzenia z internetem, aktualnej przeglądarki z włączonym JavaScriptem i aktywnego adresu e-mail. Zakazane jest przesyłanie treści bezprawnych. Umowę o konto zawieramy na czas nieokreślony – możesz ją rozwiązać w każdej chwili, usuwając konto w Strefie Klienta. Możemy ją wypowiedzieć z 14-dniowym wyprzedzeniem z ważnych powodów (np. naruszenie regulaminu), informując o tym mailem. Umowa dotycząca formularza kontaktowego kończy się z chwilą wysłania wiadomości.</p>' +
-    '<h4>§3 Zamówienie i zawarcie umowy</h4><p>Zamówienie może złożyć osoba pełnoletnia lub – w imieniu firmy – osoba do tego upoważniona. Do zamówienia potrzebne jest konto. Wybierasz usługę (kilka usług możesz połączyć w jednym terminie i jednej płatności), termin, podajesz dane i klikasz „Zamawiam z obowiązkiem zapłaty”. Termin jest zarezerwowany przez 35 minut na płatność; potem rezerwacja wygasa. Umowa zostaje zawarta z chwilą zaksięgowania płatności (zaliczki albo całej ceny). Potwierdzenie zamówienia z najważniejszymi informacjami wysyłamy e-mailem.</p>' +
-    '<h4>§4 Ceny i płatności</h4><p>Ceny są cenami końcowymi w złotych polskich. Płacisz online przez operatora Stripe (karta, BLIK lub Przelewy24 – zależnie od dostępności). Za projekty dla firm (strony WWW, automatyzacja) pobieramy zaliczkę 30%, a za komputery na zamówienie 20% (po akceptacji wyceny), zaliczaną na poczet ceny; resztę według etapów uzgodnionych przed rozpoczęciem prac. Cena „od” to cena zakresu podstawowego opisanego przy usłudze. Dodatkowe prace lub części wykonujemy wyłącznie po Twojej akceptacji wyceny – bez akceptacji płacisz tylko za zakres podstawowy. Zaliczka nie jest zadatkiem.</p>' +
+    '<h4>§3 Zamówienie i zawarcie umowy</h4><p>Zamówienie może złożyć osoba pełnoletnia lub – w imieniu firmy – osoba do tego upoważniona. Do zamówienia potrzebne jest konto. Wybierasz usługę (kilka usług możesz połączyć w jednym terminie i jednej płatności), termin, podajesz dane i klikasz „Zamawiam z obowiązkiem zapłaty”. Termin jest zarezerwowany przez 35 minut na płatność; potem rezerwacja wygasa. Umowa zostaje zawarta z chwilą zaksięgowania płatności całej ceny. Potwierdzenie zamówienia z najważniejszymi informacjami wysyłamy e-mailem.</p>' +
+    '<h4>§4 Ceny i płatności</h4><p>Ceny są cenami końcowymi w złotych polskich. Płacisz online przez operatora Stripe (karta, BLIK lub Przelewy24 – zależnie od dostępności). Za wszystkie usługi i komputery na zamówienie płacisz 100% ceny z góry, przed rozpoczęciem prac (przy komputerze na zamówienie – po akceptacji wyceny). Nie pobieramy zaliczek. Cena „od” to cena zakresu podstawowego opisanego przy usłudze. Dodatkowe prace lub części wykonujemy wyłącznie po Twojej akceptacji wyceny – bez akceptacji płacisz tylko za zakres podstawowy.</p>' +
     '<h4>§5 Realizacja usług</h4><p>Usługi zdalne wykonujemy w zarezerwowanym terminie przez AnyDesk. Zapewniasz dostęp do komputera z uprawnieniami administratora i możesz przerwać sesję w każdej chwili. Usługi warsztatowe wymagają dostarczenia sprzętu osobiście lub kurierem; koszt wysyłki do nas ponosisz Ty, chyba że ustalimy inaczej. Opcja Express (+50 zł) dotyczy wybranych usług zdalnych i skraca minimalny czas do terminu do 2 godzin, o ile są wolne godziny. Prace nieodwracalne – aktualizację BIOS-u, delid, nałożenie ciekłego metalu – wykonujemy wyłącznie po Twojej wyraźnej zgodzie wyrażonej mailowo, po informacji o ryzyku i możliwej utracie gwarancji producenta. Jeśli nie możemy wykonać usługi w terminie, zaproponujemy nowy termin, a jeśli go nie przyjmiesz – zwrócimy całą wpłatę. Zmianę terminu z Twojej strony ustalamy mailowo.</p>' +
     SETS_TERMS +
     '<h4>§7 Prawo odstąpienia od umowy</h4><p>Konsument i przedsiębiorca na prawach konsumenta mogą odstąpić od umowy zawartej na odległość w terminie 14 dni bez podania przyczyny – zasady opisuje <button type="button" class="link" data-legal="withdrawal">pouczenie o odstąpieniu od umowy</button>. Prawo to nie przysługuje w przypadkach z art. 38 ustawy o prawach konsumenta, w szczególności gdy usługa została w pełni wykonana za Twoją wyraźną zgodą, a przed jej rozpoczęciem wiedziałeś, że po wykonaniu usługi utracisz prawo odstąpienia. O ewentualnym wyłączeniu prawa odstąpienia dla zestawu składanego według Twojej indywidualnej specyfikacji informujemy w ofercie, przed zawarciem umowy.</p>' +
@@ -2748,7 +2855,7 @@ const LEGAL = {
     `<p class="note">Wersja z ${LEGAL_VERSION}.</p>` +
     '<h4>Kiedy oddajemy pieniądze</h4><ul>' +
     '<li><b>Płatność przerwana</b> – nic nie płacisz, a termin wraca do kalendarza.</li>' +
-    '<li><b>Odstąpienie od umowy w ciągu 14 dni</b> (konsument i przedsiębiorca na prawach konsumenta) – zwracamy całą wpłatę, w tym zaliczkę; jeśli na Twoje żądanie zaczęliśmy usługę wcześniej, potrącamy tylko część odpowiadającą wykonanemu zakresowi. Szczegóły: <button type="button" class="link" data-legal="withdrawal">pouczenie o odstąpieniu</button>.</li>' +
+    '<li><b>Odstąpienie od umowy w ciągu 14 dni</b> (konsument i przedsiębiorca na prawach konsumenta) – zwracamy całą wpłatę; jeśli na Twoje żądanie zaczęliśmy usługę wcześniej, potrącamy tylko część odpowiadającą wykonanemu zakresowi. Szczegóły: <button type="button" class="link" data-legal="withdrawal">pouczenie o odstąpieniu</button>.</li>' +
     '<li><b>Nie wykonamy usługi w terminie</b> – proponujemy nowy termin, a jeśli go nie przyjmiesz, zwracamy całą wpłatę.</li>' +
     '<li><b>Nie zaakceptujesz zmiany podzespołu w zestawie</b> – możesz zrezygnować i otrzymasz zwrot całej wpłaty.</li>' +
     '<li><b>Uznana reklamacja</b> – jeśli prowadzi do obniżenia ceny lub odstąpienia od umowy, zwracamy należną kwotę.</li></ul>' +
