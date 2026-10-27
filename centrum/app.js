@@ -258,6 +258,7 @@ function orderSheet(id) {
     !o.order_number && o.status === 'OCZEKUJE_NA_PLATNOSC' ? [h('h4', { text: 'Płatność' }),
       h('div', { class: 'row2' }, [['gotowka', '💵 Gotówką'], ['przelew', '🏦 Przelewem']].map(([m, t]) => h('button', { class: 'btn btn-ghost', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} ${m === 'gotowka' ? 'gotówką' : 'przelewem'}?`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number || ''}`); } })))] : null,
     paymentTools(o),
+    o.order_number ? h('button', { class: 'btn btn-ghost btn-block', style: 'margin-top:10px', type: 'button', text: '🧾 Wystaw rachunek', onclick: () => billSheet(o) }) : null,
     o.user_id && o.order_number ? [h('h4', { text: 'Raport STRIKE PROOF' }),
       h('button', { class: 'btn btn-gold btn-block', type: 'button', text: '📊 Wpisz pomiary i utwórz raport PDF', onclick: () => reportSheet(o) })] : null,
     o.user_id ? [h('h4', { text: 'Zdjęcia przy przyjęciu' }), photoTools(o, thumbs)] : null,
@@ -656,7 +657,8 @@ async function loadLedgerBox() {
   const [s, e] = await Promise.all([
     callFn('admin', { action: 'ledger_summary' }).catch((err) => ({ error: err.message })),
     sb.from('expenses').select('id,spent_on,category,description,vendor,amount_grosze,is_cost,receipt_path').order('spent_on', { ascending: false }).order('created_at', { ascending: false }).limit(8),
-  ]);
+    sb.from('bills').select('*').order('issued_on', { ascending: false }).order('created_at', { ascending: false }).limit(6),
+  ]).then(([a, b2, c]) => { S.bills = c.error ? null : c.data; return [a, b2]; });
   S.ledger = s; S.expenses = e.error ? null : e.data;
   if (e.error && /does not exist|schema cache|relation/i.test(e.error.message)) { box.replaceChildren(h('div', { class: 'card muted small', text: 'Rozliczenia wymagają migracji v10 i nowej funkcji admin.' })); return; }
   renderLedgerBox();
@@ -683,6 +685,7 @@ function renderLedgerBox() {
         h('p', { class: 'small muted', style: 'margin:6px 0 0', text: `Rok: przychód ${zl2(y?.net || 0)}, koszty ${zl2(y?.costs || 0)}, dochód ${zl2(y?.profit || 0)}` }))],
     h('div', { class: 'post-actions' },
       h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: '＋ Wydatek', onclick: () => expenseSheet() }),
+      S.bills ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '🧾 Rachunek', onclick: () => billSheet(null) }) : null,
       sh.url ? h('a', { class: 'btn btn-ghost btn-sm', href: sh.url, target: '_blank', rel: 'noopener', text: '📄 Arkusz' }) : null,
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '⟳ Synchronizuj', onclick: async (e) => {
         busy(e.currentTarget, true);
@@ -690,6 +693,11 @@ function renderLedgerBox() {
         catch (err) { toast('err', err.message); } busy(e.currentTarget, false, '⟳ Synchronizuj');
       } })),
     h('p', { class: 'free-note', style: 'margin-top:4px', text: sh.enabled === false ? 'Arkusz Google nie jest skonfigurowany.' : sh.error ? `Arkusz: błąd – ${sh.error}` : sh.pending ? 'Arkusz: zmiany czekają na synchronizację (co 5 min).' : sh.synced_at ? `Arkusz aktualny · ${ago(sh.synced_at)}` : '' }),
+    S.bills?.length ? [h('p', { class: 'sec-title', text: 'Ostatnie rachunki' }), h('div', { class: 'card exp-list' }, S.bills.map((b) => h('div', { class: 'exp-row' },
+      h('div', { class: 'grow' }, h('b', { text: `${b.number} · ${b.buyer?.name || ''}` }), h('span', { class: 'muted small', text: `${fmt(`${b.issued_on}T12:00:00Z`, { day: 'numeric', month: 'short' })} · ${b.cancelled_at ? 'anulowany' : b.sent_at ? 'wysłany' : 'nie wysłany'}` })),
+      h('b', { class: 'nowrap', text: zl2(b.total_grosze) }),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': `PDF ${b.number}`, text: '📄', onclick: () => openBillPdf(b) }),
+      b.cancelled_at ? null : h('button', { class: 'icon-btn', type: 'button', 'aria-label': `Wyślij ${b.number}`, text: '✉', onclick: (e) => { const to = prompt('Wyślij na e-mail:', b.sent_to || b.buyer?.email || ''); if (to) sendBill(b, to.trim(), e.currentTarget); } }))))] : null,
     h('p', { class: 'sec-title', text: 'Ostatnie wydatki' }),
     S.expenses?.length ? h('div', { class: 'card exp-list' }, S.expenses.map((x) => h('div', { class: 'exp-row' },
       h('div', { class: 'grow' }, h('b', { text: x.description }), h('span', { class: 'muted small', text: `${fmt(`${x.spent_on}T12:00:00Z`, { day: 'numeric', month: 'short' })} · ${EXP_CAT[x.category] || x.category}${x.vendor ? ` · ${x.vendor}` : ''}${x.is_cost ? '' : ' · nie koszt'}` })),
@@ -791,6 +799,69 @@ function paymentTools(o) {
       h('p', { class: 'hint', style: 'margin:6px 2px 0', text: 'Zwroty w Stripe zapisują się same – tu wpisuj tylko zwroty gotówką lub przelewem.' }));
   });
   return box;
+}
+
+/* ================================================================== RACHUNKI (migracja v11) */
+const BILL_PAY = { stripe: 'Online (Stripe)', karta: 'Karta (Stripe)', blik: 'BLIK (Stripe)', p24: 'Przelewy24 (Stripe)', przelew: 'Przelew', gotowka: 'Gotówka', inna: 'Inna' };
+async function openBillPdf(b) {
+  try {
+    if (!b.pdf_path) b.pdf_path = (await callFn('admin', { action: 'bill_pdf', bill_id: b.id })).path;
+    const { data, error } = await sb.storage.from('bills').createSignedUrl(b.pdf_path, 300);
+    if (error) throw error; window.open(data.signedUrl, '_blank', 'noopener');
+  } catch (e) { toast('err', e.message); }
+}
+async function sendBill(b, to, btn) {
+  if (!to) return toast('err', 'Wpisz e-mail klienta.');
+  busy(btn, true, 'Wysyłam…');
+  try {
+    const d = await callFn('admin', { action: 'bill_send', bill_id: b.id, to });
+    if (d.ok) { toast('ok', `Wysłano na ${d.to}.`); vibrate(30); } else toast('err', d.error, 12000);
+  } catch (e) { toast('err', e.message); }
+  busy(btn, false, '✉ Wyślij');
+}
+function billSheet(o) {
+  const c = o?.customer || {}, biz = c.type === 'business', today = todayKey();
+  const inp = (a) => h('input', { class: 'input', ...a });
+  const kind = h('select', { class: 'input' }, h('option', { value: 'rachunek', text: 'Rachunek' }), h('option', { value: 'faktura', text: 'Faktura bez VAT (na prośbę)' }));
+  const pay = h('select', { class: 'input' }, Object.entries(BILL_PAY).map(([k, v]) => h('option', { value: k, text: v, selected: k === (o?.paid_at ? 'stripe' : 'przelew') })));
+  const issued = inp({ type: 'date', value: today, max: today }), sale = inp({ type: 'date', value: today });
+  const name = inp({ maxlength: 160, value: biz ? c.company || '' : c.name || o?.profiles?.full_name || '' });
+  const addr = inp({ maxlength: 160, placeholder: 'ul. Przykładowa 1' }), pc = inp({ maxlength: 100, value: o?.city || '', placeholder: '37-100 Łańcut' });
+  const nip = inp({ maxlength: 20, value: biz ? c.nip || '' : '', placeholder: 'tylko firmy' });
+  const email = inp({ type: 'email', maxlength: 200, value: o?.profiles?.email || '' });
+  const iname = inp({ maxlength: 200, value: o ? o.service_name + (o.express ? ' + Express' : '') : '' });
+  const iqty = inp({ inputmode: 'decimal', value: '1' }), iprice = inp({ inputmode: 'decimal', value: o?.amount_due_grosze ? String(o.amount_due_grosze / 100).replace('.', ',') : '', placeholder: '0,00' });
+  const paidDay = o?.paid_at ? dayKeyOf(new Date(o.paid_at)) : '';
+  const paidOn = inp({ type: 'date', value: paidDay, max: today });
+  const res = h('div');
+  const go = h('button', { class: 'btn btn-gold btn-block', type: 'button', text: 'Wystaw i utwórz PDF', onclick: async () => {
+    const price = Math.round(parseFloat(iprice.value.replace(/\s/g, '').replace(',', '.')) * 100), qty = parseFloat(iqty.value.replace(',', '.'));
+    if (!iname.value.trim() || !(qty > 0) || !(price > 0)) return toast('err', 'Uzupełnij pozycję: nazwa, ilość, cena.');
+    if (!confirm(`Wystawić ${kind.value === 'faktura' ? 'fakturę' : 'rachunek'} na ${zl2(Math.round(qty * price))}? Numer nadaje się na stałe.`)) return;
+    busy(go, true, 'Wystawiam…');
+    try {
+      const { bill } = await callFn('admin', { action: 'bill_issue', kind: kind.value, order_id: o?.id, issued_on: issued.value, sale_date: sale.value, pay_method: pay.value, paid_on: paidOn.value || undefined,
+        buyer: { name: name.value, address: addr.value, postal_city: pc.value, nip: nip.value, email: email.value }, items: [{ name: iname.value.trim(), qty, unit: 'szt.', price_grosze: price }] });
+      const to = inp({ type: 'email', value: email.value });
+      const sendB = h('button', { class: 'btn btn-gold', type: 'button', text: '✉ Wyślij', onclick: (ev) => sendBill(bill, to.value.trim(), ev.currentTarget) });
+      go.remove(); vibrate(30);
+      res.replaceChildren(h('div', { class: 'card', style: 'margin-top:10px' }, h('b', { class: 'gold', text: `Wystawiono ${bill.number} · ${zl2(bill.total_grosze)}` }),
+        h('div', { class: 'row2', style: 'margin-top:10px;grid-template-columns:1fr auto' }, to, sendB),
+        h('button', { class: 'btn btn-ghost btn-sm', style: 'margin-top:8px', type: 'button', text: '📄 Otwórz PDF', onclick: () => openBillPdf(bill) })));
+    } catch (er) { toast('err', er.message); busy(go, false, 'Wystaw i utwórz PDF'); }
+  } });
+  const F = (l, el) => h('label', { class: 'field' }, h('span', { text: l }), el);
+  openSheet(o ? `Rachunek · ${o.order_number}` : 'Nowy rachunek',
+    h('div', { class: 'row2' }, F('Dokument', kind), F('Zapłata', pay)),
+    h('div', { class: 'row2' }, F('Wystawiono', issued), F('Sprzedaż', sale)),
+    h('h4', { text: 'Nabywca' }), F('Imię i nazwisko / firma', name),
+    h('div', { class: 'row2' }, F('Ulica i numer', addr), F('Kod i miasto', pc)),
+    h('div', { class: 'row2' }, F('NIP', nip), F('E-mail', email)),
+    h('h4', { text: 'Pozycja' }), F('Nazwa usługi / towaru', iname),
+    h('div', { class: 'row2' }, F('Ilość', iqty), F('Cena (zł)', iprice)),
+    F('Data zapłaty (puste = niezapłacone)', paidOn),
+    h('p', { class: 'hint', text: 'Po płatności przez Stripe rachunek wystawia się i wysyła sam – ręcznie tylko przy gotówce, przelewie albo poprawce. Więcej pozycji: panel na stronie (Finanse).' }),
+    go, res);
 }
 
 /* ================================================================== DZIŚ */

@@ -8,11 +8,11 @@
 <meta name="theme-color" content="#080808">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss: http://127.0.0.1:54321 ws://127.0.0.1:54321 http://localhost:54321 ws://localhost:54321; form-action 'self' mailto:; base-uri 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<link rel="canonical" href="https://striketechlab.com/">
+<link rel="canonical" href="https://strike-tech-lab.pages.dev/">
 <meta property="og:title" content="Strike Tech Lab | Optymalizacja, serwis i zestawy PC">
 <meta property="og:description" content="Optymalizacja i tuning PC, serwis i montaż komputerów, zestawy PC do gier oraz strony WWW i automatyzacja dla firm. Rezerwacja terminu online, płatność Stripe, raport z pomiarów przed i po.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://striketechlab.com/">
+<meta property="og:url" content="https://strike-tech-lab.pages.dev/">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22255 190 750 750%22%3E%3Cdefs%3E%3Cmask id=%22m%22%3E%3Crect x=%22255%22 y=%22190%22 width=%22750%22 height=%22750%22 fill=%22%23fff%22/%3E%3Cpolygon points=%22778,212 474,624 655,583 472,918 778,512 612,546%22 fill=%22%23000%22 stroke=%22%23000%22 stroke-width=%2244%22 stroke-linejoin=%22round%22/%3E%3C/mask%3E%3C/defs%3E%3Cpolygon points=%22627,303 853,417 853,697 627,872 400,697 400,417%22 fill=%22none%22 stroke=%22%23FFBB00%22 stroke-width=%2252%22 mask=%22url%28%23m%29%22/%3E%3Cpolygon points=%22778,212 474,624 655,583 472,918 778,512 612,546%22 fill=%22%23FFBB00%22/%3E%3C/svg%3E">
 <script>
 /* =====================================================================
@@ -34,14 +34,14 @@ window.STL_CONFIG = {
      ustawa o świadczeniu usług drogą elektroniczną art. 5). Wpisz dokładnie tak, jak w CEIDG.
      Działalność nierejestrowana: imię i nazwisko + adres; pola, których nie masz (NIP, REGON), zostaw puste. */
   COMPANY: {
-    NAME: '',            // np. 'Jan Kowalski Strike Tech Lab'
-    ADDRESS: '',         // np. 'ul. Przykładowa 1/2, 00-000 Miasto'
+    NAME: 'Mikołaj Szmuc Strike Tech Lab',
+    ADDRESS: 'Wysoka 74, 37-100 Łańcut',
     NIP: '',
     REGON: '',
     PHONE: '',           // telefon kontaktowy (jeśli udostępniasz)
-    REGISTRY: '',        // np. 'wpis do CEIDG' albo 'działalność nierejestrowana (art. 5 Prawa przedsiębiorców)'
+    REGISTRY: 'działalność nierejestrowana – art. 5 ust. 1 ustawy Prawo przedsiębiorców',
     RETURN_ADDRESS: '',  // adres do odsyłania sprzętu i zwrotów (puste = ADDRESS)
-    HOSTING: '',         // firma, która hostuje stronę i skrzynkę e-mail (np. nazwa hostingu)
+    HOSTING: 'Cloudflare, Inc. (hosting strony)',   // dopisz firmę od skrzynki e-mail, gdy kupisz domenę
     MAIL_PROVIDER: ''    // usługa wysyłająca maile z systemu (np. ta sama firma hostingowa)
   },
   /* CAPTCHA przy logowaniu i rejestracji (Cloudflare Turnstile). Puste = wyłączone.
@@ -663,6 +663,13 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
 .fin-table .x-btn{background:none;border:1px solid var(--line-2);color:var(--muted);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:1.1rem;margin-left:6px;vertical-align:middle}
 .fin-table .x-btn:hover,.fin-table .x-btn:focus-visible{color:var(--bad);border-color:var(--bad)}
 .adm-detail .code-row input[type=date]{flex:0 0 150px}
+.bill-form{margin-top:12px}.bill-form h4{margin:14px 0 8px}
+.bill-row{display:grid;grid-template-columns:1fr 70px 120px 34px;gap:8px;align-items:center;margin-bottom:8px}
+.bill-head{font-size:.75rem;color:var(--muted);margin-bottom:4px}
+.bill-row .x-btn{background:none;border:1px solid var(--line-2);color:var(--muted);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:1.1rem}
+.bill-row .x-btn:hover{color:var(--bad);border-color:var(--bad)}
+.code-row .grow{flex:1}
+@media(max-width:600px){.bill-row{grid-template-columns:1fr 1fr 34px}.bill-row>input:first-child{grid-column:1/-1}.bill-head{display:none}}
 @media(max-width:600px){.adm-detail .code-row{flex-wrap:wrap}.fin-big{font-size:1.4rem}}
 .rep-checks{display:grid;gap:4px;margin-bottom:10px}
 .rep-prev:empty{display:none}
@@ -1175,7 +1182,7 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
       </div>
     </div>
     <div class="foot-bottom">
-      <span>© <span id="year">2026</span> Strike Tech Lab · striketechlab.com</span>
+      <span>© <span id="year">2026</span> Strike Tech Lab</span>
       <span>Wszystkie nazwy i znaki towarowe należą do ich właścicieli.</span>
     </div>
   </div>
@@ -3081,6 +3088,7 @@ function adminDetail(o) {
           h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Zmień status', onclick: (e) => act(e.currentTarget, 'Zmień status', { action: 'set_status', order_id: o.id, status: status.value, note: note.value }, () => 'Status zmieniony. Klient widzi go od razu (przy „Testy” i „Zakończone” dostaje maila).') }),
           !o.order_number && o.status !== 'ANULOWANE' ? [['gotowka', 'Opłacone gotówką'], ['przelew', 'Opłacone przelewem']].map(([m, t]) => h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} poza Stripe (${m === 'gotowka' ? 'gotówka' : 'przelew'})?`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number}`); } })) : null),
         paymentBox(o),
+        o.order_number ? orderBills(o) : null,
         o.order_events?.length ? h('ul', { class: 'timeline', style: 'margin-top:14px' }, [...o.order_events].sort((a, b) => a.at.localeCompare(b.at)).map((ev) => h('li', {}, h('time', { text: fmt(ev.at) }), (STATUS[ev.status]?.[0] || ev.status) + (ev.note ? ` – ${ev.note}` : '')))) : null),
       h('div', {}, h('h4', { text: 'Raport STRIKE PROOF' }),
         cat.hasV2 ? reportEditor(o) : h('p', { class: 'note', text: 'Raporty wymagają migracji v2 w bazie.' }),
@@ -3132,7 +3140,7 @@ const MONTHS_PL = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec',
 const monthName = (m) => `${MONTHS_PL[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`;
 const pctTxt = (x) => `${(Math.round(x * 1000) / 10).toLocaleString('pl-PL')}%`;
 const zlFull = (g) => (g / 100).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 2 });
-const fin = { sum: null, exp: [], loading: false, err: '', exErr: '' };
+const fin = { sum: null, exp: [], bills: null, loading: false, err: '', exErr: '', billErr: '' };
 
 /** Zdjęcie paragonu -> JPEG maks. 1800 px (mniejszy plik, poprawny obrót); PDF bez zmian. */
 async function shrinkImage(file, max = 1800) {
@@ -3169,10 +3177,13 @@ async function loadFinance(force) {
   if (fin.sum && !force) { renderFinance(); return; }
   fin.loading = true; if (!out.childElementCount) out.replaceChildren(h('p', { class: 'muted', text: 'Liczę przychody i wydatki…' }));
   try {
-    const [s, e] = await Promise.all([
+    const [s, e, bl] = await Promise.all([
       callFn('admin', { action: 'ledger_summary' }).then((d) => { fin.err = ''; return d; }, (err) => { fin.err = err.message; return null; }),
       sb.from('expenses').select('id,spent_on,category,description,vendor,doc_number,amount_grosze,is_cost,receipt_path,order_id').order('spent_on', { ascending: false }).order('created_at', { ascending: false }).limit(200),
+      sb.from('bills').select('*').order('issued_on', { ascending: false }).order('created_at', { ascending: false }).limit(200),
     ]);
+    fin.billErr = bl.error ? (/does not exist|schema cache|relation/i.test(bl.error.message) ? 'missing' : bl.error.message) : '';
+    fin.bills = bl.data || [];
     fin.sum = s;
     fin.exErr = e.error ? (/does not exist|schema cache|relation/i.test(e.error.message) ? 'missing' : e.error.message) : '';
     fin.exp = e.data || [];
@@ -3197,7 +3208,7 @@ function finCard(title, s, extra) {
 
 function renderFinance() {
   const out = $('#financeOut'); if (!out) return;
-  const S = fin.sum;
+  const S = Array.isArray(fin.sum?.months) ? fin.sum : null;
   if (fin.exErr === 'missing') { out.replaceChildren(h('div', { class: 'banner err', text: 'Brak tabeli wydatków – uruchom migrację v10 (npx supabase db push --linked) i wdróż funkcje admin, cron i stripe-webhook.' })); return; }
   const today = S?.today || todayKey();
   const curM = today.slice(0, 7), curQ = `${today.slice(0, 4)}-Q${Math.floor((+today.slice(5, 7) - 1) / 3) + 1}`, curY = today.slice(0, 4);
@@ -3228,7 +3239,7 @@ function renderFinance() {
         h('tr', { class: 'q-row' }, h('td', {}, h('b', { text: qq.quarter.replace('-', ' ') })), h('td', { text: zlFull(qq.income) }), h('td', { text: zlFull(qq.refunds) }), h('td', {}, h('b', { text: zlFull(qq.net) })), h('td', { text: zlFull(qq.costs) }), h('td', { text: zlFull(qq.profit) }), h('td', { class: qq.pct > 1 ? 'bad' : qq.pct >= 0.8 ? 'warn' : '', text: qq.limit ? pctTxt(qq.pct) : '–' })),
         ...S.months.filter((mm) => `${mm.month.slice(0, 4)}-Q${Math.floor((+mm.month.slice(5, 7) - 1) / 3) + 1}` === qq.quarter).reverse().map((mm) =>
           h('tr', {}, h('td', { class: 'muted', text: monthName(mm.month) }), h('td', { text: zlFull(mm.income) }), h('td', { text: zlFull(mm.refunds) }), h('td', { text: zlFull(mm.net) }), h('td', { text: zlFull(mm.costs) }), h('td', { text: zlFull(mm.profit) }), h('td')))]))))) : null;
-  out.replaceChildren(head, cards, months, expenseForm(), expenseList(),
+  out.replaceChildren(head, cards, months, billList(), expenseForm(), expenseList(),
     h('p', { class: 'note', style: 'margin-top:18px', text: 'Przychód liczony jest w dniu wpłaty (opłacone zlecenie), zwrot w dniu zwrotu. Prowizje Stripe dopisują się same jako koszt. Arkusz Google zawiera ewidencję sprzedaży (dzień po dniu, narastająco w miesiącu), zestawienia miesięczne, kwartalne i roczne – bez danych osobowych klientów. To pomoc w rozliczeniu, nie porada podatkowa.' }));
 }
 
@@ -3310,6 +3321,137 @@ function paymentBox(o) {
     has ? h('p', { class: 'muted small', text: 'Kwota łączna zwrotu. Zwrot zrobiony w Stripe zapisuje się automatycznie – tutaj wpisuj tylko zwroty gotówką lub przelewem.' }) : null);
 }
 
+/* ------------------------------------------------------------------ rachunki i faktury bez VAT (migracja v11) */
+const BILL_PAY = { stripe: 'Płatność online (Stripe)', karta: 'Karta (Stripe)', blik: 'BLIK (Stripe)', p24: 'Przelewy24 (Stripe)', przelew: 'Przelew', gotowka: 'Gotówka', inna: 'Inna' };
+/** PDF tworzy serwer (funkcja admin) – tu tylko otwieramy plik z prywatnego archiwum. */
+async function openBillPdf(b) {
+  const w = window.open('', '_blank');
+  try {
+    if (!b.pdf_path) b.pdf_path = (await callFn('admin', { action: 'bill_pdf', bill_id: b.id })).path;
+    const { data, error } = await sb.storage.from('bills').createSignedUrl(b.pdf_path, 300);
+    if (error) throw error;
+    if (w) w.location.href = data.signedUrl; else location.href = data.signedUrl;
+  } catch (e) { w?.close(); toast('err', e.message); }
+}
+async function sendBill(b, to, btn) {
+  if (!to) return toast('err', 'Wpisz e-mail klienta.');
+  setBusy(btn, true, 'Wysyłam…');
+  try {
+    const d = await callFn('admin', { action: 'bill_send', bill_id: b.id, to });
+    if (d.ok) { toast('ok', `Wysłano na ${d.to}.`); fin.bills = null; if (activeTab === 'finance') loadFinance(true); }
+    else toast('err', d.error, 12000);
+  } catch (e) { toast('err', e.message); }
+  setBusy(btn, false, 'Wyślij e-mailem');
+}
+function b64Pdf(b64) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: 'application/pdf' }); }
+
+/** Formularz rachunku; o = zlecenie (opcjonalnie) – dane klienta i pozycja wpisują się same. */
+function billEditor(o) {
+  const c = o?.customer || {}, biz = c.type === 'business';
+  const kind = h('select', { class: 'select' }, h('option', { value: 'rachunek', text: 'Rachunek' }), h('option', { value: 'faktura', text: 'Faktura bez VAT (gdy klient o nią poprosi)' }));
+  const today = todayKey(), paidDay = o?.paid_at ? new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(o.paid_at)) : '';
+  const issued = h('input', { class: 'input', type: 'date', value: today, max: today });
+  const sale = h('input', { class: 'input', type: 'date', value: today });
+  const name = h('input', { class: 'input', maxlength: 160, value: biz ? (c.company || '') : (c.name || o?.profiles?.full_name || ''), placeholder: 'Imię i nazwisko / nazwa firmy' });
+  const addr = h('input', { class: 'input', maxlength: 160, placeholder: 'Ulica i numer' });
+  const pc = h('input', { class: 'input', maxlength: 100, value: o?.city ? `${o.city}` : '', placeholder: 'Kod pocztowy i miejscowość, np. 37-100 Łańcut' });
+  const nip = h('input', { class: 'input', maxlength: 20, value: biz ? (c.nip || '') : '', placeholder: 'NIP (tylko firmy)' });
+  const email = h('input', { class: 'input', type: 'email', maxlength: 200, value: o?.profiles?.email || c.email || '', placeholder: 'E-mail do wysyłki' });
+  const pay = h('select', { class: 'select' }, Object.entries(BILL_PAY).map(([k, v]) => h('option', { value: k, text: v, selected: k === (o?.pay_method && BILL_PAY[o.pay_method] ? o.pay_method : o?.paid_at ? 'stripe' : 'przelew') })));
+  const paidOn = h('input', { class: 'input', type: 'date', value: paidDay || '', max: today });
+  const notes = h('input', { class: 'input', maxlength: 500, placeholder: 'Uwagi na dokumencie (opcj.)' });
+  const rows = h('div', { class: 'bill-items' });
+  const sumEl = h('b', { class: 'gold' });
+  const recalc = () => { let t = 0; for (const r of rows.children) t += Math.round((parseFloat(r._q.value.replace(',', '.')) || 0) * Math.round((parseFloat(r._p.value.replace(/\s/g, '').replace(',', '.')) || 0) * 100)); sumEl.textContent = zlFull(t); };
+  const addRow = (nm = '', q = 1, price = '') => {
+    if (rows.children.length >= 12) return toast('err', 'Maksymalnie 12 pozycji.');
+    const n = h('input', { class: 'input', maxlength: 200, value: nm, placeholder: 'Nazwa usługi / towaru', 'aria-label': 'Nazwa pozycji' });
+    const q2 = h('input', { class: 'input', inputmode: 'decimal', value: String(q), 'aria-label': 'Ilość', oninput: recalc });
+    const p = h('input', { class: 'input', inputmode: 'decimal', value: price, placeholder: 'cena zł', 'aria-label': 'Cena jednostkowa w zł', oninput: recalc });
+    const r = h('div', { class: 'bill-row' }, n, q2, p, h('button', { class: 'x-btn', type: 'button', 'aria-label': 'Usuń pozycję', text: '×', onclick: () => { if (rows.children.length > 1) { r.remove(); recalc(); } } }));
+    Object.assign(r, { _n: n, _q: q2, _p: p }); rows.append(r); recalc(); return n;
+  };
+  if (o) addRow(o.service_name + (o.express ? ' + Express' : ''), 1, o.amount_due_grosze ? String(o.amount_due_grosze / 100).replace('.', ',') : '');
+  else addRow();
+  const out = h('div');
+  const btn = h('button', { class: 'btn btn-gold btn-sm', type: 'submit', text: 'Wystaw i utwórz PDF' });
+  const collect = () => ({ kind: kind.value, order_id: o?.id, issued_on: issued.value, sale_date: sale.value, pay_method: pay.value, paid_on: paidOn.value || undefined, notes: notes.value,
+    buyer: { name: name.value, address: addr.value, postal_city: pc.value, nip: nip.value, email: email.value },
+    items: [...rows.children].map((r) => ({ name: r._n.value.trim(), qty: parseFloat(r._q.value.replace(',', '.')), unit: 'szt.', price_grosze: Math.round(parseFloat(r._p.value.replace(/\s/g, '').replace(',', '.')) * 100) })) });
+  const prevBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Podgląd PDF', onclick: async (e) => {
+    const b2 = e.currentTarget, w = window.open('', '_blank'); setBusy(b2, true);
+    try { const d = await callFn('admin', { action: 'bill_preview', ...collect() }); const u = URL.createObjectURL(b64Pdf(d.pdf)); if (w) w.location.href = u; else downloadBlob(b64Pdf(d.pdf), 'podglad-rachunku.pdf'); }
+    catch (er) { w?.close(); toast('err', er.message); } setBusy(b2, false, 'Podgląd PDF');
+  } });
+  return h('form', { class: 'bill-form', onsubmit: async (e) => {
+    e.preventDefault();
+    const data = collect(), items = data.items;
+    if (items.some((it) => !it.name || !(it.qty > 0) || !(it.price_grosze >= 0))) return toast('err', 'Uzupełnij nazwę, ilość i cenę każdej pozycji.');
+    if (!confirm(`Wystawić ${kind.value === 'faktura' ? 'fakturę' : 'rachunek'} na ${sumEl.textContent}? Numer zostanie nadany na stałe.`)) return;
+    setBusy(btn, true, 'Wystawiam…');
+    try {
+      const d = await callFn('admin', { action: 'bill_issue', ...data });
+      const bill = d.bill;
+      fin.bills = null;
+      const to = h('input', { class: 'input', type: 'email', value: email.value, placeholder: 'e-mail klienta' });
+      const sendB = h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Wyślij e-mailem', onclick: (ev) => sendBill(bill, to.value.trim(), ev.currentTarget) });
+      out.replaceChildren(h('div', { class: 'banner ok', style: 'margin-top:12px' }, h('b', { text: `Wystawiono ${bill.number} na ${zlFull(bill.total_grosze)}.` }),
+        h('div', { class: 'code-row', style: 'margin-top:10px' }, to, sendB),
+        h('button', { class: 'btn btn-ghost btn-sm', type: 'button', style: 'margin-top:8px', text: 'Otwórz PDF', onclick: () => openBillPdf(bill) }),
+        o?.user_id ? h('p', { class: 'muted small', style: 'margin:8px 0 0', text: 'Kopia jest też w plikach zlecenia w Strefie Klienta.' }) : null));
+      btn.remove(); prevBtn.remove(); toast('ok', `Wystawiono ${bill.number}.`);
+    } catch (er) { toast('err', er.message); setBusy(btn, false, 'Wystaw i utwórz PDF'); }
+  } },
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, h('label', { text: 'Dokument' }), kind), h('div', { class: 'field' }, h('label', { text: 'Sposób zapłaty' }), pay)),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, h('label', { text: 'Data wystawienia' }), issued), h('div', { class: 'field' }, h('label', { text: 'Data sprzedaży / wykonania usługi' }), sale)),
+    h('h4', { text: 'Nabywca' }),
+    h('div', { class: 'field' }, name), h('div', { class: 'row2' }, h('div', { class: 'field' }, addr), h('div', { class: 'field' }, pc)),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, nip), h('div', { class: 'field' }, email)),
+    h('h4', { text: 'Pozycje' }), h('div', { class: 'bill-row bill-head', 'aria-hidden': 'true' }, h('span', { text: 'Nazwa' }), h('span', { text: 'Ilość' }), h('span', { text: 'Cena jedn. (zł)' }), h('span')), rows,
+    h('div', { class: 'toolbar', style: 'justify-content:space-between;margin-top:8px' }, h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '+ Pozycja', onclick: () => addRow().focus() }), h('span', {}, 'Razem: ', sumEl)),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, h('label', { text: 'Data zapłaty (puste = nie zapłacono)' }), paidOn), h('div', { class: 'field' }, h('label', { text: 'Uwagi' }), notes)),
+    h('p', { class: 'muted small', text: 'Na dokumencie automatycznie: dane sprzedawcy, zwolnienie z VAT (art. 113 ust. 1), kwota słownie. Fakturę wystawiaj tylko, gdy klient o nią poprosi; od 2027 r. faktury trzeba wystawiać w KSeF.' }),
+    h('div', { class: 'cta-row', style: 'margin:0;gap:8px' }, prevBtn, btn), out);
+}
+
+function billList() {
+  const box = h('div', { class: 'card', style: 'margin-top:18px' }, h('div', { class: 'order-h' }, h('h3', { style: 'margin:0', text: 'Rachunki i faktury' })));
+  if (fin.billErr === 'missing') { box.append(h('p', { class: 'note', text: 'Rachunki wymagają migracji v11 (npx supabase db push --linked) i nowej funkcji admin.' })); return box; }
+  box.append(h('details', { class: 'more', style: 'margin:10px 0 14px' }, h('summary', { text: '+ Nowy rachunek (np. wpłata gotówką, zlecenie spoza strony)' }), billEditor(null)));
+  if (fin.billErr) { box.append(h('p', { class: 'bad', text: fin.billErr })); return box; }
+  if (!fin.bills?.length) { box.append(h('p', { class: 'muted', text: 'Brak wystawionych dokumentów. Po płatności przez Stripe rachunek wystawia się i wysyła klientowi automatycznie.' })); return box; }
+  box.append(h('div', { class: 'scroll-x' }, h('table', { class: 'adm fin-table' },
+    h('thead', {}, h('tr', {}, ['Numer', 'Data', 'Nabywca', 'Kwota', 'Status', ''].map((t) => h('th', { text: t })))),
+    h('tbody', {}, fin.bills.map((b) => h('tr', { class: b.cancelled_at ? 'muted' : '' },
+      h('td', {}, h('b', { text: b.number }), h('div', { class: 'muted small', text: b.kind === 'faktura' ? 'faktura' : 'rachunek' })),
+      h('td', { text: fmt(`${b.issued_on}T12:00:00Z`, { dateStyle: 'medium' }) }),
+      h('td', { text: b.buyer?.name || '–' }),
+      h('td', { style: 'white-space:nowrap', text: zlFull(b.total_grosze) }),
+      h('td', { class: 'small' }, b.cancelled_at ? h('span', { class: 'pill bad', text: 'anulowany' }) : b.sent_at ? h('span', { class: 'pill ok', text: `wysłany ${fmt(b.sent_at, { day: 'numeric', month: 'short' })}` }) : h('span', { class: 'pill ghost', text: 'nie wysłany' })),
+      h('td', { style: 'white-space:nowrap' },
+        h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'PDF', onclick: () => openBillPdf(b) }),
+        b.cancelled_at ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', style: 'margin-left:6px', text: 'Wyślij', onclick: (e) => { const to = prompt('Wyślij na adres e-mail:', b.sent_to || b.buyer?.email || ''); if (to) sendBill(b, to.trim(), e.currentTarget); } }),
+        b.cancelled_at ? null : h('button', { class: 'x-btn', type: 'button', 'aria-label': `Anuluj ${b.number}`, title: 'Anuluj dokument', text: '×', onclick: async () => {
+          const reason = prompt(`Anulować ${b.number}? Numer zostaje w rejestrze. Podaj powód (np. błędne dane nabywcy):`); if (!reason) return;
+          try { await callFn('admin', { action: 'bill_cancel', bill_id: b.id, reason }); b.cancelled_at = new Date().toISOString(); b.cancel_reason = reason; toast('ok', `${b.number} anulowany.`); fin.bills = null; loadFinance(true); } catch (er) { toast('err', er.message); }
+        } }))))))));
+  return box;
+}
+
+/** Szczegóły zlecenia: wystawione dokumenty + formularz nowego. */
+function orderBills(o) {
+  const list = h('div');
+  sb.from('bills').select('*').eq('order_id', o.id).order('created_at').then(({ data, error }) => {
+    if (error || !data?.length) return;
+    list.replaceChildren(...data.map((b) => h('div', { class: 'code-row', style: 'align-items:center;margin-bottom:6px' },
+      h('span', { class: 'grow small' }, h('b', { text: b.number }), ` · ${zlFull(b.total_grosze)} · ${b.cancelled_at ? 'anulowany' : b.sent_at ? `wysłany na ${b.sent_to}` : 'nie wysłany'}`),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'PDF', onclick: () => openBillPdf(b) }),
+      b.cancelled_at ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Wyślij', onclick: (e) => { const to = prompt('Wyślij na adres e-mail:', b.sent_to || b.buyer?.email || ''); if (to) sendBill(b, to.trim(), e.currentTarget); } }))));
+  });
+  return h('div', { style: 'margin-top:16px' }, h('h4', { text: 'Rachunek / faktura' }), list,
+    h('details', { class: 'more' }, h('summary', { text: 'Wystaw rachunek do tego zlecenia' }), billEditor(o)));
+}
+
 /* ------------------------------------------------------------------ kontakt */
 function renderContactTopics() {
   const sel = $('#cTopic'), cur = sel.value;
@@ -3363,7 +3505,7 @@ setInterval(() => { if (document.visibilityState === 'visible') findNextFree(); 
 /* ------------------------------------------------------------------ teksty prawne
    Dane sprzedawcy pochodzą z window.STL_CONFIG.COMPANY (góra pliku). Dopóki NAME lub ADDRESS są puste,
    w dokumentach widać żółte pola [UZUPEŁNIJ]. Teksty przygotowano starannie, ale nie zastępują porady prawnika. */
-const LEGAL_VERSION = '26 października 2026';
+const LEGAL_VERSION = '27 października 2026';
 const escH = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fill = (v, what) => v ? escH(v) : `<mark>[UZUPEŁNIJ: ${what}]</mark>`;
 const COMPANY_OK = !!(CO.NAME && CO.ADDRESS);
@@ -3393,7 +3535,7 @@ const LEGAL = {
     '<li><b>Dochodzenie roszczeń i obrona przed nimi</b> – dane z zamówień i korespondencji. Podstawa: art. 6 ust. 1 lit. f RODO.</li>' +
     '</ul>' +
     '<h4>3. Sesja zdalna</h4><p>Podczas sesji przez AnyDesk możemy zobaczyć na ekranie Twoje pliki. Nie kopiujemy ich – zapisujemy tylko specyfikację sprzętu i wyniki pomiarów potrzebne do raportu. Przed sesją zamknij dokumenty i programy z danymi prywatnymi. Klientom firmowym, u których możemy mieć dostęp do danych osobowych ich klientów lub pracowników, zawieramy na życzenie umowę powierzenia przetwarzania danych.</p>' +
-    `<h4>4. Komu przekazujemy dane</h4><ul><li>Supabase Inc. (USA) – baza danych, logowanie i przechowywanie raportów, na podstawie umowy powierzenia.</li><li>Stripe Payments Europe Ltd. (Irlandia) – obsługa płatności; w części dotyczącej płatności Stripe działa jako odrębny administrator i stosuje własną politykę prywatności.</li><li>Dostawca wysyłki e-maili z systemu: ${fill(CO.MAIL_PROVIDER, 'nazwa dostawcy wysyłki e-mail')}.</li><li>Dostawca hostingu strony i poczty: ${fill(CO.HOSTING, 'nazwa firmy hostingowej')}.</li><li>Google (arkusz Google Sheets z kopią rejestru zamówień i zapytań) – tylko jeśli ta funkcja jest włączona.</li>${CFG.TURNSTILE_SITE_KEY ? '<li>Cloudflare, Inc. (zabezpieczenie Turnstile przy logowaniu i rejestracji – ochrona przed botami; przetwarza m.in. adres IP i dane przeglądarki).</li>' : ''}<li>Biuro rachunkowe, firmy kurierskie i operatorzy pocztowi – gdy jest to potrzebne do rozliczeń lub wysyłki.</li><li>Organy publiczne – wyłącznie gdy wymagają tego przepisy.</li></ul><p>AnyDesk Software GmbH (Niemcy) przetwarza dane połączenia jako odrębny administrator – na podstawie Twojej umowy z AnyDesk.</p>` +
+    `<h4>4. Komu przekazujemy dane</h4><ul><li>Supabase Inc. (USA) – baza danych, logowanie i przechowywanie raportów, na podstawie umowy powierzenia.</li><li>Stripe Payments Europe Ltd. (Irlandia) – obsługa płatności; w części dotyczącej płatności Stripe działa jako odrębny administrator i stosuje własną politykę prywatności.</li><li>Dostawca wysyłki e-maili z systemu: ${fill(CO.MAIL_PROVIDER, 'nazwa dostawcy wysyłki e-mail')}.</li><li>Dostawca hostingu strony i poczty: ${fill(CO.HOSTING, 'nazwa firmy hostingowej')}.</li><li>Google (arkusz Google Sheets: rozliczenia – kwoty i numery zleceń, przy zakupach firmowych nazwa firmy i NIP – oraz kopia wiadomości z formularza kontaktowego) – tylko jeśli ta funkcja jest włączona.</li>${CFG.TURNSTILE_SITE_KEY ? '<li>Cloudflare, Inc. (zabezpieczenie Turnstile przy logowaniu i rejestracji – ochrona przed botami; przetwarza m.in. adres IP i dane przeglądarki).</li>' : ''}<li>Biuro rachunkowe, firmy kurierskie i operatorzy pocztowi – gdy jest to potrzebne do rozliczeń lub wysyłki.</li><li>Organy publiczne – wyłącznie gdy wymagają tego przepisy.</li></ul><p>AnyDesk Software GmbH (Niemcy) przetwarza dane połączenia jako odrębny administrator – na podstawie Twojej umowy z AnyDesk.</p>` +
     '<h4>5. Przekazywanie danych poza Europejski Obszar Gospodarczy</h4><p>Część dostawców (np. Supabase, Google) ma siedzibę w USA lub może przetwarzać dane poza EOG. Odbywa się to na podstawie decyzji Komisji Europejskiej o adekwatności (EU-US Data Privacy Framework – jeśli dostawca jest certyfikowany) albo standardowych klauzul umownych. Kopię zabezpieczeń możesz otrzymać, pisząc do nas.</p>' +
     '<h4>6. Jak długo przechowujemy dane</h4><ul><li>Konto – do jego usunięcia (zrobisz to samodzielnie w Strefie Klienta).</li><li>Zamówienia i dokumenty sprzedaży – do upływu terminów przedawnienia zobowiązań podatkowych (5 lat od końca roku, w którym upłynął termin płatności podatku) i roszczeń z umowy (art. 118 Kodeksu cywilnego), w zależności od tego, który termin jest dłuższy. Po usunięciu konta zamówienia zostają bez powiązania z kontem.</li><li>Wiadomości z formularza – 12 miesięcy od otrzymania, chyba że stały się częścią zamówienia.</li><li>Skrót adresu IP – 24 godziny.</li><li>Zgoda marketingowa – do jej wycofania.</li></ul>' +
     '<h4>7. Twoje prawa</h4><p>Masz prawo dostępu do danych, ich sprostowania, usunięcia, ograniczenia przetwarzania i przeniesienia (w Strefie Klienta pobierzesz je jako plik JSON), a także prawo wniesienia sprzeciwu wobec przetwarzania opartego na prawnie uzasadnionym interesie i prawo wycofania zgody. Napisz na ' + MAIL + '. Masz też prawo wnieść skargę do Prezesa Urzędu Ochrony Danych Osobowych (ul. Stawki 2, 00-193 Warszawa, uodo.gov.pl).</p>' +
@@ -3412,10 +3554,10 @@ const LEGAL = {
     '<h4>Jak usunąć zapisane dane</h4><p>Wyloguj się albo wyczyść dane witryny w ustawieniach przeglądarki.</p>' },
   terms: { t: 'Regulamin', h: DRAFT_NOTE +
     `<p class="note">Wersja z ${LEGAL_VERSION}.</p>` +
-    `<h4>§1 Sprzedawca i definicje</h4><p>Serwis striketechlab.com (Strike Tech Lab) prowadzi ${SELLER} („Sprzedawca”). <b>Klient</b> – osoba lub firma korzystająca z serwisu. <b>Konsument</b> – osoba fizyczna zawierająca umowę niezwiązaną bezpośrednio z jej działalnością gospodarczą lub zawodową. <b>Przedsiębiorca na prawach konsumenta</b> – osoba fizyczna prowadząca jednoosobową działalność, dla której umowa nie ma charakteru zawodowego (art. 38a ustawy o prawach konsumenta); ma ona prawa konsumenta opisane w §7 i §8.</p>` +
+    `<h4>§1 Sprzedawca i definicje</h4><p>Serwis internetowy Strike Tech Lab prowadzi ${SELLER} („Sprzedawca”). <b>Klient</b> – osoba lub firma korzystająca z serwisu. <b>Konsument</b> – osoba fizyczna zawierająca umowę niezwiązaną bezpośrednio z jej działalnością gospodarczą lub zawodową. <b>Przedsiębiorca na prawach konsumenta</b> – osoba fizyczna prowadząca jednoosobową działalność, dla której umowa nie ma charakteru zawodowego (art. 38a ustawy o prawach konsumenta); ma ona prawa konsumenta opisane w §7 i §8.</p>` +
     '<h4>§2 Usługi elektroniczne i wymagania techniczne</h4><p>Bezpłatnie udostępniamy: konto w Strefie Klienta, formularz rezerwacji, formularz kontaktowy i program poleceń. Potrzebujesz urządzenia z internetem, aktualnej przeglądarki z włączonym JavaScriptem i aktywnego adresu e-mail. Zakazane jest przesyłanie treści bezprawnych. Umowę o konto zawieramy na czas nieokreślony – możesz ją rozwiązać w każdej chwili, usuwając konto w Strefie Klienta. Możemy ją wypowiedzieć z 14-dniowym wyprzedzeniem z ważnych powodów (np. naruszenie regulaminu), informując o tym mailem. Umowa dotycząca formularza kontaktowego kończy się z chwilą wysłania wiadomości.</p>' +
     '<h4>§3 Zamówienie i zawarcie umowy</h4><p>Zamówienie może złożyć osoba pełnoletnia lub – w imieniu firmy – osoba do tego upoważniona. Do zamówienia potrzebne jest konto. Wybierasz usługę (kilka usług możesz połączyć w jednym terminie i jednej płatności), termin, podajesz dane i klikasz „Zamawiam z obowiązkiem zapłaty”. Termin jest zarezerwowany przez 35 minut na płatność; potem rezerwacja wygasa. Umowa zostaje zawarta z chwilą zaksięgowania płatności całej ceny. Potwierdzenie zamówienia z najważniejszymi informacjami wysyłamy e-mailem.</p>' +
-    '<h4>§4 Ceny i płatności</h4><p>Ceny są cenami końcowymi w złotych polskich. Płacisz online przez operatora Stripe (karta, BLIK lub Przelewy24 – zależnie od dostępności). Za wszystkie usługi i komputery na zamówienie płacisz 100% ceny z góry, przed rozpoczęciem prac (przy komputerze na zamówienie – po akceptacji wyceny). Nie pobieramy zaliczek. Cena „od” to cena zakresu podstawowego opisanego przy usłudze. Dodatkowe prace lub części wykonujemy wyłącznie po Twojej akceptacji wyceny – bez akceptacji płacisz tylko za zakres podstawowy.</p>' +
+    '<h4>§4 Ceny i płatności</h4><p>Ceny są cenami końcowymi w złotych polskich. Płacisz online przez operatora Stripe (karta, BLIK lub Przelewy24 – zależnie od dostępności). Za wszystkie usługi i komputery na zamówienie płacisz 100% ceny z góry, przed rozpoczęciem prac (przy komputerze na zamówienie – po akceptacji wyceny). Nie pobieramy zaliczek. Sprzedawca korzysta ze zwolnienia podmiotowego z VAT (art. 113 ust. 1 ustawy o VAT), więc ceny nie zawierają VAT. Na Twoje żądanie wystawiamy rachunek, a jeśli o to poprosisz – fakturę bez VAT. Składając zamówienie, zgadzasz się na otrzymywanie rachunków i faktur w formie elektronicznej (PDF) na adres e-mail konta; zawsze możesz poprosić o wersję papierową. Cena „od” to cena zakresu podstawowego opisanego przy usłudze. Dodatkowe prace lub części wykonujemy wyłącznie po Twojej akceptacji wyceny – bez akceptacji płacisz tylko za zakres podstawowy.</p>' +
     '<h4>§5 Realizacja usług</h4><p>Usługi zdalne wykonujemy w zarezerwowanym terminie przez AnyDesk. Zapewniasz dostęp do komputera z uprawnieniami administratora i możesz przerwać sesję w każdej chwili. Usługi warsztatowe wymagają dostarczenia sprzętu osobiście lub kurierem; koszt wysyłki do nas ponosisz Ty, chyba że ustalimy inaczej. Opcja Express (+50 zł) dotyczy wybranych usług zdalnych i skraca minimalny czas do terminu do 2 godzin, o ile są wolne godziny. Prace nieodwracalne – aktualizację BIOS-u, delid, nałożenie ciekłego metalu – wykonujemy wyłącznie po Twojej wyraźnej zgodzie wyrażonej mailowo, po informacji o ryzyku i możliwej utracie gwarancji producenta. Jeśli nie możemy wykonać usługi w terminie, zaproponujemy nowy termin, a jeśli go nie przyjmiesz – zwrócimy całą wpłatę. Zmianę terminu z Twojej strony ustalamy mailowo.</p>' +
     SETS_TERMS +
     '<h4>§7 Prawo odstąpienia od umowy</h4><p>Konsument i przedsiębiorca na prawach konsumenta mogą odstąpić od umowy zawartej na odległość w terminie 14 dni bez podania przyczyny – zasady opisuje <button type="button" class="link" data-legal="withdrawal">pouczenie o odstąpieniu od umowy</button>. Prawo to nie przysługuje w przypadkach z art. 38 ustawy o prawach konsumenta, w szczególności gdy usługa została w pełni wykonana za Twoją wyraźną zgodą, a przed jej rozpoczęciem wiedziałeś, że po wykonaniu usługi utracisz prawo odstąpienia. O ewentualnym wyłączeniu prawa odstąpienia dla zestawu składanego według Twojej indywidualnej specyfikacji informujemy w ofercie, przed zawarciem umowy.</p>' +
