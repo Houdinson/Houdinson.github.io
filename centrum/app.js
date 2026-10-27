@@ -188,7 +188,7 @@ function openSheet(title, ...content) {
 sheet.addEventListener('click', (e) => { if (e.target === sheet || e.target.closest('[data-close]')) sheet.close(); });
 
 /* ================================================================== ZLECENIA */
-const ORD_COLS = 'id,order_number,status,service_id,service_name,express,total_grosze,amount_due_grosze,created_at,paid_at,customer,slot_conflict,user_id,handover,city,customer_note,spec,discount_code,referral_code_used,profiles(email,full_name,phone),calendar_slots(starts_at,ends_at,status,hold_expires_at),order_events(status,note,at),order_results(phase,metrics)';
+const ORD_COLS = 'id,order_number,status,service_id,config,service_name,express,total_grosze,amount_due_grosze,created_at,paid_at,customer,slot_conflict,user_id,handover,city,customer_note,spec,discount_code,referral_code_used,profiles(email,full_name,phone),calendar_slots(starts_at,ends_at,status,hold_expires_at),order_events(status,note,at),order_results(phase,metrics)';
 async function loadOrders() {
   const box = $('#ordList'); if (!S.orders.length) box.replaceChildren(h('div', { class: 'skeleton' }), h('div', { class: 'skeleton' }));
   const { data, error } = await sb.from('orders').select(ORD_COLS).order('created_at', { ascending: false }).limit(500);
@@ -955,163 +955,99 @@ function wrapLines(ctx, text, maxW) {
 const FONT = "'Plus Jakarta Sans', system-ui, sans-serif";
 async function fontsReady() { try { await Promise.all([document.fonts.load(`800 40px ${FONT}`), document.fonts.load(`500 20px ${FONT}`)]); } catch { /* */ } }
 
-/* ================================================================== RAPORT STRIKE PROOF (PDF) */
-const METRIC_PRESETS = [['fps_avg', 'FPS średnio'], ['fps_1low', '1% low FPS'], ['cpu_temp', 'Temp. CPU (°C)'], ['gpu_temp', 'Temp. GPU (°C)'], ['latency_ms', 'Opóźnienie (ms)'], ['noise_db', 'Hałas (dB)']];
-const METRIC_LBL = Object.fromEntries(METRIC_PRESETS);
-const lowerBetter = (k) => /temp|latency|lag|noise|db|boot|time|_ms$|_s$/.test(k);
 const slug = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
-function reportSheet(o) {
+/* ================================================================== RAPORT STRIKE PROOF (PDF) – szablon usługi (stl-report.js, wspólny ze stroną) */
+let REP = null;
+const repModule = () => (REP ||= import('./stl-report.js').catch((e) => { REP = null; throw e; }));
+async function reportSheet(o) {
+  let R; try { R = await repModule(); } catch { return toast('err', 'Brak pliku stl-report.js – odśwież Centrum.'); }
+  const tpl = R.templateFor(o.service_id, o.config?.extras);
   const before = (o.order_results || []).find((r) => r.phase === 'before')?.metrics || {};
   const after = (o.order_results || []).find((r) => r.phase === 'after')?.metrics || {};
-  const keys = [...new Set([...METRIC_PRESETS.map(([k]) => k), ...Object.keys(before), ...Object.keys(after)])];
-  const rows = h('div');
-  const addRow = (k, label) => {
-    const b = h('input', { class: 'input', inputmode: 'decimal', value: before[k] ?? '' }), a = h('input', { class: 'input', inputmode: 'decimal', value: after[k] ?? '' });
-    const lbl = k ? h('span', { class: 'lbl', text: label || METRIC_LBL[k] || k.replace(/_/g, ' ') }) : h('input', { class: 'input', placeholder: 'Nazwa, np. Cinebench', style: 'font-size:14px' });
-    const row = h('div', { class: 'metric', dataset: { key: k || '' } }, lbl, b, a, h('button', { class: 'x-btn', type: 'button', 'aria-label': 'Usuń', text: '×', onclick: () => row.remove() }));
-    rows.append(row);
-  };
-  keys.forEach((k) => addRow(k));
-  const done = h('textarea', { class: 'textarea', placeholder: 'Jedna praca w linii, np.\nCzyszczenie i nowa pasta na CPU\nUndervolting GPU – krzywa V/F' });
-  const rec = h('textarea', { class: 'textarea', style: 'min-height:70px', placeholder: 'Zalecenia dla klienta (opcjonalnie)' });
-  const prev = h('div');
-  // zapisany wcześniej opis prac i zalecenia (tabela order_reports, migracja v6)
-  sb.from('order_reports').select('works,recommendations').eq('order_id', o.id).maybeSingle().then(({ data }) => {
-    if (data && !done.value) done.value = data.works || '';
-    if (data && !rec.value) rec.value = data.recommendations || '';
+  let saved = {}, hasFacts = true;
+  let res = await sb.from('order_reports').select('works,recommendations,facts').eq('order_id', o.id).maybeSingle();
+  if (res.error && /facts/.test(res.error.message)) { hasFacts = false; res = await sb.from('order_reports').select('works,recommendations').eq('order_id', o.id).maybeSingle(); }
+  if (!res.error && res.data) saved = res.data;
+  const f0 = saved.facts || {};
+  const vStr = (v) => v === undefined || v === null ? '' : String(v).replace(/^(-?\d+)\.(\d+)$/, '$1,$2');
+  const factIn = {};
+  const facts = tpl.facts.map((f) => {
+    const el = f.long ? h('textarea', { class: 'textarea', style: 'min-height:64px', maxlength: 1000, placeholder: f.ph || '' }) : h('input', { class: 'input', maxlength: 200, placeholder: f.ph || '' });
+    el.value = f0[f.k] ?? ''; factIn[f.k] = el;
+    return h('label', { class: 'field' }, h('span', { class: 'lbl', text: f.l }), el);
   });
+  const mIn = [];
+  const groups = tpl.groups.map((g) => [h('h4', { text: g.t }),
+    h('div', { class: 'metric-h' }, h('span', { text: 'Pomiar' }), h('span', { text: g.one ? '' : 'Przed' }), h('span', { text: g.one ? 'Wynik' : 'Po' }), h('span')),
+    g.m.map(([k, l, u]) => {
+      const b = g.one ? null : h('input', { class: 'input', inputmode: 'decimal', 'aria-label': `${l} – przed`, value: vStr(before[k]) });
+      const a = h('input', { class: 'input', inputmode: 'decimal', 'aria-label': `${l} – ${g.one ? 'wynik' : 'po'}`, value: vStr(after[k]) });
+      mIn.push({ key: k, b, a });
+      return h('div', { class: `metric${g.one ? ' one' : ''}` }, h('span', { class: 'lbl', text: u ? `${l} (${u})` : l }), b, a, h('span'));
+    })]);
+  const known = new Set(tpl.groups.flatMap((g) => g.m.map(([k]) => k)));
+  const extraBox = h('div');
+  const addExtra = (k = '', label = '') => {
+    const name = h('input', { class: 'input', placeholder: 'Nazwa, np. Cinebench R23', style: 'font-size:14px', value: label || (k ? R.metricInfo(k).l : '') });
+    const b = h('input', { class: 'input', inputmode: 'decimal', value: vStr(before[k]) }), a = h('input', { class: 'input', inputmode: 'decimal', value: vStr(after[k]) });
+    const row = { key: k, name, b, a }; mIn.push(row);
+    const el = h('div', { class: 'metric' }, name, b, a, h('button', { class: 'x-btn', type: 'button', 'aria-label': 'Usuń', text: '×', onclick: () => { el.remove(); mIn.splice(mIn.indexOf(row), 1); } }));
+    extraBox.append(el); return name;
+  };
+  [...new Set([...Object.keys(before), ...Object.keys(after)])].filter((k) => !known.has(k)).forEach((k) => addExtra(k, f0._labels?.[k]));
+  const checkList = (items, txt) => {
+    const lines = String(txt || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    const boxes = items.map((t) => ({ t, cb: h('input', { type: 'checkbox', checked: lines.length ? lines.includes(t) : true }) }));
+    const other = h('textarea', { class: 'textarea', style: 'min-height:60px', placeholder: 'Inne – jedna pozycja w linii' }); other.value = lines.filter((l) => !items.includes(l)).join('\n');
+    return { el: [boxes.map((x) => h('label', { class: 'chk-row' }, x.cb, h('span', { text: x.t }))), other],
+      value: () => [...boxes.filter((x) => x.cb.checked).map((x) => x.t), ...other.value.split('\n').map((s) => s.trim()).filter(Boolean)] };
+  };
+  const works = checkList(tpl.works, saved.works), recs = checkList(tpl.recs, saved.recommendations);
+  const prev = h('div');
   openSheet(`Raport ${o.order_number}`,
-    h('div', { class: 'metric-h' }, h('span', { text: 'Pomiar' }), h('span', { text: 'Przed' }), h('span', { text: 'Po' }), h('span')),
-    rows, h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '+ Własny pomiar', onclick: () => addRow('') }),
-    h('h4', { text: 'Wykonane prace' }), done, h('h4', { text: 'Zalecenia' }), rec,
-    h('button', { class: 'btn btn-gold btn-block', style: 'margin-top:12px', type: 'button', text: 'Zapisz pomiary i utwórz PDF', onclick: async (e) => {
+    h('p', { class: 'muted small', text: `Szablon: ${tpl.title}` }),
+    h('h4', { text: 'Sprzęt i ustawienia' }), facts,
+    groups, h('h4', { text: 'Własne pomiary' }), extraBox,
+    h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '+ Własny pomiar', onclick: () => addExtra().focus() }),
+    h('h4', { text: 'Wykonane prace' }), works.el, h('h4', { text: 'Zalecenia' }), recs.el,
+    h('button', { class: 'btn btn-gold btn-block', style: 'margin-top:12px', type: 'button', text: 'Zapisz i utwórz PDF', onclick: async (e) => {
       const btn = e.currentTarget;
-      const num = (v) => { const t = String(v).trim().replace(',', '.'); return t === '' ? undefined : isNaN(+t) ? t : +t; };
-      const mb = {}, ma = {}, labels = {};
-      for (const r of rows.children) {
-        const [l, bi, ai] = r.children; let k = r.dataset.key;
-        if (!k) { const name = l.value.trim(); if (!name) continue; k = slug(name); labels[k] = name; } else labels[k] = l.textContent;
-        const vb = num(bi.value), va = num(ai.value);
+      const mb = {}, ma = {}, labels = { ...(f0._labels || {}) };
+      for (const x of mIn) {
+        let k = x.key;
+        if (x.name) { const nm = x.name.value.trim(); if (!nm) continue; k = x.key || R.slug(nm); if (!k) continue; labels[k] = nm.slice(0, 60); }
+        const vb = x.b ? R.parseVal(x.b.value) : undefined, va = R.parseVal(x.a.value);
         if (vb !== undefined) mb[k] = vb; if (va !== undefined) ma[k] = va;
       }
-      if (!Object.keys(mb).length && !Object.keys(ma).length) return toast('err', 'Wpisz przynajmniej jeden pomiar.');
-      busy(btn, true, 'Zapisuję pomiary…');
+      const fx = {}; for (const [k, el] of Object.entries(factIn)) { const v = el.value.trim(); if (v) fx[k] = v.slice(0, 1000); }
+      const used = new Set([...Object.keys(mb), ...Object.keys(ma)]), lab = Object.fromEntries(Object.entries(labels).filter(([k]) => used.has(k)));
+      if (Object.keys(lab).length) fx._labels = lab;
+      if (!used.size && !Object.keys(fx).length) return toast('err', 'Wpisz przynajmniej jeden pomiar albo dane sprzętu.');
+      const w = works.value(), r = recs.value();
+      busy(btn, true, 'Zapisuję…');
       try {
-        if (Object.keys(mb).length) await callFn('admin', { action: 'save_results', order_id: o.id, phase: 'before', metrics: mb });
-        if (Object.keys(ma).length) await callFn('admin', { action: 'save_results', order_id: o.id, phase: 'after', metrics: ma });
-        const { error: repErr } = await sb.from('order_reports').upsert({ order_id: o.id, works: done.value.trim().slice(0, 4000) || null, recommendations: rec.value.trim().slice(0, 2000) || null });
-        if (repErr) console.warn('order_reports', repErr.message);   // raport i tak powstanie
+        await callFn('admin', { action: 'save_results', order_id: o.id, phase: 'before', metrics: mb });
+        await callFn('admin', { action: 'save_results', order_id: o.id, phase: 'after', metrics: ma });
+        const row = { order_id: o.id, works: w.join('\n').slice(0, 4000) || null, recommendations: r.join('\n').slice(0, 2000) || null };
+        let err = hasFacts ? (await sb.from('order_reports').upsert({ ...row, facts: fx })).error : null;
+        if (!hasFacts || (err && /facts/.test(err.message))) err = (await sb.from('order_reports').upsert(row)).error;
+        if (err) console.warn('order_reports', err.message);   // raport i tak powstanie
         busy(btn, true, 'Tworzę PDF…');
-        const pages = await renderReport(o, mb, ma, labels, done.value, rec.value);
-        const pdf = jpegPdf(pages);
-        const path = `${o.user_id}/${o.id}/${Date.now()}-STRIKE-PROOF-${o.order_number}.pdf`;
-        const { error } = await sb.storage.from('reports').upload(path, pdf, { contentType: 'application/pdf', upsert: false });
+        const pages = await R.renderReport({ order: { order_number: o.order_number, service_name: o.service_name, client: o.customer?.company || o.customer?.name || o.profiles?.full_name }, tpl, before: mb, after: ma, facts: fx, works: w, recs: r });
+        const pdf = R.toPdf(pages);
+        const { error } = await sb.storage.from('reports').upload(`${o.user_id}/${o.id}/${Date.now()}-STRIKE-PROOF-${o.order_number}.pdf`, pdf, { contentType: 'application/pdf', upsert: false });
         if (error) throw error;
         const url = URL.createObjectURL(pdf);
         prev.replaceChildren(h('img', { class: 'report-prev', src: pages[0].preview, alt: 'Podgląd raportu' }),
-          h('div', { class: 'post-actions' }, h('a', { class: 'btn btn-ghost btn-sm', href: url, target: '_blank', rel: 'noopener', text: 'Otwórz PDF' }),
+          h('div', { class: 'post-actions' }, h('a', { class: 'btn btn-ghost btn-sm', href: url, target: '_blank', rel: 'noopener', text: `Otwórz PDF (${pages.length} str.)` }),
             o.status !== 'TESTY' && o.status !== 'ZAKONCZONE' ? h('button', { class: 'btn btn-ok btn-sm', type: 'button', text: 'Zmień status na „Testy i raport”', onclick: async (ev) => {
-              busy(ev.currentTarget, true); try { await callFn('admin', { action: 'set_status', order_id: o.id, status: 'TESTY', note: 'Raport STRIKE PROOF gotowy' }); toast('ok', 'Status zmieniony.'); sheet.close(); loadOrders(); } catch (err) { toast('err', err.message); }
+              busy(ev.currentTarget, true); try { await callFn('admin', { action: 'set_status', order_id: o.id, status: 'TESTY', note: 'Raport STRIKE PROOF gotowy' }); toast('ok', 'Status zmieniony.'); sheet.close(); loadOrders(); } catch (er) { toast('err', er.message); }
             } }) : null));
         toast('ok', 'Raport zapisany – klient widzi go w Strefie Klienta.', 7000); vibrate(30);
         busy(btn, false, 'Utwórz ponownie');
         prev.scrollIntoView({ behavior: 'smooth' }); loadOrders();
-      } catch (err) { toast('err', err.message); busy(btn, false, 'Zapisz pomiary i utwórz PDF'); }
+      } catch (err) { toast('err', err.message); busy(btn, false, 'Zapisz i utwórz PDF'); }
     } }), prev);
-}
-async function renderReport(o, mb, ma, labels, doneTxt, recTxt) {
-  await fontsReady();
-  const W = 1240, H = 1754, M = 90, pages = [];
-  let c, x, y;
-  const newPage = () => {
-    c = document.createElement('canvas'); c.width = W; c.height = H; x = c.getContext('2d');
-    x.fillStyle = '#0a0a0b'; x.fillRect(0, 0, W, H);
-    const g = x.createRadialGradient(W, 0, 10, W, 0, 900); g.addColorStop(0, 'rgba(255,187,0,.16)'); g.addColorStop(1, 'rgba(255,187,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
-    x.strokeStyle = 'rgba(255,187,0,.6)'; x.lineWidth = 4;
-    [[30, 30, 1, 1], [W - 30, H - 30, -1, -1]].forEach(([px, py, sx, sy]) => { x.beginPath(); x.moveTo(px, py + 60 * sy); x.lineTo(px, py); x.lineTo(px + 60 * sx, py); x.stroke(); });
-    x.fillStyle = '#7d7d86'; x.font = `500 20px ${FONT}`; x.textAlign = 'left';
-    x.fillText('striketechlab.com · Raport STRIKE PROOF · pomiary w tych samych warunkach przed i po', M, H - 52);
-    x.textAlign = 'right'; x.fillText(`${o.order_number} · str. ${pages.length + 1}`, W - M, H - 52); x.textAlign = 'left';
-    y = M;
-  };
-  const flush = () => { pages.push(c); };
-  const need = (hh) => { if (y + hh > H - 120) { flush(); newPage(); } };
-  newPage();
-  // nagłówek
-  drawLogo(x, M + 45, y + 60, 120);
-  x.fillStyle = '#FFBB00'; x.font = `800 30px ${FONT}`; x.fillText('STRIKE TECH LAB', M + 120, y + 42);
-  x.fillStyle = '#fff'; x.font = `800 74px ${FONT}`; x.fillText('STRIKE PROOF', M + 116, y + 118);
-  y += 190;
-  x.fillStyle = '#a3a3ab'; x.font = `500 26px ${FONT}`; x.fillText('Raport z pomiarów przed i po', M, y); y += 50;
-  const info = [['Zlecenie', o.order_number], ['Usługa', o.service_name], ['Klient', o.customer?.name || o.profiles?.full_name || '–'], ['Data raportu', new Date().toLocaleDateString('pl-PL', { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' })]];
-  x.font = `500 24px ${FONT}`;
-  info.forEach(([k, v], i) => {
-    const cx = M + (i % 2) * 540, cy = y + Math.floor(i / 2) * 78;
-    x.fillStyle = '#7d7d86'; x.font = `600 20px ${FONT}`; x.fillText(k.toUpperCase(), cx, cy);
-    x.fillStyle = '#fff'; x.font = `700 28px ${FONT}`; x.fillText(String(v).slice(0, 34), cx, cy + 36);
-  });
-  y += 180;
-  // tabela
-  const keys = [...new Set([...Object.keys(mb), ...Object.keys(ma)])];
-  x.fillStyle = '#FFBB00'; x.font = `800 22px ${FONT}`; x.fillText('POMIARY', M, y); y += 22;
-  const cols = [M, M + 520, M + 720, M + 900];
-  x.fillStyle = 'rgba(255,255,255,.06)'; x.fillRect(M - 16, y, W - 2 * M + 32, 56);
-  x.fillStyle = '#a3a3ab'; x.font = `700 22px ${FONT}`;
-  ['Pomiar', 'Przed', 'Po', 'Zmiana'].forEach((t, i) => x.fillText(t, cols[i], y + 37)); y += 56;
-  for (const k of keys) {
-    need(130);
-    const b = mb[k], a = ma[k];
-    x.fillStyle = '#fff'; x.font = `600 26px ${FONT}`; x.fillText((labels[k] || METRIC_LBL[k] || k).slice(0, 30), cols[0], y + 44);
-    x.fillStyle = '#c9c9cf'; x.font = `600 28px ${FONT}`; x.fillText(b ?? '–', cols[1], y + 44);
-    x.fillStyle = '#FFBB00'; x.font = `800 28px ${FONT}`; x.fillText(a ?? '–', cols[2], y + 44);
-    if (typeof b === 'number' && typeof a === 'number' && b !== 0) {
-      const p = Math.round((a - b) / Math.abs(b) * 1000) / 10, good = p !== 0 && (p > 0) !== lowerBetter(k);
-      x.fillStyle = p === 0 ? '#a3a3ab' : good ? '#3ddc84' : '#ff6b5e'; x.font = `800 28px ${FONT}`;
-      x.fillText(`${p > 0 ? '+' : ''}${p}%`, cols[3], y + 44);
-      const max = Math.max(Math.abs(a), Math.abs(b)) || 1, bw = W - 2 * M;
-      x.fillStyle = 'rgba(255,255,255,.12)'; x.fillRect(cols[0], y + 66, bw * Math.abs(b) / max, 10);
-      x.fillStyle = '#FFBB00'; x.fillRect(cols[0], y + 82, bw * Math.abs(a) / max, 10);
-    }
-    x.strokeStyle = 'rgba(255,255,255,.08)'; x.lineWidth = 2; x.beginPath(); x.moveTo(M - 16, y + 112); x.lineTo(W - M + 16, y + 112); x.stroke();
-    y += 118;
-  }
-  x.fillStyle = '#7d7d86'; x.font = `500 19px ${FONT}`; x.fillText('Pasek szary – przed, złoty – po. Zielony wynik oznacza poprawę (dla temperatur, hałasu i opóźnień – spadek).', M, y + 30); y += 70;
-  const section = (title, text) => {
-    const lines = String(text || '').split('\n').map((s) => s.trim()).filter(Boolean); if (!lines.length) return;
-    need(110); x.fillStyle = '#FFBB00'; x.font = `800 22px ${FONT}`; x.fillText(title, M, y); y += 46;
-    x.font = `500 26px ${FONT}`;
-    for (const l of lines) for (const [i, w] of wrapLines(x, l, W - 2 * M - 40).entries()) {
-      need(40); x.fillStyle = '#FFBB00'; if (i === 0) x.fillText('▸', M, y); x.fillStyle = '#e4e4e8'; x.fillText(w, M + 36, y); y += 40;
-    }
-    y += 24;
-  };
-  section('WYKONANE PRACE', doneTxt); section('ZALECENIA', recTxt);
-  flush();
-  return Promise.all(pages.map(async (cv) => {
-    const blob = await new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.88));
-    return { bytes: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, preview: cv.toDataURL('image/jpeg', 0.5) };
-  }));
-}
-/** Minimalny PDF z obrazów JPEG (jedna strona A4 = jeden obraz). Bez bibliotek. */
-function jpegPdf(pages, PW = 595.28, PH = 841.89) {
-  const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
-  const put = (v) => { const b = typeof v === 'string' ? enc.encode(v) : v; parts.push(b); len += b.length; };
-  const obj = (id, ...body) => { offs[id] = len; put(`${id} 0 obj\n`); body.forEach(put); put('\nendobj\n'); };
-  put('%PDF-1.4\n%âãÏÓ\n');
-  const n = pages.length;
-  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
-  obj(2, `<< /Type /Pages /Kids [${pages.map((_, i) => `${3 + i * 3} 0 R`).join(' ')}] /Count ${n} >>`);
-  pages.forEach((p, i) => {
-    const pid = 3 + i * 3, iid = pid + 1, cid = pid + 2, content = `q ${PW} 0 0 ${PH} 0 0 cm /Im0 Do Q`;
-    obj(pid, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${iid} 0 R >> >> /Contents ${cid} 0 R >>`);
-    obj(iid, `<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.bytes.length} >>\nstream\n`, p.bytes, '\nendstream');
-    obj(cid, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
-  });
-  const total = 3 + n * 3, xref = len;
-  put(`xref\n0 ${total}\n0000000000 65535 f \n`);
-  for (let i = 1; i < total; i++) put(`${String(offs[i]).padStart(10, '0')} 00000 n \n`);
-  put(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
-  return new Blob(parts, { type: 'application/pdf' });
 }
 
 /* ================================================================== FILM Z NAPISÓW (9:16) */

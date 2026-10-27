@@ -251,6 +251,11 @@ details.more summary{cursor:pointer;color:var(--gold);font-weight:700;font-size:
 .metric{display:grid;grid-template-columns:1fr 70px 70px 26px;gap:6px;align-items:center;margin-bottom:6px}
 .metric .input{min-height:40px;padding:8px;font-size:15px}
 .metric .lbl{font-size:.82rem;color:var(--text-2)}
+.metric.one .input{grid-column:2/4}
+.chk-row{display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:.9rem;color:var(--text-2);cursor:pointer}
+.chk-row input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:#FFBB00}
+.sheet-body .field{display:grid;gap:4px;margin-bottom:10px}
+.sheet-body .field .lbl{font-size:.8rem;color:var(--muted)}
 .metric-h{display:grid;grid-template-columns:1fr 70px 70px 26px;gap:6px;font-size:.7rem;color:var(--muted);font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
 .x-btn{background:none;border:0;color:var(--muted);font-size:1.1rem;cursor:pointer}
 .report-prev{width:100%;border-radius:10px;border:1px solid var(--line);margin-top:10px}

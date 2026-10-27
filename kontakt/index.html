@@ -628,6 +628,33 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
 .guide-steps .warn b{color:var(--warn)}
 .guide-steps .warn b::before{content:"⚠ ";}
 .guide-steps .done b,.guide-steps .done .gd{opacity:.5;text-decoration:line-through}
+.guide-steps .gk{display:flex;gap:10px;align-items:flex-start;margin:8px 0 0 30px;padding:8px 10px;border-radius:8px;background:rgba(255,187,0,.06);border-left:3px solid var(--gold)}
+.guide-steps .gk-l{flex:none;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:3px}
+.guide-steps .gk code{font-family:var(--mono);font-size:.82rem;color:#e9e9ee;white-space:normal;overflow-wrap:anywhere}
+.guide-steps .gp{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0 30px}
+.guide-steps .gp .pill{font-size:.72rem;text-decoration:none}
+.guide-steps .done .gk,.guide-steps .done .gp{opacity:.5}
+.rep-ed{display:grid;gap:10px}
+.rep-tpl{margin:0;color:var(--muted);font-size:.9rem}.rep-tpl b{color:var(--gold)}
+.rep-sec{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);padding:0 14px}
+.rep-sec>summary{cursor:pointer;padding:12px 0;font-weight:700}
+.rep-sec[open]>summary{border-bottom:1px solid var(--line);margin-bottom:12px}
+.rep-facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0 12px}
+.rep-facts .wide{grid-column:1/-1}
+.rep-groups h5{margin:12px 0 6px;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.rep-tbl{width:100%;border-collapse:collapse;margin-bottom:6px}
+.rep-tbl th,.rep-tbl td{padding:4px 6px 4px 0;text-align:left;vertical-align:middle;font-size:.88rem}
+.rep-tbl thead th{color:var(--muted);font-weight:600;font-size:.78rem}
+.rep-tbl tbody th{font-weight:500;width:46%}
+.rep-tbl td .input,.rep-tbl th .input{padding:8px 10px;font-size:.9rem}
+.rep-tbl td:last-child{display:flex;gap:6px;align-items:center}
+.rep-tbl .x-btn{background:none;border:1px solid var(--line-2);color:var(--muted);border-radius:8px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1.1rem}
+.rep-tbl .x-btn:hover,.rep-tbl .x-btn:focus-visible{color:var(--bad);border-color:var(--bad)}
+.rep-checks{display:grid;gap:4px;margin-bottom:10px}
+.rep-prev:empty{display:none}
+.rep-pages{display:flex;gap:10px;overflow-x:auto;padding:4px 0}
+.rep-pages img{width:220px;flex:none;border-radius:8px;border:1px solid var(--line-2)}
+@media(max-width:640px){.rep-tbl tbody th{width:40%}.rep-pages img{width:170px}}
 .guide-edit{min-height:460px!important;font-family:var(--mono);font-size:.84rem;line-height:1.55}
 .soft-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .soft{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02)}
@@ -2390,6 +2417,14 @@ function orderCard(o) {
 function resultsTable(results) {
   const b = results.find((r) => r.phase === 'before')?.metrics || {}, a = results.find((r) => r.phase === 'after')?.metrics || {};
   const keys = [...new Set([...Object.keys(b), ...Object.keys(a)])]; if (!keys.length) return null;
+  if (REPmod) {
+    return h('div', { class: 'scroll-x' }, h('table', { class: 'res' }, h('thead', {}, h('tr', {}, ['Pomiar', 'Przed', 'Po', 'Zmiana'].map((t) => h('th', { text: t })))),
+      h('tbody', {}, keys.map((k) => {
+        const inf = REPmod.metricInfo(k), ch = REPmod.change(k, b[k], a[k], inf), v = (x) => x === undefined ? '–' : `${String(x).replace('.', ',')}${inf.u && typeof x === 'number' ? ' ' + inf.u : ''}`;
+        return h('tr', {}, h('td', { text: inf.l }), h('td', { text: v(b[k]) }), h('td', { text: v(a[k]) }), h('td', { class: ch?.good ? 'up' : ch?.good === false ? 'down' : '', text: ch?.text || '–' }));
+      }))));
+  }
+  repModule().then(() => { if (activeTab === 'orders') renderOrders(); }).catch(() => {});
   const LBL = { fps_avg: 'FPS średnio', fps_1low: '1% low FPS', gpu_temp: 'Temp. GPU (°C)', cpu_temp: 'Temp. CPU (°C)', latency_ms: 'Opóźnienie (ms)', noise_db: 'Hałas (dB)', boot_s: 'Start systemu (s)' };
   const lowerBetter = (k) => /temp|latency|lag|noise|db|boot|time|_ms$|_s$/.test(k);
   return h('div', { class: 'scroll-x' }, h('table', { class: 'res' }, h('thead', {}, h('tr', {}, ['Pomiar', 'Przed', 'Po', 'Zmiana'].map((t) => h('th', { text: t })))),
@@ -2540,9 +2575,11 @@ async function loadGuides(force) {
   finally { gd.loading = false; }
   renderGuides();
 }
-/* Edycja w zwykłym tekście: "# Sekcja", "- Krok :: szczegóły", "! Krok z ostrzeżeniem :: szczegóły". */
+/* Edycja w zwykłym tekście: "# Sekcja", "- Krok :: szczegóły", "! Krok z ostrzeżeniem :: szczegóły",
+   pod krokiem opcjonalnie "  → ścieżka kliknięć" i "  @ programy" (klucze z listy, po przecinku). */
 function guideToText(body) {
-  return (body || []).map((s) => [`# ${s.t}`, ...(s.steps || []).map((st) => `${st.w ? '!' : '-'} ${st.t}${st.d ? ` :: ${st.d}` : ''}`)].join('\n')).join('\n\n');
+  return (body || []).map((s) => [`# ${s.t}`, ...(s.steps || []).flatMap((st) => [`${st.w ? '!' : '-'} ${st.t}${st.d ? ` :: ${st.d}` : ''}`,
+    ...(st.k ? [`  → ${st.k}`] : []), ...(st.p?.length ? [`  @ ${st.p.join(', ')}`] : [])])].join('\n')).join('\n\n');
 }
 function textToGuide(txt) {
   const out = [];
@@ -2551,6 +2588,9 @@ function textToGuide(txt) {
     if (line.startsWith('#')) { out.push({ t: line.replace(/^#+\s*/, ''), steps: [] }); continue; }
     if (!out.length) out.push({ t: 'Kroki', steps: [] });
     const sec = out[out.length - 1];
+    const last = sec.steps[sec.steps.length - 1];
+    if (last && /^(→|->)/.test(line)) { last.k = line.replace(/^(→|->)\s*/, ''); continue; }
+    if (last && line.startsWith('@')) { const p = line.slice(1).split(/[,\s]+/).map((x) => x.trim().toLowerCase()).filter(Boolean); if (p.length) last.p = p; continue; }
     const m = line.match(/^([-!*])\s*(.*)$/);
     if (m) { const [t, ...d] = m[2].split(' :: '); const st = { t: t.trim() }; if (d.length) st.d = d.join(' :: ').trim(); if (m[1] === '!') st.w = true; if (st.t) sec.steps.push(st); }
     else if (sec.steps.length) { const st = sec.steps[sec.steps.length - 1]; st.d = st.d ? `${st.d} ${line}` : line; }
@@ -2571,6 +2611,7 @@ function renderGuides() {
   if (gd.err) { out.replaceChildren(h('div', { class: 'banner err', text: `Nie udało się wczytać instrukcji: ${gd.err}` })); return; }
   if (!gd.list?.length) { out.replaceChildren(h('div', { class: 'banner info', text: 'Instrukcje widzi tylko administrator po logowaniu dwuetapowym. Wejdź w zakładkę Administracja, potwierdź kod z aplikacji i wróć tutaj.' }), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Wczytaj ponownie', onclick: () => loadGuides(true) })); return; }
   if (!gd.list.some((g) => g.service_id === gd.sel)) gd.sel = gd.list[0].service_id;
+  if (!REPmod) repModule().then(renderGuides).catch(() => {});   // nazwy i adresy programów
   const g = gd.list.find((x) => x.service_id === gd.sel);
   const checks = guideChecks(g.service_id);
   const total = (g.body || []).reduce((n, s) => n + (s.steps?.length || 0), 0);
@@ -2581,6 +2622,12 @@ function renderGuides() {
   const bar = h('div', { class: 'guide-bar' },
     h('div', { class: 'grow' }, h('b', { text: g.title }), h('div', { class: 'muted small', text: `${done} z ${total} kroków · zmieniono ${fmt(g.updated_at)}` }), h('div', { class: 'guide-progress', 'aria-hidden': 'true' }, h('i', { style: `width:${total ? Math.round(done / total * 100) : 0}%` }))),
     gd.edit ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', id: 'guideClear', text: 'Nowe zlecenie – wyczyść', disabled: !done, onclick: () => { saveGuideChecks(g.service_id, new Set()); renderGuides(); } }),
+    gd.edit ? null : h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Pobierz PDF krok po kroku', onclick: async (e) => {
+      const b = e.currentTarget; setBusy(b, true);
+      try { const R = await repModule(); const pages = await R.renderGuide({ title: g.title, body: g.body || [], updated: fmt(g.updated_at, { dateStyle: 'medium' }) }); downloadBlob(R.toPdf(pages), `Instrukcja-${g.service_id}.pdf`); toast('ok', `PDF gotowy (${pages.length} str.).`); }
+      catch (err) { toast('err', `Nie udało się utworzyć PDF: ${err.message}`); }
+      setBusy(b, false, 'Pobierz PDF krok po kroku');
+    } }),
     gd.edit ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Edytuj instrukcję', onclick: () => { gd.edit = true; renderGuides(); } }));
   if (gd.edit) {
     const title = h('input', { class: 'input', id: 'guideTitle', value: g.title, maxlength: '160' });
@@ -2597,7 +2644,7 @@ function renderGuides() {
     out.replaceChildren(pick, bar, h('div', { class: 'card' },
       h('div', { class: 'field' }, h('label', { for: 'guideTitle', text: 'Tytuł' }), title),
       h('div', { class: 'field' }, h('label', { for: 'guideText', text: 'Kroki' }), ta,
-        h('p', { class: 'muted small', id: 'guideHelp', text: 'Format: „# Nazwa sekcji”, „- Krok :: szczegóły”, „! Krok z ostrzeżeniem :: szczegóły”. Linia bez znaku na początku dopisuje się do szczegółów poprzedniego kroku. Zapis czyści zaznaczenia na tej usłudze.' })),
+        h('p', { class: 'muted small', id: 'guideHelp', text: 'Format: „# Nazwa sekcji”, „- Krok :: szczegóły”, „! Krok z ostrzeżeniem :: szczegóły”. Pod krokiem: „→ ścieżka kliknięć” i „@ programy” (np. @ hwinfo, occt). Linia bez znaku na początku dopisuje się do szczegółów poprzedniego kroku. Zapis czyści zaznaczenia na tej usłudze.' })),
       h('div', { class: 'row-actions', style: 'display:flex;gap:10px;flex-wrap:wrap' }, save, h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Anuluj', onclick: () => { gd.edit = false; renderGuides(); } }))));
     return;
   }
@@ -2609,7 +2656,10 @@ function renderGuides() {
         const key = `${i}.${j}`, on = checks.has(key);
         // bez przerysowania całej listy – fokus klawiatury zostaje na polu
         const cb = h('input', { type: 'checkbox', checked: on, onchange: (e) => { const c = guideChecks(g.service_id); e.target.checked ? c.add(key) : c.delete(key); saveGuideChecks(g.service_id, c); e.target.closest('li').classList.toggle('done', e.target.checked); updateGuideProgress(); } });
-        return h('li', { class: `${st.w ? 'warn' : ''}${on ? ' done' : ''}` }, h('label', {}, cb, h('span', {}, h('b', { text: st.t }), st.d ? h('span', { class: 'gd', text: st.d }) : null)));
+        const progs = (st.p || []).map((k) => REPmod?.PROGRAMS?.[k]).filter(Boolean);
+        return h('li', { class: `${st.w ? 'warn' : ''}${on ? ' done' : ''}` }, h('label', {}, cb, h('span', {}, h('b', { text: st.t }), st.d ? h('span', { class: 'gd', text: st.d }) : null)),
+          st.k ? h('div', { class: 'gk' }, h('span', { class: 'gk-l', text: 'Kliknij' }), h('code', { text: st.k })) : null,
+          progs.length ? h('div', { class: 'gp' }, progs.map(([nm, why, url]) => url ? h('a', { class: 'pill ghost', href: url, target: '_blank', rel: 'noopener noreferrer', title: why, text: nm }) : h('span', { class: 'pill ghost', title: why, text: nm }))) : null);
       })));
   }));
 }
@@ -2757,6 +2807,140 @@ function initAdvisor() {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ADV.panel.classList.contains('open') && !$('#legalModal')?.open) advClose(); });
 }
 
+/* ------------------------------------------------------------------ raport STRIKE PROOF w panelu admina (szablon usługi → PDF) */
+let REPmod = null, REPload = null;
+const repModule = () => (REPload ||= import(BASE + 'stl-report.js').then((m) => (REPmod = m)).catch((e) => { REPload = null; throw e; }));
+function downloadBlob(blob, name) { const u = URL.createObjectURL(blob); const a = h('a', { href: u, download: name }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
+function reportEditor(o) {
+  const box = h('div', { class: 'rep-ed' }, h('p', { class: 'muted small', text: 'Wczytuję szablon raportu…' }));
+  (async () => {
+    let R;
+    try { R = await repModule(); } catch { box.replaceChildren(h('div', { class: 'banner err', text: 'Nie udało się wczytać generatora raportów (plik stl-report.js). Odśwież stronę.' })); return; }
+    const tpl = R.templateFor(o.service_id, o.config?.extras);
+    const before = (o.order_results || []).find((r) => r.phase === 'before')?.metrics || {};
+    const after = (o.order_results || []).find((r) => r.phase === 'after')?.metrics || {};
+    let saved = {}, hasFacts = true;
+    let r = await sb.from('order_reports').select('works,recommendations,facts').eq('order_id', o.id).maybeSingle();
+    if (r.error && /facts/.test(r.error.message)) { hasFacts = false; r = await sb.from('order_reports').select('works,recommendations').eq('order_id', o.id).maybeSingle(); }
+    if (!r.error && r.data) saved = r.data;
+    const facts0 = saved.facts || {};
+    const uid = `rep-${o.id.slice(0, 8)}`;
+    // --- sprzęt i ustawienia
+    const factIn = {};
+    const factsBox = h('div', { class: 'rep-facts' }, tpl.facts.map((f) => {
+      const id = `${uid}-f-${f.k}`;
+      const el = f.long ? h('textarea', { class: 'textarea', id, rows: 2, maxlength: 1000, placeholder: f.ph || '' }) : h('input', { class: 'input', id, maxlength: 200, placeholder: f.ph || '' });
+      el.value = facts0[f.k] ?? ''; factIn[f.k] = el;
+      return h('div', { class: `field${f.long ? ' wide' : ''}` }, h('label', { for: id, text: f.l }), el);
+    }));
+    // --- pomiary
+    const rowsBox = h('div', { class: 'rep-groups' });
+    const mIn = [];   // { key, label?, b, a, one }
+    const vStr = (v) => v === undefined || v === null ? '' : String(v).replace(/^(-?\d+)\.(\d+)$/, '$1,$2');
+    for (const g of tpl.groups) {
+      const tb = h('tbody');
+      for (const [k, l, u] of g.m) {
+        const b = g.one ? null : h('input', { class: 'input', inputmode: 'decimal', 'aria-label': `${l} – przed`, value: vStr(before[k]) });
+        const a = h('input', { class: 'input', inputmode: 'decimal', 'aria-label': `${l} – ${g.one ? 'wynik' : 'po'}`, value: vStr(after[k]) });
+        mIn.push({ key: k, b, a, one: !!g.one });
+        tb.append(h('tr', {}, h('th', { scope: 'row' }, l, u ? h('span', { class: 'muted', text: ` (${u})` }) : null), g.one ? h('td', { colspan: 2 }, a) : [h('td', {}, b), h('td', {}, a)]));
+      }
+      rowsBox.append(h('h5', { text: g.t }), h('table', { class: 'rep-tbl' }, h('thead', {}, h('tr', {}, h('th', { text: 'Pomiar' }), g.one ? h('th', { colspan: 2, text: 'Wynik' }) : [h('th', { text: 'Przed' }), h('th', { text: 'Po' })])), tb));
+    }
+    // własne pomiary (spoza szablonu) – także te zapisane wcześniej
+    const known = new Set(tpl.groups.flatMap((g) => g.m.map(([k]) => k)));
+    const extraTb = h('tbody');
+    const addExtra = (k = '', label = '') => {
+      const name = h('input', { class: 'input', placeholder: 'Nazwa, np. Cinebench R23', 'aria-label': 'Nazwa pomiaru', value: label || (k ? R.metricInfo(k).l : '') });
+      const b = h('input', { class: 'input', inputmode: 'decimal', 'aria-label': 'Przed', value: vStr(before[k]) }), a = h('input', { class: 'input', inputmode: 'decimal', 'aria-label': 'Po', value: vStr(after[k]) });
+      const row = { key: k, name, b, a, one: false }; mIn.push(row);
+      const tr = h('tr', {}, h('th', {}, name), h('td', {}, b), h('td', {}, a, h('button', { class: 'x-btn', type: 'button', 'aria-label': 'Usuń pomiar', text: '×', onclick: () => { tr.remove(); mIn.splice(mIn.indexOf(row), 1); } })));
+      extraTb.append(tr); return name;
+    };
+    [...new Set([...Object.keys(before), ...Object.keys(after)])].filter((k) => !known.has(k)).forEach((k) => addExtra(k, facts0._labels?.[k]));
+    rowsBox.append(h('h5', { text: 'Własne pomiary' }), h('table', { class: 'rep-tbl' }, extraTb),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '+ Dodaj pomiar', onclick: () => addExtra().focus() }));
+    // --- prace i zalecenia: lista z szablonu (zaznacz wykonane) + własne linie
+    const checkList = (items, savedTxt, label) => {
+      const lines = String(savedTxt || '').split('\n').map((s) => s.trim()).filter(Boolean);
+      const boxes = items.map((t) => ({ t, cb: h('input', { type: 'checkbox', checked: lines.length ? lines.includes(t) : true }) }));
+      const other = h('textarea', { class: 'textarea', rows: 2, maxlength: 2000, placeholder: `${label} spoza listy – jedna w linii` });
+      other.value = lines.filter((l) => !items.includes(l)).join('\n');
+      return { el: h('div', {}, h('div', { class: 'rep-checks' }, boxes.map((x) => h('label', { class: 'check' }, x.cb, h('span', { text: x.t })))), other),
+        value: () => [...boxes.filter((x) => x.cb.checked).map((x) => x.t), ...other.value.split('\n').map((s) => s.trim()).filter(Boolean)] };
+    };
+    const works = checkList(tpl.works, saved.works, 'Prace'), recs = checkList(tpl.recs, saved.recommendations, 'Zalecenia');
+    const prev = h('div', { class: 'rep-prev', 'aria-live': 'polite' });
+    // --- zbieranie i zapis
+    const collect = () => {
+      const mb = {}, ma = {}, labels = { ...(facts0._labels || {}) };
+      for (const x of mIn) {
+        let k = x.key;
+        if (x.name) { const nm = x.name.value.trim(); if (!nm) continue; k = x.key || R.slug(nm); if (!k) continue; labels[k] = nm.slice(0, 60); }   // istniejący pomiar zachowuje klucz
+        const vb = x.b ? R.parseVal(x.b.value) : undefined, va = R.parseVal(x.a.value);
+        if (vb !== undefined) mb[k] = vb; if (va !== undefined) ma[k] = va;
+      }
+      const facts = {};
+      for (const [k, el] of Object.entries(factIn)) { const v = el.value.trim(); if (v) facts[k] = v.slice(0, 1000); }
+      const used = new Set([...Object.keys(mb), ...Object.keys(ma)]);
+      const lab = Object.fromEntries(Object.entries(labels).filter(([k]) => used.has(k)));
+      if (Object.keys(lab).length) facts._labels = lab;
+      return { mb, ma, facts, works: works.value(), recs: recs.value() };
+    };
+    const save = async (d) => {
+      await callFn('admin', { action: 'save_results', order_id: o.id, phase: 'before', metrics: d.mb });
+      await callFn('admin', { action: 'save_results', order_id: o.id, phase: 'after', metrics: d.ma });
+      const row = { order_id: o.id, works: d.works.join('\n').slice(0, 4000) || null, recommendations: d.recs.join('\n').slice(0, 2000) || null };
+      let e = hasFacts ? (await sb.from('order_reports').upsert({ ...row, facts: d.facts })).error : null;
+      if (!hasFacts || (e && /facts/.test(e.message))) { e = (await sb.from('order_reports').upsert(row)).error; if (!e) toast('err', 'Dane sprzętu nie zostały zapisane w bazie – uruchom npx supabase db push --linked (migracja v9). Raport PDF i tak je zawiera.', 9000); }
+      if (e) throw new Error(`Nie zapisano opisu raportu: ${e.message}`);
+      o.order_results = [{ phase: 'before', metrics: d.mb }, { phase: 'after', metrics: d.ma }];
+    };
+    const build = async (d) => R.renderReport({ order: { order_number: o.order_number, service_name: o.service_name, client: o.customer?.company || o.customer?.name || o.profiles?.full_name }, tpl, before: d.mb, after: d.ma, facts: d.facts, works: d.works, recs: d.recs });
+    const showPrev = (pages, extra) => prev.replaceChildren(h('div', { class: 'rep-pages' }, pages.map((p, i) => h('img', { src: p.preview, alt: `Podgląd raportu – strona ${i + 1}`, loading: 'lazy' }))), extra || '');
+    const empty = (d) => !Object.keys(d.mb).length && !Object.keys(d.ma).length && !Object.keys(d.facts).length;
+    const bSave = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Zapisz dane', onclick: async () => {
+      const d = collect(); setBusy(bSave, true);
+      try { await save(d); toast('ok', 'Dane raportu zapisane. Klient widzi pomiary w Strefie Klienta.'); } catch (e) { toast('err', e.message); }
+      setBusy(bSave, false, 'Zapisz dane');
+    } });
+    const bPrev = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Podgląd', onclick: async () => {
+      const d = collect(); if (empty(d)) return toast('err', 'Wpisz przynajmniej jeden pomiar albo dane sprzętu.');
+      setBusy(bPrev, true); try { showPrev(await build(d)); prev.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { toast('err', `Podgląd nie powstał: ${e.message}`); } setBusy(bPrev, false, 'Podgląd');
+    } });
+    const bPdf = h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: o.user_id ? 'Utwórz raport PDF i udostępnij klientowi' : 'Utwórz raport PDF', onclick: async () => {
+      const d = collect(); if (empty(d)) return toast('err', 'Wpisz przynajmniej jeden pomiar albo dane sprzętu.');
+      setBusy(bPdf, true);
+      try {
+        await save(d);
+        const pages = await build(d), pdf = R.toPdf(pages), name = `STRIKE-PROOF-${o.order_number || 'raport'}.pdf`;
+        let shared = false;
+        if (o.user_id) {
+          const { error } = await sb.storage.from('reports').upload(`${o.user_id}/${o.id}/${Date.now()}-${name}`, pdf, { contentType: 'application/pdf', upsert: false });
+          if (error) throw new Error(`PDF powstał, ale nie udało się go wgrać: ${error.message}`);
+          shared = true; const files = box.closest('.adm-detail')?.querySelector('.files'); if (files) loadFiles(o, files, o.user_id);
+        }
+        showPrev(pages, h('div', { class: 'cta-row', style: 'margin-top:10px' },
+          h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Pobierz PDF', onclick: () => downloadBlob(pdf, name) }),
+          shared && !['TESTY', 'ZAKONCZONE'].includes(o.status) ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Zmień status na „Testy i raport”', onclick: async (e) => {
+            const b = e.currentTarget; setBusy(b, true);
+            try { await callFn('admin', { action: 'set_status', order_id: o.id, status: 'TESTY', note: 'Raport STRIKE PROOF gotowy' }); toast('ok', 'Status zmieniony – klient dostał powiadomienie.'); await loadAdmin(true); } catch (err) { toast('err', err.message); setBusy(b, false, 'Zmień status na „Testy i raport”'); }
+          } }) : null));
+        toast('ok', shared ? 'Raport PDF zapisany – klient pobierze go w Strefie Klienta.' : 'Raport PDF gotowy do pobrania.', 7000);
+      } catch (e) { toast('err', e.message); }
+      setBusy(bPdf, false, o.user_id ? 'Utwórz raport PDF i udostępnij klientowi' : 'Utwórz raport PDF');
+    } });
+    box.replaceChildren(
+      h('p', { class: 'rep-tpl' }, 'Szablon: ', h('b', { text: tpl.title })),
+      h('details', { class: 'rep-sec', open: true }, h('summary', { text: 'Sprzęt i ustawienia' }), factsBox),
+      h('details', { class: 'rep-sec', open: true }, h('summary', { text: 'Pomiary' }), h('p', { class: 'muted small', text: 'Liczby z przecinkiem lub kropką. Puste pola nie trafiają do raportu. Zielona zmiana w raporcie = poprawa.' }), rowsBox),
+      h('details', { class: 'rep-sec' }, h('summary', { text: `Wykonane prace (${tpl.works.length})` }), works.el),
+      h('details', { class: 'rep-sec' }, h('summary', { text: `Zalecenia dla klienta (${tpl.recs.length})` }), recs.el),
+      h('div', { class: 'cta-row', style: 'margin:12px 0 0' }, bPdf, bPrev, bSave), prev);
+  })();
+  return box;
+}
+
 /* ------------------------------------------------------------------ administracja */
 let adm = { orders: [], sel: null, filter: '', q: '', loading: false };
 /* Panel administracji wymaga logowania dwuetapowego (TOTP). Baza też to sprawdza (is_admin() wymaga aal2). */
@@ -2815,7 +2999,7 @@ async function loadAdmin(silent = false) {
   if (!(await adminMfaOk(silent))) return;
   adm.loading = true;
   const box = $('#adminOut'); if (!silent && !box.childElementCount) box.replaceChildren(h('p', { class: 'muted', text: 'Ładuję zamówienia…' }));
-  let q = sb.from('orders').select(cat.hasV2 ? 'id,order_number,status,service_name,express,total_grosze,amount_due_grosze,created_at,paid_at,customer,slot_conflict,user_id,handover,city,customer_note,consents,spec,discount_code,referral_code_used,profiles(email,full_name,phone),calendar_slots(starts_at,ends_at,status),order_events(status,note,at),order_results(phase,metrics)' : 'id,order_number,status,service_name,total_grosze,amount_due_grosze,created_at,paid_at,slot_conflict,user_id,customer_note,profiles(email,full_name,phone),calendar_slots(starts_at,ends_at,status)')
+  let q = sb.from('orders').select(cat.hasV2 ? 'id,order_number,status,service_id,config,service_name,express,total_grosze,amount_due_grosze,created_at,paid_at,customer,slot_conflict,user_id,handover,city,customer_note,consents,spec,discount_code,referral_code_used,profiles(email,full_name,phone),calendar_slots(starts_at,ends_at,status),order_events(status,note,at),order_results(phase,metrics)' : 'id,order_number,status,service_name,total_grosze,amount_due_grosze,created_at,paid_at,slot_conflict,user_id,customer_note,profiles(email,full_name,phone),calendar_slots(starts_at,ends_at,status)')
     .order('created_at', { ascending: false }).limit(200);
   if (adm.filter) q = q.eq('status', adm.filter);
   const { data, error } = await q; adm.loading = false;
@@ -2849,14 +3033,11 @@ function renderAdmin() {
   loadInquiries();
 }
 function adminDetail(o) {
-  const c = o.customer || {}, fmtRes = (ph) => Object.entries((o.order_results || []).find((r) => r.phase === ph)?.metrics || {}).map(([k, v]) => `${k}=${v}`).join('\n');
+  const c = o.customer || {};
   const status = h('select', { class: 'select' }, ['W_REALIZACJI', 'TESTY', 'ZAKONCZONE', 'ANULOWANE'].map((k) => h('option', { value: k, text: STATUS[k][0], selected: k === o.status })));
   const note = h('input', { class: 'input', maxlength: 500, placeholder: 'Notatka dla klienta (widoczna w historii)' });
-  const before = h('textarea', { class: 'textarea', style: 'min-height:120px;font-family:var(--mono);font-size:.85rem', placeholder: 'fps_avg=190\ngpu_temp=79' }); before.value = fmtRes('before');
-  const after = h('textarea', { class: 'textarea', style: 'min-height:120px;font-family:var(--mono);font-size:.85rem', placeholder: 'fps_avg=262\ngpu_temp=61' }); after.value = fmtRes('after');
   const files = h('div', { class: 'files' }); if (o.user_id) loadFiles(o, files, o.user_id);
   const fileIn = h('input', { type: 'file', accept: '.pdf,.png,.jpg,.jpeg,.txt,.log,.csv,.json', class: 'input', style: 'padding:9px' });
-  const parse = (t) => Object.fromEntries(t.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const [k, ...v] = l.split('='); const val = v.join('=').trim(); return [k.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'), val !== '' && !isNaN(+val.replace(',', '.')) ? +val.replace(',', '.') : val]; }));
   const act = async (btn, label, body, ok) => { setBusy(btn, true); try { const d = await callFn('admin', body); toast('ok', ok(d)); await loadAdmin(true); } catch (e) { toast('err', e.message); } setBusy(btn, false, label); };
   const MIME = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', txt: 'text/plain', log: 'text/plain', csv: 'text/csv', json: 'application/json' };
   return h('div', { class: 'adm-detail', id: 'admDetail' },
@@ -2876,8 +3057,7 @@ function adminDetail(o) {
           !o.order_number && o.status !== 'ANULOWANE' ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Oznacz jako opłacone', onclick: (e) => { if (confirm('Potwierdzasz wpłatę poza Stripe (gotówka / przelew)?')) act(e.currentTarget, 'Oznacz jako opłacone', { action: 'mark_paid', order_id: o.id }, (d) => `Opłacone: ${d.order_number}`); } }) : null),
         o.order_events?.length ? h('ul', { class: 'timeline', style: 'margin-top:14px' }, [...o.order_events].sort((a, b) => a.at.localeCompare(b.at)).map((ev) => h('li', {}, h('time', { text: fmt(ev.at) }), (STATUS[ev.status]?.[0] || ev.status) + (ev.note ? ` – ${ev.note}` : '')))) : null),
       h('div', {}, h('h4', { text: 'Raport STRIKE PROOF' }),
-        cat.hasV2 ? h('div', { class: 'row2' }, h('div', { class: 'field' }, h('label', { text: 'Przed (klucz=wartość)' }), before), h('div', { class: 'field' }, h('label', { text: 'Po (klucz=wartość)' }), after)) : null,
-        cat.hasV2 ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Zapisz pomiary', onclick: async (e) => { const b = e.currentTarget; setBusy(b, true); try { await callFn('admin', { action: 'save_results', order_id: o.id, phase: 'before', metrics: parse(before.value) }); await callFn('admin', { action: 'save_results', order_id: o.id, phase: 'after', metrics: parse(after.value) }); toast('ok', 'Pomiary zapisane – klient widzi je w Strefie Klienta.'); await loadAdmin(true); } catch (err) { toast('err', err.message); } setBusy(b, false, 'Zapisz pomiary'); } }) : null,
+        cat.hasV2 ? reportEditor(o) : h('p', { class: 'note', text: 'Raporty wymagają migracji v2 w bazie.' }),
         h('h4', { style: 'margin-top:16px', text: 'Pliki (PDF, zdjęcia, logi – maks. 10 MB)' }), files,
         o.user_id ? h('div', { class: 'code-row', style: 'margin-top:8px' }, fileIn, h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Wgraj plik', onclick: async (e) => {
           const f = fileIn.files[0]; if (!f) return toast('err', 'Wybierz plik.');
