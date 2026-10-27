@@ -258,7 +258,7 @@ function orderSheet(id) {
     !o.order_number && o.status === 'OCZEKUJE_NA_PLATNOSC' ? [h('h4', { text: 'Płatność' }),
       h('div', { class: 'row2' }, [['gotowka', '💵 Gotówką'], ['przelew', '🏦 Przelewem']].map(([m, t]) => h('button', { class: 'btn btn-ghost', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} ${m === 'gotowka' ? 'gotówką' : 'przelewem'}?`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number || ''}`); } })))] : null,
     paymentTools(o),
-    o.order_number ? h('button', { class: 'btn btn-ghost btn-block', style: 'margin-top:10px', type: 'button', text: '🧾 Wystaw rachunek', onclick: () => billSheet(o) }) : null,
+    o.order_number ? orderBillsC(o) : null,
     o.user_id && o.order_number ? [h('h4', { text: 'Raport STRIKE PROOF' }),
       h('button', { class: 'btn btn-gold btn-block', type: 'button', text: '📊 Wpisz pomiary i utwórz raport PDF', onclick: () => reportSheet(o) })] : null,
     o.user_id ? [h('h4', { text: 'Zdjęcia przy przyjęciu' }), photoTools(o, thumbs)] : null,
@@ -818,6 +818,20 @@ async function sendBill(b, to, btn) {
     if (d.ok) { toast('ok', `Wysłano na ${d.to}.`); vibrate(30); } else toast('err', d.error, 12000);
   } catch (e) { toast('err', e.message); }
   busy(btn, false, '✉ Wyślij');
+}
+function orderBillsC(o) {
+  const box = h('div', {}, h('h4', { text: 'Rachunek' }), h('div', { class: 'skeleton', style: 'height:44px' }));
+  sb.from('bills').select('*').eq('order_id', o.id).order('created_at').then(({ data, error }) => {
+    if (error) { box.replaceChildren(); return; }   // przed migracją v11
+    const active = (data || []).some((b) => !b.cancelled_at);
+    box.replaceChildren(h('h4', { text: 'Rachunek' }),
+      data?.length ? h('div', { class: 'card exp-list' }, data.map((b) => h('div', { class: 'exp-row' },
+        h('div', { class: 'grow' }, h('b', { text: `${b.number} · ${zl2(b.total_grosze)}` }), h('span', { class: 'muted small', text: b.cancelled_at ? 'anulowany' : b.sent_at ? `wysłany na ${b.sent_to}` : 'nie wysłany' })),
+        h('button', { class: 'icon-btn', type: 'button', 'aria-label': `PDF ${b.number}`, text: '📄', onclick: () => openBillPdf(b) }),
+        b.cancelled_at ? null : h('button', { class: 'icon-btn', type: 'button', 'aria-label': `Wyślij ${b.number}`, text: '✉', onclick: (e) => { const to = prompt('Wyślij na e-mail:', b.sent_to || b.buyer?.email || ''); if (to) sendBill(b, to.trim(), e.currentTarget); } })))) : h('p', { class: 'muted small', style: 'margin:0', text: 'Brak – po płatności przez Stripe wystawi się sam.' }),
+      active ? null : h('button', { class: 'btn btn-ghost btn-block', style: 'margin-top:10px', type: 'button', text: '🧾 Wystaw rachunek', onclick: () => billSheet(o) }));
+  });
+  return box;
 }
 function billSheet(o) {
   const c = o?.customer || {}, biz = c.type === 'business', today = todayKey();

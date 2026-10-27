@@ -669,6 +669,9 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
 .bill-row .x-btn{background:none;border:1px solid var(--line-2);color:var(--muted);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:1.1rem}
 .bill-row .x-btn:hover{color:var(--bad);border-color:var(--bad)}
 .code-row .grow{flex:1}
+.bill-chip{display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 14px;border:1px solid rgba(255,187,0,.35);border-radius:12px;background:rgba(255,187,0,.05)}
+.bill-chip .grow{flex:1;min-width:0}.bill-chip .bill-ico{font-size:1.4rem}
+@media(max-width:600px){.bill-chip{flex-wrap:wrap}.bill-chip .btn{width:100%}}
 @media(max-width:600px){.bill-row{grid-template-columns:1fr 1fr 34px}.bill-row>input:first-child{grid-column:1/-1}.bill-head{display:none}}
 @media(max-width:600px){.adm-detail .code-row{flex-wrap:wrap}.fin-big{font-size:1.4rem}}
 .rep-checks{display:grid;gap:4px;margin-bottom:10px}
@@ -2426,6 +2429,7 @@ function orderCard(o) {
   const spec = Object.entries(o.spec || {}).filter(([k]) => k !== 'Usługa');
   if (spec.length) card.append(h('ul', { class: 'sum-spec' }, spec.map(([k, v]) => h('li', { text: `${k}: ${v}` }))));
   const res = resultsTable(o.order_results || []); if (res) card.append(h('h4', { style: 'margin:14px 0 0;font-size:.95rem', text: 'Raport STRIKE PROOF – pomiary' }), res);
+  if (o.paid_at) card.append(clientBillBox(o));
   const files = h('div', { class: 'files' }); card.append(files);
   if (['OPLACONE', 'W_REALIZACJI', 'TESTY', 'ZAKONCZONE'].includes(o.status)) loadFiles(o, files);
   if (o.order_events?.length) card.append(h('details', { class: 'more' }, h('summary', { text: 'Historia zlecenia' }), h('ul', { class: 'timeline' }, [...o.order_events].sort((a, b) => a.at.localeCompare(b.at)).map((e) => h('li', {}, h('time', { text: fmt(e.at) }), (STATUS[e.status]?.[0] || e.status) + (e.note ? ` – ${e.note}` : ''))))));
@@ -2459,10 +2463,28 @@ function resultsTable(results) {
       return h('tr', {}, h('td', { text: LBL[k] || k.replace(/_/g, ' ') }), h('td', { text: x ?? '–' }), h('td', { text: y ?? '–' }), h('td', { class: cls, text: d }));
     }))));
 }
+/** Rachunek / faktura do zamówienia (Strefa Klienta) – PDF z plików zamówienia. */
+function clientBillBox(o) {
+  const box = h('div');
+  if (!cat.hasV2) return box;
+  sb.from('bills').select('id,kind,number,issued_on,total_grosze,client_path,sent_at,sent_to').eq('order_id', o.id).then(({ data, error }) => {
+    if (error || !data?.length) return;
+    box.replaceChildren(...data.map((b) => h('div', { class: 'bill-chip' },
+      h('span', { class: 'bill-ico', 'aria-hidden': 'true', text: '🧾' }),
+      h('div', { class: 'grow' }, h('b', { text: `${b.kind === 'faktura' ? 'Faktura' : 'Rachunek'} ${b.number}` }),
+        h('div', { class: 'muted small', text: `${zl(b.total_grosze)} · ${fmt(`${b.issued_on}T12:00:00Z`, { dateStyle: 'medium' })}${b.sent_at ? ` · wysłany na ${b.sent_to}` : ''}` })),
+      b.client_path ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Pobierz PDF', onclick: async () => {
+        const { data: u, error: e } = await sb.storage.from('reports').createSignedUrl(b.client_path, 120);
+        if (e) return toast('err', 'Nie udało się pobrać rachunku.'); window.open(u.signedUrl, '_blank', 'noopener');
+      } }) : null)));
+  });
+  return box;
+}
+const BILL_FILE_RE = /-(Rachunek|Faktura)-[RF]-\d+-\d{4}\.pdf$/;
 async function loadFiles(o, box, ownerId) {
   const folder = `${ownerId || session.user.id}/${o.id}`;
   const { data } = await sb.storage.from('reports').list(folder, { sortBy: { column: 'created_at', order: 'asc' } });
-  box.replaceChildren(...(data || []).filter((f) => f.name && !f.name.startsWith('.')).map((f) => h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: `⬇ ${f.name.replace(/^\d{10,}-/, '')}`, 'aria-label': `Pobierz plik ${f.name.replace(/^\d{10,}-/, '')}`,
+  box.replaceChildren(...(data || []).filter((f) => f.name && !f.name.startsWith('.') && !BILL_FILE_RE.test(f.name)).map((f) => h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: `⬇ ${f.name.replace(/^\d{10,}-/, '')}`, 'aria-label': `Pobierz plik ${f.name.replace(/^\d{10,}-/, '')}`,
     onclick: async () => { const { data: s, error } = await sb.storage.from('reports').createSignedUrl(`${folder}/${f.name}`, 120); if (error) return toast('err', 'Nie udało się pobrać pliku.'); window.open(s.signedUrl, '_blank', 'noopener'); } })));
 }
 async function loadRefs() {
@@ -3441,15 +3463,16 @@ function billList() {
 /** Szczegóły zlecenia: wystawione dokumenty + formularz nowego. */
 function orderBills(o) {
   const list = h('div');
+  const form = h('details', { class: 'more' }, h('summary', { text: 'Wystaw rachunek do tego zlecenia' }), billEditor(o));
   sb.from('bills').select('*').eq('order_id', o.id).order('created_at').then(({ data, error }) => {
     if (error || !data?.length) return;
+    form.hidden = data.some((b) => !b.cancelled_at);
     list.replaceChildren(...data.map((b) => h('div', { class: 'code-row', style: 'align-items:center;margin-bottom:6px' },
       h('span', { class: 'grow small' }, h('b', { text: b.number }), ` · ${zlFull(b.total_grosze)} · ${b.cancelled_at ? 'anulowany' : b.sent_at ? `wysłany na ${b.sent_to}` : 'nie wysłany'}`),
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'PDF', onclick: () => openBillPdf(b) }),
       b.cancelled_at ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Wyślij', onclick: (e) => { const to = prompt('Wyślij na adres e-mail:', b.sent_to || b.buyer?.email || ''); if (to) sendBill(b, to.trim(), e.currentTarget); } }))));
   });
-  return h('div', { style: 'margin-top:16px' }, h('h4', { text: 'Rachunek / faktura' }), list,
-    h('details', { class: 'more' }, h('summary', { text: 'Wystaw rachunek do tego zlecenia' }), billEditor(o)));
+  return h('div', { style: 'margin-top:16px' }, h('h4', { text: 'Rachunek / faktura' }), list, form);
 }
 
 /* ------------------------------------------------------------------ kontakt */
