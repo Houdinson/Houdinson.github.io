@@ -1028,11 +1028,12 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
     </div>
     <p class="muted small" id="authHint"></p>
     <form id="authForm" novalidate>
-      <div class="field" data-for="register"><label for="aName">Imię i nazwisko</label><input class="input" id="aName" autocomplete="name" maxlength="120"></div>
+      <div class="field hidden" data-for="register"><label for="aName">Imię i nazwisko</label><input class="input" id="aName" autocomplete="name" maxlength="120"></div>
       <div class="field" data-for="login register reset"><label for="aMail">E-mail</label><input class="input" id="aMail" type="email" autocomplete="email" maxlength="120"></div>
       <div class="field" data-for="login register newpass"><label for="aPass" id="aPassLbl">Hasło</label><input class="input" id="aPass" type="password" autocomplete="current-password" maxlength="200"></div>
-      <label class="check" data-for="register"><input type="checkbox" id="aTerms" aria-required="true"><span>Akceptuję <button type="button" class="link" data-legal="terms">Regulamin</button> i zapoznałem(-am) się z <button type="button" class="link" data-legal="privacy">Polityką Prywatności</button>. <span class="req" aria-hidden="true">*</span></span></label>
-      <label class="check" data-for="register"><input type="checkbox" id="aMarketing"><span>Chcę otrzymywać e-mailem informacje o promocjach Strike Tech Lab (opcjonalnie – zgodę wycofasz w każdej chwili).</span></label>
+      <label class="check hidden" data-for="register"><input type="checkbox" id="aTerms" aria-required="true"><span>Akceptuję <button type="button" class="link" data-legal="terms">Regulamin</button> i zapoznałem(-am) się z <button type="button" class="link" data-legal="privacy">Polityką Prywatności</button>. <span class="req" aria-hidden="true">*</span></span></label>
+      <label class="check hidden" data-for="register"><input type="checkbox" id="aMarketing"><span>Chcę otrzymywać e-mailem informacje o promocjach Strike Tech Lab (opcjonalnie – zgodę wycofasz w każdej chwili).</span></label>
+      <label class="check" data-for="login"><input type="checkbox" id="aRemember" checked><span>Nie wylogowuj mnie na tym urządzeniu <span class="muted small">(odznacz na cudzym lub wspólnym komputerze)</span></span></label>
       <div class="captcha-box" id="captchaBox" data-for="login register reset"></div>
       <button class="btn btn-gold btn-block" type="submit" id="authSubmit">Zaloguj się</button>
       <div class="form-msg" id="authMsg" role="status" aria-live="polite"></div>
@@ -2180,6 +2181,16 @@ async function handleStripeReturn() {
 }
 
 /* ------------------------------------------------------------------ logowanie */
+/* „Nie wylogowuj mnie”: zaznaczone (domyślnie) = sesja w pamięci lokalnej, przetrwa zamknięcie przeglądarki;
+   odznaczone = pamięć sesji, wylogowanie po zamknięciu karty. Supabase sam odświeża token w tle. */
+const REMEMBER_KEY = 'stl_remember';
+const remembered = () => { try { return localStorage.getItem(REMEMBER_KEY) !== '0'; } catch { return false; } };
+const AUTH_STORE = {
+  getItem(k) { try { return localStorage.getItem(k) ?? sessionStorage.getItem(k); } catch { try { return sessionStorage.getItem(k); } catch { return null; } } },
+  setItem(k, v) { try { const keep = remembered(); (keep ? localStorage : sessionStorage).setItem(k, v); (keep ? sessionStorage : localStorage).removeItem(k); } catch { /* tryb prywatny */ } },
+  removeItem(k) { try { localStorage.removeItem(k); } catch { /* */ } try { sessionStorage.removeItem(k); } catch { /* */ } },
+};
+function setRemember(on) { try { on ? localStorage.removeItem(REMEMBER_KEY) : localStorage.setItem(REMEMBER_KEY, '0'); } catch { /* */ } }
 let authMode = 'login';
 function openAuth(mode = 'login', hint = '', focusField = true) {
   authMode = mode;
@@ -2193,6 +2204,7 @@ function openAuth(mode = 'login', hint = '', focusField = true) {
   $('#aPass').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
   $('#authSubmit').textContent = { login: 'Zaloguj się', register: 'Załóż konto', reset: 'Wyślij link', newpass: 'Zapisz hasło' }[mode];
   $('#authMsg').textContent = ''; $('#authMsg').className = 'form-msg';
+  if ($('#aRemember')) $('#aRemember').checked = remembered();
   renderPanel(); if (mode !== 'newpass') renderCaptcha();
   if (focusField) setTimeout(() => (mode === 'register' ? $('#aName') : mode === 'newpass' ? $('#aPass') : $('#aMail')).focus(), 30);
 }
@@ -2226,6 +2238,7 @@ async function submitAuth(e) {
   setBusy(btn, true);
   try {
     if (authMode === 'login') {
+      setRemember($('#aRemember').checked);
       const { error } = await sb.auth.signInWithPassword({ email, password: pass, options: { captchaToken } }); if (error) throw error;
       toast('ok', 'Zalogowano.');
     } else if (authMode === 'register') {
@@ -3001,7 +3014,7 @@ const LEGAL = {
     '<h4>Czy potrzebna jest Twoja zgoda?</h4><p>Nie. Strona nie używa cookies ani innych narzędzi analitycznych, reklamowych czy śledzących (np. Google Analytics, Meta Pixel, wtyczek mediów społecznościowych). Zapisuje w przeglądarce tylko informacje niezbędne do działania usług, o które prosisz – a na to przepisy (art. 399 Prawa komunikacji elektronicznej) nie wymagają zgody. Dlatego nie wyświetlamy banera zgody.</p>' +
     '<h4>Co zapisujemy w Twojej przeglądarce</h4><ul>' +
     '<li><code>sb-…-auth-token</code> (pamięć lokalna) – utrzymuje zalogowanie w Strefie Klienta; usuwany po wylogowaniu.</li>' +
-    '<li><code>stl_booking_draft</code> (pamięć sesji) – wersja robocza formularza rezerwacji, żeby wpisane dane nie zniknęły po odświeżeniu; znika po zamknięciu karty i po opłaceniu zamówienia.</li>' +
+    '<li><code>stl_remember</code> (pamięć lokalna) – zapisuje się tylko, gdy przy logowaniu odznaczysz „Nie wylogowuj mnie”; wtedy dane logowania trzymamy w pamięci sesji i znikają po zamknięciu karty.</li><li><code>stl-guide-…</code> (pamięć lokalna) – tylko dla administratora: zaznaczone kroki w instrukcjach serwisowych.</li><li><code>stl_booking_draft</code> (pamięć sesji) – wersja robocza formularza rezerwacji, żeby wpisane dane nie zniknęły po odświeżeniu; znika po zamknięciu karty i po opłaceniu zamówienia.</li>' +
     '<li><code>stl_last_order</code> (pamięć sesji) – numer ostatniego zamówienia na czas powrotu ze strony płatności; znika po zamknięciu karty.</li></ul><p>Zdjęcia i filmy na stronie są serwowane z naszego serwera.</p>' +
     '<p>Strona nie zapisuje plików cookies w przeglądarce.</p>' +
     '<h4>Połączenia z innymi serwerami</h4><ul><li>Supabase – serwer bazy danych i logowania (nasz dostawca, przetwarza dane na nasze zlecenie).</li><li>Stripe (checkout.stripe.com) – strona płatności, na którą przechodzisz po złożeniu zamówienia. Stripe stosuje na swojej stronie własne cookies.</li><li>cdn.jsdelivr.net – tylko gdy nie działa lokalna kopia biblioteki połączenia z serwerem; wtedy serwer CDN widzi Twój adres IP.</li>' + (CFG.TURNSTILE_SITE_KEY ? '<li>challenges.cloudflare.com – zabezpieczenie „nie jestem robotem” (Cloudflare Turnstile) w formularzu logowania i rejestracji. Służy wyłącznie ochronie przed botami, więc zgodnie z art. 399 Prawa komunikacji elektronicznej nie wymaga zgody.</li>' : '') + '</ul><p>Czcionka i pozostałe pliki strony są serwowane z naszego serwera.</p>' +
@@ -3235,7 +3248,7 @@ async function boot() {
     catch { setConn('connecting'); await new Promise((r) => setTimeout(r, 2000 * (i + 1))); }
   }
   if (!createClient) { setConn('offline', 'Kalendarz rezerwacji jest chwilowo niedostępny. Odśwież stronę za chwilę albo napisz do nas.'); addEventListener('online', () => location.reload(), { once: true }); return; }
-  sb = createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }, realtime: { params: { eventsPerSecond: 5 } } });
+  sb = createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: AUTH_STORE }, realtime: { params: { eventsPerSecond: 5 } } });
   sb.auth.onAuthStateChange((event, s) => {
     if (event === 'PASSWORD_RECOVERY') { authMode = 'newpass'; setTimeout(() => openAuth('newpass'), 50); }
     setTimeout(() => onSession(s), 0);                // poza wywołaniem zwrotnym (zalecenie supabase-js)
