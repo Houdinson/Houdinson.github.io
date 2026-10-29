@@ -712,6 +712,11 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
 }
 .gal-item.portrait figcaption{font-size:.76rem;padding:18px 10px 8px}
 </style>
+<style id="stl-oauth-styles">
+.auth-social{display:grid;gap:10px;margin:16px 0}
+.auth-social .btn{width:100%;justify-content:center}
+.auth-social .muted{margin:2px 0 0;text-align:center}
+</style>
 </head>
 <body>
 <a class="skip" href="#main">Przejdź do treści</a>
@@ -1090,6 +1095,11 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
       <button class="tab" role="tab" data-mode="reset" aria-selected="false" aria-controls="authForm" tabindex="-1">Nie pamiętam hasła</button>
     </div>
     <p class="muted small" id="authHint"></p>
+    <div id="authSocial" class="auth-social">
+      <button class="btn btn-ghost btn-block" type="button" id="authGoogle">Kontynuuj z Google</button>
+      <button class="btn btn-ghost btn-block" type="button" id="authDiscord">Kontynuuj z Discord</button>
+      <p class="muted small">Możesz też użyć adresu e-mail i hasła.</p>
+    </div>
     <form id="authForm" novalidate>
       <div class="field hidden" data-for="register"><label for="aName">Imię i nazwisko</label><input class="input" id="aName" autocomplete="name" maxlength="120"></div>
       <div class="field" data-for="login register reset"><label for="aMail">E-mail</label><input class="input" id="aMail" type="email" autocomplete="email" maxlength="120"></div>
@@ -1948,6 +1958,12 @@ function pickItem(id) {
   setBookMode('svc');
   if (B.item !== id) { B.item = id; B.extras = B.extras.filter((x) => x !== id); }
   $('#bItem').value = id; onItemChange(true);
+  saveDraft();
+  if (!session) {
+    saveAuthReturn('booking');
+    openAuth('login', 'Zaloguj się lub utwórz konto, aby kontynuować rezerwację.');
+    return;
+  }
   navigate('/rezerwacja');
 }
 function renderExtras() {
@@ -2028,6 +2044,12 @@ async function loadSlots(silent = false) {
   const { data, error } = await sb.rpc('get_available_slots', args);
   if (req !== slotsReq) return;                       // przyszła nowsza odpowiedź
   if (error) { if (!silent) box.replaceChildren(h('span', { class: 'slots-msg', text: 'Nie udało się pobrać wolnych godzin. Spróbujemy ponownie za chwilę.' })); conn.wasDown = true; heartbeat(); return; }
+  if (!B.slot && B._restoreSlotStart) {
+    const restoredSlot = data.find((x) => x.starts_at === B._restoreSlotStart);
+    B._restoreSlotStart = '';
+    if (restoredSlot) B.slot = restoredSlot;
+    else toast('err', 'Poprzedni termin nie jest już dostępny. Wybierz inną godzinę.');
+  }
   if (B.slot && !data.some((x) => x.starts_at === B.slot.starts_at)) {
     B.slot = null; toast('err', 'Wybrana godzina została właśnie zajęta. Wybierz inną.'); refreshSummary();
   }
@@ -2081,14 +2103,14 @@ function refreshSummary() {
 }
 function saveDraft() {
   store.set(draftKey, {
-    mode: B.mode, item: B.item, extras: B.extras, express: B.express, ctype: ctype(), name: $('#bName').value, phone: $('#bPhone').value, company: $('#bCompany').value, nip: $('#bNip').value, note: $('#bNote').value, code: $('#bCode').value, handover: $('input[name=handover]:checked')?.value || '', city: $('#bCity').value,
+    mode: B.mode, item: B.item, extras: B.extras, express: B.express, day: B.day || '', slotStart: B.slot?.starts_at || B._restoreSlotStart || '', ctype: ctype(), name: $('#bName').value, phone: $('#bPhone').value, company: $('#bCompany').value, nip: $('#bNip').value, note: $('#bNote').value, code: $('#bCode').value, handover: $('input[name=handover]:checked')?.value || '', city: $('#bCity').value,
     pc: { budget: $('#pcBudget').value, purpose: $('input[name=pcPurpose]:checked')?.value || '', have: $$('input[name=pcHave]:checked').map((x) => x.value), add: $$('input[name=pcAdd]:checked').map((x) => x.value), note: $('#pcNote').value, inspiration: P.inspiration, name: $('#pcName').value, email: $('#pcMail').value, phone: $('#pcPhone').value },
   });
 }
 function restoreDraft() {
   const d = store.get(draftKey); if (!d) return;
   B.mode = d.mode === 'pc' ? 'pc' : 'svc';
-  B.item = d.item || ''; B.extras = Array.isArray(d.extras) ? d.extras.slice(0, MAX_EXTRAS) : []; B.express = !!d.express; $('#bExpress').checked = B.express;
+  B.item = d.item || ''; B.extras = Array.isArray(d.extras) ? d.extras.slice(0, MAX_EXTRAS) : []; B.express = !!d.express; B.day = typeof d.day === 'string' ? d.day : (B.day || ''); B._restoreSlotStart = typeof d.slotStart === 'string' ? d.slotStart : ''; $('#bExpress').checked = B.express;
   for (const [id, k] of [['bName', 'name'], ['bPhone', 'phone'], ['bCompany', 'company'], ['bNip', 'nip'], ['bNote', 'note'], ['bCode', 'code'], ['bCity', 'city']]) if (d[k]) $('#' + id).value = d[k];
   if (d.ctype) { const r = $(`input[name=ctype][value=${d.ctype}]`); if (r) r.checked = true; }
   if (d.handover) { const r = $(`input[name=handover][value=${d.handover}]`); if (r) r.checked = true; }
@@ -2143,7 +2165,7 @@ async function submitBooking() {
   else if (consumer && !$('#kWithdrawal').checked) f.consents = 'Potwierdź zapoznanie się z pouczeniem o odstąpieniu od umowy.';
   else if (needsEarlyStart() && !$('#kEarly').checked) f.consents = 'Termin wypada w ciągu 14 dni – potwierdź żądanie rozpoczęcia usługi przed upływem terminu na odstąpienie albo wybierz późniejszy termin.';
   fieldErrors(f); if (Object.keys(f).length) return;
-  if (!session) { pendingPay = true; openAuth('login', 'Zaloguj się lub załóż konto, żeby dokończyć zamówienie. Wybrany termin i dane formularza zostaną zachowane.'); return; }
+  if (!session) { saveDraft(); saveAuthReturn('checkout'); pendingPay = true; openAuth('login', 'Zaloguj się lub utwórz konto, aby dokończyć zamówienie. Po powrocie sprawdzimy, czy wybrany termin jest nadal dostępny.'); return; }
   const btn = $('#payBtn'); setBusy(btn, true, 'Przekierowuję do płatności…');
   try {
     const data = await callFn('create-checkout', {
@@ -2270,6 +2292,43 @@ const AUTH_STORE = {
 };
 function setRemember(on) { try { on ? localStorage.removeItem(REMEMBER_KEY) : localStorage.setItem(REMEMBER_KEY, '0'); } catch { /* */ } }
 let authMode = 'login';
+const AUTH_RETURN_KEY = 'stl_auth_return_v1';
+function saveAuthReturn(intent) {
+  try {
+    if (intent === 'booking' || intent === 'checkout') sessionStorage.setItem(AUTH_RETURN_KEY, intent);
+  } catch (e) { console.warn('Nie udało się zapisać celu powrotu OAuth.', e); }
+}
+function takeAuthReturn() {
+  try {
+    const intent = sessionStorage.getItem(AUTH_RETURN_KEY) || '';
+    sessionStorage.removeItem(AUTH_RETURN_KEY);
+    return intent === 'booking' || intent === 'checkout' ? intent : '';
+  } catch { return ''; }
+}
+async function startOAuth(provider) {
+  const msg = $('#authMsg');
+  const btn = provider === 'google' ? $('#authGoogle') : $('#authDiscord');
+  if (!sb) {
+    msg.className = 'form-msg err';
+    msg.textContent = 'Logowanie jest chwilowo niedostępne.';
+    return;
+  }
+  try {
+    if (typeof saveDraft === 'function') saveDraft();
+    btn.disabled = true;
+    msg.className = 'form-msg';
+    msg.textContent = 'Przekierowuję do logowania…';
+    const options = { redirectTo: SITE_URL + 'konto' };
+    if (provider === 'discord') options.scopes = 'identify email';
+    const { error } = await sb.auth.signInWithOAuth({ provider, options });
+    if (error) throw error;
+    // Supabase SDK rozpoczyna przekierowanie; przy błędzie przycisk odblokujemy w catch.
+  } catch (e) {
+    btn.disabled = false;
+    msg.className = 'form-msg err';
+    msg.textContent = AUTH_ERR(e?.message || 'Nie udało się rozpocząć logowania.');
+  }
+}
 function openAuth(mode = 'login', hint = '', focusField = true) {
   authMode = mode;
   if (route !== '/konto') navigate('/konto');
@@ -2277,6 +2336,7 @@ function openAuth(mode = 'login', hint = '', focusField = true) {
   $('#authHint').textContent = hint || { login: '', register: 'Hasło: min. 10 znaków. Po rejestracji potwierdź adres e-mail linkiem z wiadomości.', reset: 'Wyślemy link do ustawienia nowego hasła.', newpass: 'Wpisz nowe hasło (min. 10 znaków).' }[mode];
   $$('#authTabs .tab').forEach((t) => { const on = t.dataset.mode === mode; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; });
   $('#authTabs').classList.toggle('hidden', mode === 'newpass');
+  $('#authSocial')?.classList.toggle('hidden', !['login', 'register'].includes(mode));
   $$('#authForm [data-for]').forEach((el) => el.classList.toggle('hidden', !el.dataset.for.split(' ').includes(mode)));
   $('#aPassLbl').textContent = mode === 'newpass' ? 'Nowe hasło' : 'Hasło';
   $('#aPass').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
@@ -2353,10 +2413,18 @@ async function applySession(s) {
   renderPanel(); loadPanelData(); subscribeRealtime(); refreshPrice(); renderConsole();
   if (!$('#pcMail').value && session?.user?.email) $('#pcMail').value = session.user.email;
   if (!$('#pcName').value && profile?.full_name) $('#pcName').value = profile.full_name;
-  if (pendingPay) {
+  const authReturn = takeAuthReturn();
+  if (authReturn === 'booking' || authReturn === 'checkout') {
+    pendingPay = false;
+    navigate('/rezerwacja');
+    banner('#bookBanner', 'info', authReturn === 'checkout'
+      ? 'Zalogowano. Sprawdź dane i dostępność terminu, a następnie kliknij „Zamawiam z obowiązkiem zapłaty”.'
+      : 'Zalogowano. Możesz kontynuować rezerwację; sprawdzamy ponownie dostępność terminu.');
+    if (B.day) await loadSlots(true);
+  } else if (pendingPay) {
     pendingPay = false; navigate('/rezerwacja');
     banner('#bookBanner', 'info', 'Zalogowano. Sprawdź dane i kliknij „Zamawiam z obowiązkiem zapłaty”, żeby przejść do płatności.');
-    loadSlots(true);
+    if (B.day) await loadSlots(true);
   }
 }
 async function loadProfile() {
@@ -3783,7 +3851,17 @@ function initChrome() {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = e.target.closest('a[href]'); if (!a) return;
     const href = a.getAttribute('href');
-    if (a.hasAttribute('data-link')) { e.preventDefault(); navigate(href); return; }
+    if (a.hasAttribute('data-link')) {
+      e.preventDefault();
+      const targetPath = new URL(href, location.origin).pathname.replace(/\/+$/, '') || '/';
+      const bookingPath = new URL(BASE + 'rezerwacja', location.origin).pathname.replace(/\/+$/, '') || '/';
+      if (targetPath === bookingPath && !session) {
+        saveDraft(); saveAuthReturn('booking');
+        openAuth('login', 'Zaloguj się lub utwórz konto, aby przejść do rezerwacji.');
+        return;
+      }
+      navigate(href); return;
+    }
     if (href.startsWith('#') && href.length > 1) { e.preventDefault(); const t = document.getElementById(href.slice(1)); if (t) { t.setAttribute('tabindex', '-1'); t.focus(); } }
   });
   $$('.acc').forEach((acc) => acc.addEventListener('click', (e) => {
@@ -3812,6 +3890,8 @@ function initChrome() {
 
 /* ------------------------------------------------------------------ start */
 async function boot() {
+  $('#authGoogle')?.addEventListener('click', () => startOAuth('google'));
+  $('#authDiscord')?.addEventListener('click', () => startOAuth('discord'));
   initChrome(); initBenchmark(); initEffects(); bindBooking(); restoreDraft();
   setMotion(document.documentElement.classList.contains('paused'), false);
   $('#budget')?.addEventListener('input', renderBudget);
