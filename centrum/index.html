@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="social-hub.css">
 <script src="config.js"></script>
 </head>
 <body>
@@ -98,9 +99,20 @@
 
     <section data-view="social" aria-label="Social media" hidden>
       <div class="view-head"><h2>Social Media</h2><button class="icon-btn" data-refresh="social" aria-label="Odśwież">↻</button></div>
-      <div class="run-bar card" id="runBar"></div>
-      <div class="chips" id="socChips" role="tablist" aria-label="Filtr postów"></div>
-      <div id="socList" class="list"></div>
+      <div class="hub-tabs" id="hubTabs" role="tablist" aria-label="Widok social media">
+        <button type="button" role="tab" data-hub="queue" aria-selected="true">Do publikacji</button>
+        <button type="button" role="tab" data-hub="feed" aria-selected="false">Opublikowane</button>
+        <button type="button" role="tab" data-hub="plan" aria-selected="false">Kalendarz</button>
+        <button type="button" role="tab" data-hub="accounts" aria-selected="false">Konta</button>
+      </div>
+      <div data-hub-view="queue">
+        <div class="run-bar card" id="runBar"></div>
+        <div class="chips" id="socChips" role="tablist" aria-label="Filtr postów"></div>
+        <div id="socList" class="list"></div>
+      </div>
+      <div data-hub-view="feed" hidden><div id="hubFeed"></div></div>
+      <div data-hub-view="plan" hidden><div id="hubPlan"></div></div>
+      <div data-hub-view="accounts" hidden><div id="hubAccounts"></div></div>
     </section>
 
     <section data-view="finance" aria-label="Finanse" hidden>
@@ -129,5 +141,6 @@
 
 <div id="toasts" aria-live="polite"></div>
 <script type="module" src="app.js"></script>
+<script type="module" src="social-hub.js"></script>
 </body>
 </html>
