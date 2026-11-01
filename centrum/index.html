@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="STL Centrum">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss: http://127.0.0.1:54321 ws://127.0.0.1:54321; base-uri 'self'; object-src 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss: http://127.0.0.1:54321 ws://127.0.0.1:54321; base-uri 'self'; object-src 'none'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
@@ -45,6 +45,7 @@
     <form id="loginForm" novalidate>
       <label class="field"><span>E-mail</span><input class="input" id="lMail" type="email" autocomplete="username" required></label>
       <label class="field"><span>Hasło</span><input class="input" id="lPass" type="password" autocomplete="current-password" required></label>
+      <div id="lCaptcha" style="min-height:0;margin:4px 0 12px;display:flex;justify-content:center"></div>
       <button class="btn btn-gold btn-block" type="submit" id="lBtn">Zaloguj</button>
       <p class="form-msg" id="lMsg" role="status" aria-live="polite"></p>
     </form>

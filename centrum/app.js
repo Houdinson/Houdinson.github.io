@@ -108,6 +108,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ------------------------------------------------------------------ logowanie */
 function showLoginStep(step) {
   $('#login').classList.remove('hidden'); $('#app').classList.add('hidden');
+  renderCaptcha();
   $('#loginForm').classList.toggle('hidden', step !== 'password');
   $('#mfaForm').classList.toggle('hidden', step !== 'mfa');
   setTimeout(() => (step === 'mfa' ? $('#mCode') : $('#lMail')).focus(), 50);
@@ -137,13 +138,27 @@ async function showLoginOrApp() {
   openTab(TABS.includes(want) ? want : 'today');
   heartbeat(); subscribe(); refreshBadges();
 }
+/* CAPTCHA (Cloudflare Turnstile) – wymagana, gdy w Supabase włączona jest ochrona CAPTCHA */
+const CAP = { id: null, token: '', loading: null };
+function loadTurnstile() {
+  if (!CFG.TURNSTILE_SITE_KEY) return Promise.resolve(null);
+  if (window.turnstile) return Promise.resolve(window.turnstile);
+  CAP.loading ||= new Promise((ok) => { const el = document.createElement('script'); el.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; el.async = true; el.onload = () => ok(window.turnstile || null); el.onerror = () => ok(null); document.head.append(el); });
+  return CAP.loading;
+}
+async function renderCaptcha() {
+  const ts = await loadTurnstile(); if (!ts || CAP.id !== null) return;
+  CAP.id = ts.render('#lCaptcha', { sitekey: CFG.TURNSTILE_SITE_KEY, language: 'pl', theme: 'dark', callback: (t) => { CAP.token = t; }, 'expired-callback': () => { CAP.token = ''; }, 'error-callback': () => { CAP.token = ''; } });
+}
+function captchaReset() { if (CAP.id !== null && window.turnstile) { window.turnstile.reset(CAP.id); CAP.token = ''; } }
 $('#loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = $('#lBtn'), msg = $('#lMsg'); msg.className = 'form-msg'; msg.textContent = '';
+  if (CFG.TURNSTILE_SITE_KEY && !CAP.token) { msg.className = 'form-msg err'; msg.textContent = 'Potwierdź, że nie jesteś robotem (pole nad przyciskiem).'; renderCaptcha(); return; }
   busy(btn, true, 'Loguję…');
-  const { error } = await sb.auth.signInWithPassword({ email: $('#lMail').value.trim(), password: $('#lPass').value });
-  busy(btn, false, 'Zaloguj');
-  if (error) { msg.className = 'form-msg err'; msg.textContent = /Invalid login/i.test(error.message) ? 'Nieprawidłowy e-mail lub hasło.' : error.message; }
+  const { error } = await sb.auth.signInWithPassword({ email: $('#lMail').value.trim(), password: $('#lPass').value, options: { captchaToken: CAP.token || undefined } });
+  busy(btn, false, 'Zaloguj'); captchaReset();
+  if (error) { msg.className = 'form-msg err'; msg.textContent = /Invalid login/i.test(error.message) ? 'Nieprawidłowy e-mail lub hasło.' : /captcha/i.test(error.message) ? 'Weryfikacja „nie jestem robotem” nie powiodła się – spróbuj ponownie.' : error.message; }
 });
 $('#mfaForm').addEventListener('submit', async (e) => {
   e.preventDefault();

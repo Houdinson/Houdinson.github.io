@@ -363,7 +363,7 @@ function adminDetail(o) {
       h('div', {}, h('h4', { text: 'Status' }), h('div', { class: 'field' }, status), h('div', { class: 'field' }, note),
         h('div', { class: 'cta-row', style: 'margin:0' },
           h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Zmień status', onclick: (e) => act(e.currentTarget, 'Zmień status', { action: 'set_status', order_id: o.id, status: status.value, note: note.value }, () => 'Status zmieniony. Klient widzi go od razu (przy „Testy” i „Zakończone” dostaje maila).') }),
-          !o.order_number && o.status !== 'ANULOWANE' ? [['gotowka', 'Opłacone gotówką'], ['przelew', 'Opłacone przelewem']].map(([m, t]) => h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} poza Stripe (${m === 'gotowka' ? 'gotówka' : 'przelew'})?`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number}`); } })) : null),
+          !o.order_number && o.status !== 'ANULOWANE' ? [['gotowka', 'Opłacone gotówką'], ['blik', 'Opłacone BLIK-iem na telefon'], ['przelew', 'Opłacone przelewem']].map(([m, t]) => h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} poza Stripe (${({ gotowka: 'gotówka', blik: 'BLIK na telefon', przelew: 'przelew' })[m]})?`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number}`); } })) : null),
         paymentBox(o),
         o.order_number ? orderBills(o) : null,
         o.order_events?.length ? h('ul', { class: 'timeline', style: 'margin-top:14px' }, [...o.order_events].sort((a, b) => a.at.localeCompare(b.at)).map((ev) => h('li', {}, h('time', { text: fmt(ev.at) }), (STATUS[ev.status]?.[0] || ev.status) + (ev.note ? ` – ${ev.note}` : '')))) : null),
@@ -395,6 +395,7 @@ function adminForms() {
     h('div', { class: 'card' }, h('h3', { text: 'Blokada kalendarza (urlop, przerwa)' }),
       h('div', { class: 'field' }, h('label', { text: 'Dzień' }), bDate), h('div', { class: 'row2' }, h('div', { class: 'field' }, h('label', { text: 'Od' }), bFrom), h('div', { class: 'field' }, h('label', { text: 'Do' }), bTo)), h('div', { class: 'field' }, bWhy),
       h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Zablokuj termin', onclick: async (e) => { if (!bDate.value) return toast('err', 'Wybierz dzień.'); const b = e.currentTarget; setBusy(b, true); try { await callFn('admin', { action: 'block', date: bDate.value, from: bFrom.value, to: bTo.value, reason: bWhy.value }); toast('ok', 'Termin zablokowany – zniknął z kalendarza.'); loadSlots(true); } catch (err) { toast('err', err.message); } setBusy(b, false, 'Zablokuj termin'); } })),
+    manualOrderCard(),
     h('div', { class: 'card', style: 'grid-column:1/-1' }, h('h3', { text: 'Wiadomości i zapytania o wycenę' }), h('div', { id: 'inqOut', class: 'muted', text: 'Ładuję…' })),
     h('div', { class: 'card', style: 'grid-column:1/-1' }, h('h3', { text: 'Opinie klientów' }), h('div', { id: 'revAdmOut', class: 'muted', text: 'Ładuję…' })));
 }
@@ -762,4 +763,41 @@ async function loadAdminReviews() {
             : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Zapisz odpowiedź', onclick: (e) => act(e.currentTarget, 'published', 'Zapisz odpowiedź') }),
           r.status !== 'rejected' ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Odrzuć', onclick: (e) => act(e.currentTarget, 'rejected', 'Odrzuć') }) : null));
     }));
+}
+
+/* ------------------------------------------------------------------ zlecenie ręczne: klient płacący gotówką / BLIK-iem na telefon */
+function manualOrderCard() {
+  const svcs = [...cat.services.values()].filter((x) => x.kind === 'USLUGA').sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  const f = (attrs) => h('input', { class: 'input', ...attrs });
+  const svc = h('select', { class: 'select' }, h('option', { value: '', text: '— usługa —' }), svcs.map((x) => h('option', { value: x.id, text: `${x.name} – ${zl(x.price_grosze)}` })));
+  const name = f({ placeholder: 'Imię i nazwisko klienta', maxlength: 120 }), phone = f({ type: 'tel', placeholder: 'Telefon (opcjonalnie)', maxlength: 20 });
+  const email = f({ type: 'email', placeholder: 'E-mail (opcjonalnie – jeśli ma konto, zlecenie pojawi się w jego Strefie Klienta)', maxlength: 120 });
+  const price = f({ type: 'number', min: 1, step: '0.01', placeholder: 'Kwota zł (puste = z cennika)' });
+  const day = f({ type: 'date' }), time = f({ type: 'time', step: 900 });
+  const pay = h('select', { class: 'select' }, [['gotowka', 'Opłacone gotówką'], ['blik', 'Opłacone BLIK-iem na telefon'], ['nieoplacone', 'Jeszcze nieopłacone (zapłaci przy odbiorze)']].map(([v, t]) => h('option', { value: v, text: t })));
+  const line1 = f({ placeholder: 'Ulica i numer (do rachunku, opcjonalnie)', maxlength: 120 }), postal = f({ placeholder: 'Kod', maxlength: 12 }), city = f({ placeholder: 'Miasto', maxlength: 80 });
+  const note = h('textarea', { class: 'textarea', rows: 2, maxlength: 2000, placeholder: 'Notatka: sprzęt, objawy, co zrobić' });
+  svc.addEventListener('change', () => { const x = cat.services.get(svc.value); price.placeholder = x ? `Kwota zł (z cennika: ${zl(x.price_grosze)})` : 'Kwota zł (puste = z cennika)'; });
+  const btn = h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Utwórz zlecenie', onclick: async () => {
+    if (!svc.value) return toast('err', 'Wybierz usługę.');
+    if (name.value.trim().length < 2) return toast('err', 'Podaj imię i nazwisko klienta.');
+    setBusy(btn, true);
+    try {
+      const d = await callFn('admin', { action: 'create_manual', service_id: svc.value, name: name.value.trim(), email: email.value.trim() || undefined, phone: phone.value.trim() || undefined,
+        price_zl: price.value || undefined, date: day.value || undefined, time: time.value || undefined, payment: pay.value, note: note.value.trim() || undefined,
+        address: line1.value.trim() && city.value.trim() ? { line1: line1.value.trim(), postal_code: postal.value.trim(), city: city.value.trim() } : undefined });
+      toast('ok', d.order_number ? `Zlecenie ${d.order_number} utworzone i opłacone.${line1.value.trim() ? ' Rachunek wystawi się sam.' : ' Rachunek wystawisz w szczegółach zlecenia.'}` : 'Zlecenie utworzone jako nieopłacone – po wpłacie kliknij w nim „Opłacone…”.');
+      [name, phone, email, price, day, time, line1, postal, city].forEach((x) => { x.value = ''; }); note.value = ''; svc.value = '';
+      await loadAdmin(true);
+    } catch (err) { toast('err', err.message); }
+    setBusy(btn, false, 'Utwórz zlecenie');
+  } });
+  return h('div', { class: 'card', style: 'grid-column:1/-1' }, h('h3', { text: 'Nowe zlecenie ręczne (gotówka / BLIK na telefon)' }),
+    h('p', { class: 'muted small', text: 'Dla klientów, którzy umawiają się telefonicznie albo na miejscu. Przy BLIK-u poproś o tytuł przelewu z imieniem i nazwą usługi – to Twój dowód wpłaty. Gotówkę wpisz od razu w dniu przyjęcia.' }),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, svc), h('div', { class: 'field' }, pay)),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, name), h('div', { class: 'field' }, phone)),
+    h('div', { class: 'field' }, email),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, price), h('div', { class: 'row2' }, h('div', { class: 'field' }, day), h('div', { class: 'field' }, time))),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, line1), h('div', { class: 'row2' }, h('div', { class: 'field' }, postal), h('div', { class: 'field' }, city))),
+    h('div', { class: 'field' }, note), btn);
 }
