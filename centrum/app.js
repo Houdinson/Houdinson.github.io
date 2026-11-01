@@ -1070,7 +1070,7 @@ $('#clientsBtn').addEventListener('click', () => { vibrate(); clientsSheet(); })
 
 /* ================================================================== SZABLONY WIADOMOŚCI */
 const TPL_DEFAULT = [
-  { id: 'remind', name: 'Przypomnienie o terminie', text: 'Dzień dobry {imie}, przypominam o terminie {termin} – {usluga}. Przy usłudze zdalnej proszę mieć zainstalowany AnyDesk. Do zobaczenia! Strike Tech Lab' },
+  { id: 'remind', name: 'Przypomnienie o terminie', text: 'Dzień dobry {imie}, przypominam o terminie {termin} – {usluga}. Przy usłudze zdalnej proszę mieć zainstalowany RustDesk (rustdesk.com). Do zobaczenia! Strike Tech Lab' },
   { id: 'start', name: 'Rozpoczęcie prac', text: 'Dzień dobry {imie}, zaczynamy pracę nad zleceniem {numer}. Postęp widać na bieżąco w Strefie Klienta na striketechlab.com. Strike Tech Lab' },
   { id: 'quote', name: 'Prośba o akceptację wyceny', text: 'Dzień dobry {imie}, przy zleceniu {numer} potrzebna jest dodatkowa praca lub część: [OPIS] – koszt [KWOTA] zł. Czy mogę to wykonać? Bez Pana/Pani zgody nic nie robię. Strike Tech Lab' },
   { id: 'ready', name: 'Sprzęt gotowy do odbioru', text: 'Dzień dobry {imie}, zlecenie {numer} ({usluga}) jest gotowe do odbioru. Raport z pomiarów jest w Strefie Klienta na striketechlab.com. Kiedy będzie Panu/Pani pasował odbiór? Strike Tech Lab' },
