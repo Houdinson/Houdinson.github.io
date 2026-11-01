@@ -712,13 +712,191 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
 }
 .gal-item.portrait figcaption{font-size:.76rem;padding:18px 10px 8px}
 </style>
-<style id="stl-oauth-styles">
-.auth-social{display:grid;gap:10px;margin:16px 0}
-.auth-social .btn{width:100%;justify-content:center}
-.auth-social .muted{margin:2px 0 0;text-align:center}
+<style id="stl-v17">
+/* ---------- ekran startowy ---------- */
+html.intro-on,html.intro-on body{overflow:hidden}
+#intro{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;cursor:pointer;color:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+#intro .i-half{position:absolute;left:0;right:0;height:50.2%;background:#050505;transition:transform 1s cubic-bezier(.77,0,.18,1)}
+#intro .i-top{top:0}#intro .i-bot{bottom:0}
+#intro .i-grid{position:absolute;inset:-40px;background:var(--circuit);background-size:160px 160px;opacity:.55;-webkit-mask:radial-gradient(closest-side,#000 0,transparent 100%);mask:radial-gradient(closest-side,#000 0,transparent 100%);animation:iPan 18s linear infinite;transition:opacity .5s}
+#intro .i-glow{position:absolute;width:min(760px,120vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(closest-side,rgba(255,187,0,.16),transparent 70%);animation:iBreath 3.2s ease-in-out infinite;transition:opacity .5s}
+#intro .i-core{position:relative;display:grid;justify-items:center;gap:18px;padding:24px;text-align:center;transition:opacity .45s,transform .7s cubic-bezier(.2,.7,.2,1)}
+#intro .i-logo{width:96px;height:132px;overflow:visible}
+#intro .i-hex{fill:none;stroke:#FFBB00;stroke-width:28;stroke-dasharray:1700;stroke-dashoffset:1700;animation:iDraw 1.1s .1s cubic-bezier(.65,0,.35,1) forwards}
+#intro .i-bolt{fill:#FFBB00;stroke:#050505;stroke-width:34;paint-order:stroke;stroke-linejoin:round;opacity:0;transform-origin:627px 565px;animation:iBolt .55s .95s cubic-bezier(.2,1.4,.4,1) forwards}
+#intro .i-flash{position:absolute;left:50%;top:58px;width:220px;height:220px;margin-left:-110px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,220,120,.85),rgba(255,187,0,.25) 45%,transparent 70%);opacity:0;animation:iFlash .7s 1.05s ease-out forwards;pointer-events:none}
+#intro .i-word{display:grid;gap:6px}
+#intro .i-strike{display:flex;justify-content:center;font-weight:800;font-size:clamp(2rem,7vw,3.4rem);letter-spacing:.14em;line-height:1;overflow:hidden;padding-left:.14em}
+#intro .i-strike span{display:inline-block;transform:translateY(110%);animation:iUp .6s cubic-bezier(.2,.9,.25,1) forwards}
+#intro .i-lab{font-weight:600;font-size:clamp(.72rem,2.2vw,.9rem);color:#FFBB00;letter-spacing:.9em;padding-left:.9em;opacity:0;animation:iTrack 1s 1.55s cubic-bezier(.2,.8,.2,1) forwards}
+#intro .i-load{width:min(260px,70vw);display:grid;gap:9px;opacity:0;animation:iFade .4s 1.2s forwards}
+#intro .i-bar{height:2px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+#intro .i-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#b88500,#FFBB00,#ffe08a);box-shadow:0 0 12px rgba(255,187,0,.8)}
+#intro .i-meta{display:flex;justify-content:space-between;gap:12px;font:500 .7rem/1 var(--mono);color:rgba(255,255,255,.55);letter-spacing:.06em;text-transform:uppercase}
+#intro .i-pct{color:#FFBB00}
+#intro .i-hint{position:absolute;bottom:max(26px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.38);opacity:0;animation:iFade .6s 2.4s forwards}
+#intro .i-slash{position:absolute;left:0;right:0;top:50%;height:2px;margin-top:-1px;background:linear-gradient(90deg,transparent,#FFBB00 20%,#fff 50%,#FFBB00 80%,transparent);box-shadow:0 0 18px #FFBB00,0 0 40px rgba(255,187,0,.6);transform:scaleX(0);opacity:0}
+#intro.out{pointer-events:none}
+#intro.out .i-core{opacity:0;transform:scale(1.08)}
+#intro.out .i-grid,#intro.out .i-glow,#intro.out .i-hint{animation:none;opacity:0}
+#intro.out .i-slash{animation:iSlash .55s cubic-bezier(.7,0,.3,1) forwards}
+#intro.out .i-top{transform:translateY(-101%);transition-delay:.38s}
+#intro.out .i-bot{transform:translateY(101%);transition-delay:.38s}
+#intro.quick .i-hex{animation-duration:.45s;animation-delay:0s}
+#intro.quick .i-bolt{animation-duration:.3s;animation-delay:.2s}
+#intro.quick .i-flash{animation-delay:.25s}
+#intro.quick .i-strike span{animation-delay:0s!important;animation-duration:.3s}
+#intro.quick .i-lab{animation-delay:.2s;animation-duration:.4s}
+#intro.quick .i-load,#intro.quick .i-hint{display:none}
+@keyframes iDraw{to{stroke-dashoffset:0}}
+@keyframes iBolt{0%{opacity:0;transform:translateY(-60px) scale(1.25)}60%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes iFlash{0%{opacity:0;transform:scale(.4)}35%{opacity:1}100%{opacity:0;transform:scale(1.6)}}
+@keyframes iUp{to{transform:none}}
+@keyframes iTrack{from{opacity:0;letter-spacing:1.6em}to{opacity:1;letter-spacing:.9em}}
+@keyframes iFade{to{opacity:1}}
+@keyframes iPan{to{background-position:160px 160px}}
+@keyframes iBreath{50%{transform:scale(1.08);opacity:.75}}
+@keyframes iSlash{0%{opacity:1;transform:scaleX(0)}70%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){
+  #intro *{animation:none!important}
+  #intro .i-hex{stroke-dashoffset:0}#intro .i-bolt,#intro .i-lab,#intro .i-load,#intro .i-strike span{opacity:1;transform:none}
+  #intro .i-flash,#intro .i-slash,#intro .i-hint{display:none}
+  #intro .i-half{transition:none}#intro{transition:opacity .3s}#intro.out{opacity:0}
+}
+/* ---------- logowanie: Google / Discord i okno „zaloguj się” ---------- */
+.auth-social{margin:14px 0 4px}
+.soc-btns{display:grid;gap:10px}
+.btn-soc{width:100%;background:#fff;color:#111;border-color:#fff;gap:12px}
+.btn-soc:hover{background:#f1f1f1}
+.btn-soc[data-prov=discord]{background:#5865F2;border-color:#5865F2;color:#fff}
+.btn-soc[data-prov=discord]:hover{background:#4752c4}
+.btn-soc[data-prov=facebook]{background:#1877F2;border-color:#1877F2;color:#fff}
+.btn-soc[data-prov=twitch]{background:#9146FF;border-color:#9146FF;color:#fff}
+.btn-soc[data-prov=apple]{background:#000;border-color:#555;color:#fff}
+.btn-soc svg,.btn-discord svg{width:20px;height:20px;flex:none}
+.btn-soc:disabled{opacity:.6;cursor:wait}
+.or-line{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.74rem;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.1em}
+.or-line::before,.or-line::after{content:'';flex:1;height:1px;background:var(--line-2)}
+.auth-legal{font-size:.74rem;color:var(--muted);margin:10px 0 0;text-align:center}
+#authGate{overflow:visible}
+#authGate .gate-x{position:absolute;top:8px;right:8px;z-index:2}
+.gate-body{position:relative;padding:30px 26px 24px;text-align:center;overflow:hidden;border-radius:18px}
+.gate-body::before{content:'';position:absolute;inset:0;background:radial-gradient(420px 200px at 50% -10%,rgba(255,187,0,.16),transparent 70%);pointer-events:none}
+.gate-logo{position:relative;width:50px;height:68px;margin:0 auto 12px;display:block;filter:drop-shadow(0 0 18px rgba(255,187,0,.45))}
+.gate-body h3{position:relative;margin:0 0 8px;font-size:1.3rem}
+.gate-lead{position:relative;color:var(--text-2);font-size:.9rem;margin:0 auto 20px;max-width:350px;line-height:1.55}
+.gate-perks{position:relative;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:-6px 0 18px;padding:0;list-style:none}
+.gate-perks li{font-size:.74rem;color:var(--gold);border:1px solid rgba(255,187,0,.3);background:var(--gold-soft);border-radius:999px;padding:4px 10px}
+.gate-btns{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:420px){.gate-btns{grid-template-columns:1fr}}
+/* ---------- czat w okienku asystenta ---------- */
+.adv-tabs{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--line)}
+.adv-tab{flex:1;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font:inherit;font-weight:700;font-size:.85rem;padding:11px 8px 10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.adv-tab[aria-selected=true]{color:#fff;border-bottom-color:var(--gold)}
+.adv-tab:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.cnt{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--gold);color:#000;font-size:.7rem;font-weight:800;line-height:1}
+.adv-view{flex:1;display:flex;flex-direction:column;min-height:0}
+.chat-badge{position:absolute;top:-3px;right:-3px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--bad);color:#fff;font-size:.74rem;font-weight:800;display:grid;place-items:center;border:2px solid var(--bg)}
+.adv-fab.has-msg .adv-ping{display:none}
+.chat-list{flex:1;overflow-y:auto;padding:14px 14px 8px;display:flex;flex-direction:column;gap:8px;overscroll-behavior:contain}
+.chat-day{align-self:center;font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:6px 0 2px}
+.chat-from{display:block;font-size:.7rem;font-weight:800;color:var(--gold);margin-bottom:3px;letter-spacing:.02em}
+.chat-time{display:block;font-size:.66rem;opacity:.6;margin-top:4px;font-weight:500;text-align:right}
+.adv-msg.bot .chat-time{text-align:left}
+.adv-msg.pending{opacity:.6}
+.chat-txt{white-space:pre-wrap}
+.chat-form{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);align-items:flex-end}
+.chat-form textarea{resize:none;min-height:42px;max-height:130px;line-height:1.4}
+.chat-note{font-size:.7rem;color:var(--muted);padding:0 14px 10px;margin:0;text-align:center}
+.chat-empty{margin:auto;text-align:center;color:var(--muted);font-size:.88rem;padding:20px;max-width:290px;display:grid;gap:12px;justify-items:center}
+.chat-empty b{color:#fff;font-size:.98rem}
+.chat-head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.chat-back{all:unset;cursor:pointer;width:32px;height:32px;display:grid;place-items:center;border-radius:8px;font-size:1.2rem;flex:none}
+.chat-back:hover,.chat-back:focus-visible{background:var(--surface-2)}
+.chat-who{min-width:0;flex:1}.chat-who b{display:block;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-who small{display:block;color:var(--muted);font-size:.74rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-actions{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.chat-actions .btn{padding:7px 11px;font-size:.78rem;border-radius:9px}
+.chat-search{padding:10px 12px;border-bottom:1px solid var(--line)}
+.chat-search .input{padding:10px 12px;font-size:.88rem}
+.chat-inbox{flex:1;overflow-y:auto;overscroll-behavior:contain}
+.chat-row{all:unset;box-sizing:border-box;display:flex;gap:10px;align-items:center;width:100%;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
+.chat-row:hover,.chat-row:focus-visible{background:var(--surface-2)}
+.chat-av{width:38px;height:38px;border-radius:50%;background:var(--gold-soft);border:1px solid rgba(255,187,0,.3);color:var(--gold);display:grid;place-items:center;font-weight:800;flex:none;font-size:.9rem}
+.chat-row .meta{min-width:0;flex:1}
+.chat-row .top{display:flex;gap:6px;align-items:center}
+.chat-row .top b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.88rem}
+.chat-row time{margin-left:auto;font-size:.7rem;color:var(--muted);flex:none}
+.chat-row p{margin:3px 0 0;font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-row.unread p{color:#fff;font-weight:600}
+.chat-row .dc{width:14px;height:14px;color:#8b93ff;flex:none}
+.chat-sec{padding:10px 14px 4px;font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.btn-discord{background:#5865F2;border-color:#5865F2;color:#fff;gap:8px}
+.btn-discord:hover{background:#4752c4}
+.client-contact{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 4px}
+.linked{display:grid;gap:10px;margin-top:10px}
+.linked-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.linked-row .ico{width:22px;height:22px;display:grid;place-items:center;flex:none}
+.linked-row .ico svg{width:20px;height:20px}
+.linked-row .grow{min-width:0}.linked-row small{display:block;color:var(--muted);font-size:.76rem;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
+<div id="intro" aria-hidden="true">
+  <div class="i-half i-top"></div><div class="i-half i-bot"></div>
+  <div class="i-grid"></div><div class="i-glow"></div>
+  <div class="i-slash"></div>
+  <div class="i-core">
+    <div class="i-flash"></div>
+    <svg class="i-logo" viewBox="360 190 540 750"><polygon class="i-hex" points="627,303 853,417 853,697 627,872 400,697 400,417" stroke-linejoin="miter"/><polygon class="i-bolt" points="778,212 474,624 655,583 472,918 778,512 612,546"/></svg>
+    <div class="i-word">
+      <div class="i-strike"><span style="animation-delay:1.05s">S</span><span style="animation-delay:1.1s">T</span><span style="animation-delay:1.15s">R</span><span style="animation-delay:1.2s">I</span><span style="animation-delay:1.25s">K</span><span style="animation-delay:1.3s">E</span></div>
+      <div class="i-lab">TECH LAB</div>
+    </div>
+    <div class="i-load"><div class="i-bar"><i></i></div><div class="i-meta"><span class="i-line">Uruchamianie</span><span class="i-pct">0%</span></div></div>
+  </div>
+  <div class="i-hint">Kliknij, aby wejść</div>
+</div>
+<script>
+/* Ekran startowy: pełna animacja przy pierwszej wizycie w sesji, krótka przy kolejnych.
+   Znika, gdy strona jest gotowa (window.stlIntroDone) albo po kliknięciu / klawiszu. */
+(function () {
+  var el = document.getElementById('intro'); if (!el) return;
+  var seen = false; try { seen = sessionStorage.getItem('stl_intro') === '1'; sessionStorage.setItem('stl_intro', '1'); } catch (e) { /* tryb prywatny */ }
+  var rm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var root = document.documentElement, t0 = Date.now();
+  var MIN = rm ? 350 : seen ? 650 : 2400, MAX = seen ? 2500 : 6500;
+  var ready = false, readyAt = 0, done = false, p = 0, last = t0;
+  var bar = el.querySelector('.i-bar i'), pct = el.querySelector('.i-pct'), line = el.querySelector('.i-line');
+  var LINES = ['Uruchamianie', 'Test podzespołów', 'Kalibracja chłodzenia', 'Wolne terminy', 'Gotowe'];
+  if (seen) el.classList.add('quick');
+  root.classList.add('intro-on');
+  function frame() {
+    if (done) return;
+    var now = Date.now(), t = now - t0, dt = Math.min(250, now - last), target = ready ? 100 : Math.min(90, t / MIN * 85);
+    last = now;
+    p += (target - p) * (1 - Math.exp(-dt / (ready ? 90 : 260)));   // płynnie niezależnie od liczby klatek
+    if (bar) bar.style.width = p.toFixed(1) + '%';
+    if (pct) pct.textContent = Math.round(p) + '%';
+    if (line) line.textContent = LINES[Math.min(LINES.length - 1, Math.floor(p / 100 * (LINES.length - 1) + 0.0001))];
+    if (ready && t >= MIN && (p > 99.4 || now - readyAt > 450)) return finish();
+    requestAnimationFrame(frame);
+  }
+  function finish() {
+    if (done) return; done = true;
+    if (bar) bar.style.width = '100%'; if (pct) pct.textContent = '100%'; if (line) line.textContent = LINES[LINES.length - 1];
+    el.classList.add('out'); root.classList.remove('intro-on');
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, rm ? 350 : 1500);
+  }
+  function setReady() { if (!ready) { ready = true; readyAt = Date.now(); } }
+  window.stlIntroDone = setReady;
+  el.addEventListener('click', finish);
+  addEventListener('keydown', function k() { removeEventListener('keydown', k); finish(); });
+  addEventListener('load', function () { setTimeout(setReady, 1800); });
+  setTimeout(setReady, MAX);
+  requestAnimationFrame(frame);
+})();
+</script>
 <a class="skip" href="#main">Przejdź do treści</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="logo" viewBox="360 190 540 750">
@@ -1095,10 +1273,10 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
       <button class="tab" role="tab" data-mode="reset" aria-selected="false" aria-controls="authForm" tabindex="-1">Nie pamiętam hasła</button>
     </div>
     <p class="muted small" id="authHint"></p>
-    <div id="authSocial" class="auth-social">
-      <button class="btn btn-ghost btn-block" type="button" id="authGoogle">Kontynuuj z Google</button>
-      <button class="btn btn-ghost btn-block" type="button" id="authDiscord">Kontynuuj z Discord</button>
-      <p class="muted small">Możesz też użyć adresu e-mail i hasła.</p>
+    <div id="authSocial" class="auth-social hidden">
+      <div class="soc-btns" id="authSocialBtns"></div>
+      <p class="auth-legal">Logując się przez Google lub Discord, akceptujesz <button type="button" class="link" data-legal="terms">Regulamin</button> i <button type="button" class="link" data-legal="privacy">Politykę Prywatności</button>.</p>
+      <div class="or-line"><span>albo e-mailem i hasłem</span></div>
     </div>
     <form id="authForm" novalidate>
       <div class="field hidden" data-for="register"><label for="aName">Imię i nazwisko</label><input class="input" id="aName" autocomplete="name" maxlength="120"></div>
@@ -1214,6 +1392,23 @@ input.range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;backgroun
   </div>
 </footer>
 
+<dialog class="modal narrow" id="authGate" aria-labelledby="gateTitle" aria-describedby="gateText">
+  <form method="dialog" class="gate-x"><button class="modal-x" value="x" aria-label="Zamknij">×</button></form>
+  <div class="gate-body">
+    <svg class="gate-logo" aria-hidden="true"><use href="#logo"/></svg>
+    <h3 id="gateTitle">Zaloguj się, żeby zarezerwować</h3>
+    <p class="gate-lead" id="gateText"></p>
+    <ul class="gate-perks" aria-label="Co daje konto"><li>Status zlecenia na żywo</li><li>Raport z pomiarów</li><li>Rachunki</li><li>Czat z nami</li></ul>
+    <div class="soc-btns" id="gateSocial"></div>
+    <div class="or-line hidden" id="gateOr"><span>albo e-mailem</span></div>
+    <div class="gate-btns">
+      <button class="btn btn-gold" type="button" id="gateLogin">Zaloguj się</button>
+      <button class="btn btn-ghost" type="button" id="gateRegister">Załóż konto</button>
+    </div>
+    <p class="auth-legal hidden" id="gateLegal">Logując się przez Google lub Discord, akceptujesz <button type="button" class="link" data-legal="terms">Regulamin</button> i <button type="button" class="link" data-legal="privacy">Politykę Prywatności</button>.</p>
+  </div>
+</dialog>
+
 <dialog class="modal legal-doc" id="legalModal" aria-labelledby="legalTitle">
   <div class="modal-head"><h3 id="legalTitle"></h3><form method="dialog"><button class="modal-x" aria-label="Zamknij dokument">×</button></form></div>
   <div class="modal-body" id="legalBody"></div>
@@ -1270,6 +1465,7 @@ function currentRoute() {
 let route = '/';
 function navigate(to, { replace = false, keepScroll = false } = {}) {
   const [path, query = ''] = to.split('?');
+  if (bookingLocked(path)) { askLogin('booking'); return; }   // rezerwacja tylko dla zalogowanych
   const url = BASE + path.replace(/^\//, '') + (query ? '?' + query : '');
   if (replace) history.replaceState(null, '', url); else if (url !== location.pathname + location.search) history.pushState(null, '', url);
   renderRoute(keepScroll);
@@ -1959,11 +2155,6 @@ function pickItem(id) {
   if (B.item !== id) { B.item = id; B.extras = B.extras.filter((x) => x !== id); }
   $('#bItem').value = id; onItemChange(true);
   saveDraft();
-  if (!session) {
-    saveAuthReturn('booking');
-    openAuth('login', 'Zaloguj się lub utwórz konto, aby kontynuować rezerwację.');
-    return;
-  }
   navigate('/rezerwacja');
 }
 function renderExtras() {
@@ -2165,7 +2356,7 @@ async function submitBooking() {
   else if (consumer && !$('#kWithdrawal').checked) f.consents = 'Potwierdź zapoznanie się z pouczeniem o odstąpieniu od umowy.';
   else if (needsEarlyStart() && !$('#kEarly').checked) f.consents = 'Termin wypada w ciągu 14 dni – potwierdź żądanie rozpoczęcia usługi przed upływem terminu na odstąpienie albo wybierz późniejszy termin.';
   fieldErrors(f); if (Object.keys(f).length) return;
-  if (!session) { saveDraft(); saveAuthReturn('checkout'); pendingPay = true; openAuth('login', 'Zaloguj się lub utwórz konto, aby dokończyć zamówienie. Po powrocie sprawdzimy, czy wybrany termin jest nadal dostępny.'); return; }
+  if (!session) { pendingPay = true; askLogin('checkout', { title: 'Zaloguj się, żeby zamówić', text: 'Zamówienie i płatność wymagają konta. Wybrany termin i dane z formularza zostaną zachowane – po zalogowaniu sprawdzimy, czy termin jest nadal wolny.' }); return; }
   const btn = $('#payBtn'); setBusy(btn, true, 'Przekierowuję do płatności…');
   try {
     const data = await callFn('create-checkout', {
@@ -2295,39 +2486,15 @@ let authMode = 'login';
 const AUTH_RETURN_KEY = 'stl_auth_return_v1';
 function saveAuthReturn(intent) {
   try {
-    if (intent === 'booking' || intent === 'checkout') sessionStorage.setItem(AUTH_RETURN_KEY, intent);
+    if (intent === 'booking' || intent === 'checkout' || intent === 'chat') sessionStorage.setItem(AUTH_RETURN_KEY, intent);
   } catch (e) { console.warn('Nie udało się zapisać celu powrotu OAuth.', e); }
 }
 function takeAuthReturn() {
   try {
     const intent = sessionStorage.getItem(AUTH_RETURN_KEY) || '';
     sessionStorage.removeItem(AUTH_RETURN_KEY);
-    return intent === 'booking' || intent === 'checkout' ? intent : '';
+    return intent === 'booking' || intent === 'checkout' || intent === 'chat' ? intent : '';
   } catch { return ''; }
-}
-async function startOAuth(provider) {
-  const msg = $('#authMsg');
-  const btn = provider === 'google' ? $('#authGoogle') : $('#authDiscord');
-  if (!sb) {
-    msg.className = 'form-msg err';
-    msg.textContent = 'Logowanie jest chwilowo niedostępne.';
-    return;
-  }
-  try {
-    if (typeof saveDraft === 'function') saveDraft();
-    btn.disabled = true;
-    msg.className = 'form-msg';
-    msg.textContent = 'Przekierowuję do logowania…';
-    const options = { redirectTo: SITE_URL + 'konto' };
-    if (provider === 'discord') options.scopes = 'identify email';
-    const { error } = await sb.auth.signInWithOAuth({ provider, options });
-    if (error) throw error;
-    // Supabase SDK rozpoczyna przekierowanie; przy błędzie przycisk odblokujemy w catch.
-  } catch (e) {
-    btn.disabled = false;
-    msg.className = 'form-msg err';
-    msg.textContent = AUTH_ERR(e?.message || 'Nie udało się rozpocząć logowania.');
-  }
 }
 function openAuth(mode = 'login', hint = '', focusField = true) {
   authMode = mode;
@@ -2336,7 +2503,7 @@ function openAuth(mode = 'login', hint = '', focusField = true) {
   $('#authHint').textContent = hint || { login: '', register: 'Hasło: min. 10 znaków. Po rejestracji potwierdź adres e-mail linkiem z wiadomości.', reset: 'Wyślemy link do ustawienia nowego hasła.', newpass: 'Wpisz nowe hasło (min. 10 znaków).' }[mode];
   $$('#authTabs .tab').forEach((t) => { const on = t.dataset.mode === mode; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; });
   $('#authTabs').classList.toggle('hidden', mode === 'newpass');
-  $('#authSocial')?.classList.toggle('hidden', !['login', 'register'].includes(mode));
+  renderSocial();
   $$('#authForm [data-for]').forEach((el) => el.classList.toggle('hidden', !el.dataset.for.split(' ').includes(mode)));
   $('#aPassLbl').textContent = mode === 'newpass' ? 'Nowe hasło' : 'Hasło';
   $('#aPass').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
@@ -2401,7 +2568,7 @@ function onSession(s) { sessionQueue = sessionQueue.then(() => applySession(s)).
 async function applySession(s) {
   const was = session?.user?.id; session = s;
   $('#acctTxt').textContent = s ? 'Moje konto' : 'Zaloguj';
-  if (!s) { profile = null; isAdmin = false; unsubscribeRealtime(); renderPanel(); refreshSummary(); renderConsole(); return; }
+  if (!s) { profile = null; isAdmin = false; unsubscribeRealtime(); renderPanel(); refreshSummary(); renderConsole(); chatOnSession(); if (authKnown && route === '/rezerwacja') navigate('/', { replace: true }); return; }
   if (was === s.user.id && profile) return;
   await loadProfile();
   if (s.user.user_metadata?.marketing_consent_at && profile && cat.hasV2) {   // zgoda z formularza rejestracji – zapisz raz, potem usuń znacznik
@@ -2411,6 +2578,7 @@ async function applySession(s) {
   if (!$('#bName').value && profile?.full_name) $('#bName').value = profile.full_name;
   if (!$('#bPhone').value && profile?.phone) $('#bPhone').value = profile.phone;
   renderPanel(); loadPanelData(); subscribeRealtime(); refreshPrice(); renderConsole();
+  chatOnSession(); syncSocial();
   if (!$('#pcMail').value && session?.user?.email) $('#pcMail').value = session.user.email;
   if (!$('#pcName').value && profile?.full_name) $('#pcName').value = profile.full_name;
   const authReturn = takeAuthReturn();
@@ -2421,6 +2589,8 @@ async function applySession(s) {
       ? 'Zalogowano. Sprawdź dane i dostępność terminu, a następnie kliknij „Zamawiam z obowiązkiem zapłaty”.'
       : 'Zalogowano. Możesz kontynuować rezerwację; sprawdzamy ponownie dostępność terminu.');
     if (B.day) await loadSlots(true);
+  } else if (authReturn === 'chat') {
+    setTimeout(() => chatOpen('msgs'), 300);
   } else if (pendingPay) {
     pendingPay = false; navigate('/rezerwacja');
     banner('#bookBanner', 'info', 'Zalogowano. Sprawdź dane i kliknij „Zamawiam z obowiązkiem zapłaty”, żeby przejść do płatności.');
@@ -2629,6 +2799,7 @@ function renderAccount() {
       cat.hasV2 ? h('label', { class: 'check' }, mkt, h('span', { text: 'Chcę otrzymywać e-mailem informacje o promocjach Strike Tech Lab (zgodę wycofasz w każdej chwili, odznaczając to pole).' })) : null,
       save, msg),
     h('div', {},
+      linkedAccountsCard(),
       h('form', { class: 'card', style: 'margin-bottom:20px', onsubmit: async (e) => {
         e.preventDefault(); if (pass.value.length < 10) return toast('err', 'Hasło musi mieć co najmniej 10 znaków.');
         const { error } = await sb.auth.updateUser({ password: pass.value }); pass.value = '';
@@ -2868,7 +3039,7 @@ const ADV_INTENTS = [
   { id: 'status', k: ['status', 'moje zlecenie', 'moje zamowienie', 'zamowienie', 'stl', 'raport', 'wynik', 'wyniki', 'konto', 'zalogowac', 'logowanie', 'haslo'], o: ['contact', 'menu'],
     a: () => [advP('Status zlecenia, raport STRIKE PROOF z pomiarami i zdjęcia sprzętu znajdziesz w Strefie Klienta – zmieniają się na żywo.'), advP(advLink('Przejdź do Strefy Klienta →', '/konto'))] },
   { id: 'privacy', k: ['rodo', 'dane osobowe', 'prywatnosc', 'cookies', 'ciasteczka', 'czy zapisujesz', 'czy jestes ai', 'jestes botem', 'bot', 'czlowiek', 'sztuczna inteligencja', 'ai'], o: ['contact', 'menu'],
-    a: () => [advP('Jestem automatycznym asystentem z gotowymi odpowiedziami przygotowanymi przez nasz zespół – nie jestem człowiekiem. Twoje wiadomości w tym okienku nie są nigdzie wysyłane ani zapisywane.'), advP('W sprawach indywidualnych odpowiada człowiek: ', advLink('formularz kontaktowy →', '/kontakt'), ' · ', advLegal('Polityka Prywatności', 'privacy'))] },
+    a: () => [advP('Jestem automatycznym asystentem z gotowymi odpowiedziami przygotowanymi przez nasz zespół – nie jestem człowiekiem. To, co piszesz w zakładce Asystent, nie jest nigdzie wysyłane ani zapisywane. Zakładka Wiadomości to prywatny czat z naszym zespołem – po zalogowaniu.'), advP('W sprawach indywidualnych odpowiada człowiek: ', advLink('formularz kontaktowy →', '/kontakt'), ' · ', advLegal('Polityka Prywatności', 'privacy'))] },
   { id: 'contact', k: ['kontakt', 'napisac', 'napisz', 'mail', 'email', 'e mail', 'telefon', 'zadzwonic', 'numer', 'czlowiekiem', 'konsultant', 'pracownik', 'adres'], o: ['menu'],
     a: () => [advP('Napisz do nas przez formularz – opisz sprzęt i problem, a odpowie człowiek: ', advLink('Kontakt →', '/kontakt')), advP('E-mail: ', h('a', { href: `mailto:${CFG.CONTACT_EMAIL}`, text: CFG.CONTACT_EMAIL }), CO.PHONE ? ` · tel. ${CO.PHONE}` : '')] },
   { id: 'thanks', k: ['dzieki', 'dziekuje', 'dziekowac', 'thx', 'thanks', 'super', 'spoko', 'git'], o: ADV_MAIN, a: () => [advP('Proszę bardzo! Jeśli masz kolejne pytanie, pisz śmiało.')] },
@@ -2925,8 +3096,8 @@ function advAsk(text, id) {
 }
 function advOpen() {
   ADV.panel.classList.add('open'); ADV.fab.setAttribute('aria-expanded', 'true'); ADV.panel.removeAttribute('hidden');
-  if (!ADV.started) { ADV.started = true; advReply(ADV_INTENTS[0]); }
-  setTimeout(() => ADV.input.focus(), 30);
+  // nieprzeczytana odpowiedź → od razu zakładka „Wiadomości”
+  chatSetTab(CHAT.unread ? 'msgs' : CHAT.tab);
 }
 function advClose() { ADV.panel.classList.remove('open'); ADV.panel.setAttribute('hidden', ''); ADV.fab.setAttribute('aria-expanded', 'false'); ADV.fab.focus(); }
 function initAdvisor() {
@@ -2944,7 +3115,418 @@ function initAdvisor() {
     html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/><path d="M9 11h.01M12 11h.01M15 11h.01"/></svg><span class="adv-ping" aria-hidden="true"></span>',
     onclick: () => (ADV.panel.classList.contains('open') ? advClose() : advOpen()) });
   document.body.append(ADV.panel, ADV.fab);
+  chatMount();
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ADV.panel.classList.contains('open') && !$('#legalModal')?.open) advClose(); });
+}
+
+/* ------------------------------------------------------------------ logowanie przez Google, Discord i inne (Supabase Auth)
+   Przyciski pojawiają się tylko dla dostawców włączonych w Supabase → Authentication → Providers. */
+const ICO = {
+  google: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1S8.7 6 12 6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.5 14.6 2.5 12 2.5 6.8 2.5 2.6 6.7 2.6 12s4.2 9.5 9.4 9.5c5.4 0 9-3.8 9-9.2 0-.6-.1-1.1-.2-1.6H12z"/><path fill="#4285F4" d="M21 12.3c0-.6-.1-1.1-.2-1.6H12v3.9h5.5c-.3 1.3-1.1 2.3-2.2 3.1l3.4 2.6c2-1.8 2.3-4.6 2.3-8z"/><path fill="#FBBC05" d="M6.3 14.3c-.2-.7-.3-1.4-.3-2.2s.1-1.5.3-2.2L2.9 7.3C2.1 8.7 1.7 10.3 1.7 12s.4 3.3 1.2 4.7l3.4-2.4z"/><path fill="#34A853" d="M12 21.5c2.6 0 4.8-.9 6.4-2.3L15 16.6c-.9.6-2 1-3 1-2.6 0-4.8-1.7-5.6-4.1l-3.5 2.6C4.6 19.3 8 21.5 12 21.5z"/></svg>',
+  discord: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.3 18.3 0 0 0-5.6 0L8.6 3a19.7 19.7 0 0 0-4.9 1.5C.6 9.1-.3 13.6.1 18.1a19.9 19.9 0 0 0 6 3l1.3-2.1c-.7-.3-1.4-.6-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1l1.3 2.1a19.8 19.8 0 0 0 6-3c.5-5.2-.8-9.7-3.6-13.7ZM8 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z"/></svg>',
+  facebook: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v2.9h-1.5c-1.5 0-2 .9-2 1.9V12h3.3l-.5 3.5h-2.8v8.4A12 12 0 0 0 24 12Z"/></svg>',
+  apple: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.7-1-2.7-4.1ZM13.9 5c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5Z"/></svg>',
+  twitch: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M4.3 1 1.5 4.7v15.1h5.1V23h2.8l3.1-3.2h4.2l5.8-5.8V1H4.3Zm16 12.1-3.3 3.3h-5.1l-2.9 2.9v-2.9H4.7V2.9h15.6v10.2Zm-3.2-6.4h-1.9v5.6h1.9V6.7Zm-5.1 0h-1.9v5.6H12V6.7Z"/></svg>',
+  azure: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#F25022" d="M2 2h9.5v9.5H2z"/><path fill="#7FBA00" d="M12.5 2H22v9.5h-9.5z"/><path fill="#00A4EF" d="M2 12.5h9.5V22H2z"/><path fill="#FFB900" d="M12.5 12.5H22V22h-9.5z"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/></svg>',
+};
+const OAUTH = { google: 'Google', discord: 'Discord', facebook: 'Facebook', apple: 'Apple', twitch: 'Twitch', azure: 'Microsoft' };
+const OAUTH_SCOPES = { discord: 'identify email', azure: 'email' };
+let oauthOn = [];
+async function loadProviders(cfg) {
+  try {
+    const r = await fetch(cfg.url.replace(/\/+$/, '') + '/auth/v1/settings', { headers: { apikey: cfg.key } });
+    const j = r.ok ? await r.json() : {};
+    oauthOn = Object.keys(OAUTH).filter((p) => j?.external?.[p] === true);
+  } catch { oauthOn = []; }
+  renderSocial();
+  if (route === '/konto' && session && activeTab === 'account') renderAccount();
+}
+function socialButtons(intent) {
+  return oauthOn.map((p) => h('button', { type: 'button', class: 'btn btn-soc', 'data-prov': p, html: `${ICO[p]}<span>Kontynuuj z ${OAUTH[p]}</span>`, onclick: (e) => startOAuth(p, intent, e.currentTarget) }));
+}
+function renderSocial() {
+  const any = oauthOn.length > 0;
+  const box = $('#authSocialBtns'); if (box) box.replaceChildren(...socialButtons(''));
+  $('#authSocial')?.classList.toggle('hidden', !any || !['login', 'register'].includes(authMode));
+  const g = $('#gateSocial'); if (g) g.replaceChildren(...socialButtons(GATE.intent));
+  $('#gateOr')?.classList.toggle('hidden', !any);
+  $('#gateLegal')?.classList.toggle('hidden', !any);
+}
+async function startOAuth(provider, intent = '', btn = null) {
+  if (!sb) { toast('err', 'Logowanie jest chwilowo niedostępne.'); return; }
+  saveDraft(); if (intent) saveAuthReturn(intent); setRemember(true);
+  if (btn) btn.disabled = true;
+  const options = { redirectTo: SITE_URL + 'konto' };
+  if (OAUTH_SCOPES[provider]) options.scopes = OAUTH_SCOPES[provider];
+  const { error } = await sb.auth.signInWithOAuth({ provider, options });
+  if (error) { if (btn) btn.disabled = false; toast('err', /not enabled|provider/i.test(error.message) ? `Logowanie przez ${OAUTH[provider]} nie jest jeszcze włączone.` : AUTH_ERR(error.message)); }
+}
+
+/* Okno „zaloguj się / załóż konto” – pokazuje się przy próbie rezerwacji (i czatu) bez logowania. */
+const GATE = { intent: '' };
+let authKnown = false;   // true po odczytaniu sesji – wcześniej nie blokujemy rezerwacji
+function bookingLocked(path) { return authKnown && !!sb && !session && (path.replace(/\/+$/, '') || '/') === '/rezerwacja'; }
+function askLogin(intent = 'booking', { title = '', text = '' } = {}) {
+  const d = $('#authGate'); if (!d) { openAuth('login'); return; }
+  GATE.intent = intent; saveDraft();
+  $('#gateTitle').textContent = title || 'Zaloguj się, żeby zarezerwować';
+  $('#gateText').textContent = text || 'Rezerwacja terminu i płatność są dostępne po zalogowaniu. Wybrana usługa i dane z formularza zostaną zachowane.';
+  renderSocial();
+  d.returnValue = '';
+  if (!d.open) d.showModal();
+  setTimeout(() => ($('#gateSocial button') || $('#gateLogin'))?.focus(), 30);
+}
+function bindGate() {
+  const d = $('#authGate'); if (!d) return;
+  const go = (mode) => {
+    saveAuthReturn(GATE.intent); d.close('go');
+    const hint = GATE.intent === 'chat' ? 'Zaloguj się, a potem otwórz okienko czatu w prawym dolnym rogu.'
+      : mode === 'register' ? 'Po założeniu konta i potwierdzeniu e-maila wrócisz do rezerwacji – Twój wybór czeka.' : 'Po zalogowaniu wrócisz do rezerwacji – Twój wybór czeka.';
+    openAuth(mode, hint);
+  };
+  $('#gateLogin').addEventListener('click', () => go('login'));
+  $('#gateRegister').addEventListener('click', () => go('register'));
+  // zamknięte bez logowania na bezpośrednio otwartej rezerwacji → strona główna
+  d.addEventListener('close', () => { if (d.returnValue !== 'go' && route === '/rezerwacja' && !session) navigate('/', { replace: true }); });
+}
+
+/* Konta Google / Discord zalogowanego klienta – kopiowane przez bazę z danych logowania. */
+async function syncSocial() {
+  const ids = session?.user?.identities || [];
+  if (!sb || !ids.some((i) => i.provider === 'discord' || i.provider === 'google')) return;
+  await sb.rpc('sync_social_accounts').then(() => {}, () => {});
+}
+function linkedAccountsCard() {
+  if (!oauthOn.length || !session) return null;
+  const ids = session.user.identities || [];
+  const rows = oauthOn.map((p) => {
+    const idn = ids.find((i) => i.provider === p);
+    const who = idn ? (idn.identity_data?.custom_claims?.global_name || idn.identity_data?.full_name || idn.identity_data?.email || 'połączone') : '';
+    const btn = idn
+      ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Odłącz', disabled: ids.length < 2, title: ids.length < 2 ? 'To jedyny sposób logowania – najpierw ustaw hasło albo połącz inne konto.' : '', onclick: async (e) => {
+        const b = e.currentTarget; setBusy(b, true);
+        const { error } = await sb.auth.unlinkIdentity(idn);
+        if (error) { setBusy(b, false, 'Odłącz'); toast('err', AUTH_ERR(error.message)); return; }
+        await sb.auth.refreshSession(); session = (await sb.auth.getSession()).data.session || session;
+        await syncSocial(); toast('ok', `Odłączono ${OAUTH[p]}.`); renderAccount();
+      } })
+      : h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Połącz', onclick: async (e) => {
+        const b = e.currentTarget; setBusy(b, true);
+        const options = { redirectTo: SITE_URL + 'konto' }; if (OAUTH_SCOPES[p]) options.scopes = OAUTH_SCOPES[p];
+        const { error } = await sb.auth.linkIdentity({ provider: p, options });
+        if (error) { setBusy(b, false, 'Połącz'); toast('err', /manual linking/i.test(error.message) ? 'Łączenie kont jest wyłączone w ustawieniach logowania (Supabase → Authentication → Allow manual linking).' : /already/i.test(error.message) ? `To konto ${OAUTH[p]} jest już przypięte do innego konta w serwisie.` : AUTH_ERR(error.message)); }
+      } });
+    return h('div', { class: 'linked-row' }, h('span', { class: 'ico', html: ICO[p] }),
+      h('div', { class: 'grow' }, h('b', { text: OAUTH[p] }), h('small', { text: idn ? `Połączone: ${who}` : 'Niepołączone' })), h('span', { style: 'margin-left:auto' }, btn));
+  });
+  return h('div', { class: 'card', style: 'margin-bottom:20px' }, h('h3', { text: 'Logowanie przez Google / Discord' }),
+    h('p', { class: 'muted small', text: 'Połącz konto, żeby logować się jednym kliknięciem. Po połączeniu Discorda widzimy Twoją nazwę użytkownika i możemy też skontaktować się z Tobą na Discordzie.' }),
+    h('div', { class: 'linked' }, rows));
+}
+
+/* ------------------------------------------------------------------ czat z klientami (zakładka „Wiadomości” w okienku asystenta)
+   Klient: jedna prywatna rozmowa z zespołem. Administrator (z 2FA): lista klientów, wyszukiwarka, odpowiedzi.
+   Dostęp pilnuje baza (RLS) – nikt nie zobaczy cudzej rozmowy, nawet modyfikując stronę. */
+const CHAT = { tab: 'bot', view: null, botView: null, tabs: {}, badge: null, sub: null,
+  msgs: [], loadedFor: null, convId: null, unread: 0, inbox: [], q: '', sel: null, err: '', channel: null, sending: false, mounted: false };
+const chatTime = (iso) => new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+const chatDay = (iso) => {
+  const d = new Date(iso), key = (x) => x.toLocaleDateString('pl-PL', { timeZone: TZ });
+  const today = new Date(), y = new Date(Date.now() - 864e5);
+  return key(d) === key(today) ? 'Dziś' : key(d) === key(y) ? 'Wczoraj' : d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', timeZone: TZ });
+};
+const chatShort = (iso) => { const d = new Date(iso); return (Date.now() - d) < 864e5 && chatDay(iso) === 'Dziś' ? chatTime(iso) : d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', timeZone: TZ }); };
+const chatErr = (e) => { const m = e?.message || String(e); return /function .*does not exist|Could not find the function|schema cache/i.test(m) ? 'Czat nie jest jeszcze włączony w bazie (migracja v17).' : /JWT|token/i.test(m) ? 'Sesja wygasła – odśwież stronę.' : m; };
+const discordUrl = (id) => (/^\d{5,25}$/.test(String(id || '')) ? `https://discord.com/users/${id}` : '');
+
+function chatMount() {
+  if (CHAT.mounted || !ADV.panel) return; CHAT.mounted = true;
+  const head = ADV.panel.querySelector('.adv-head'), form = ADV.panel.querySelector('.adv-form');
+  head.querySelector('b').textContent = 'Strike Tech Lab';
+  CHAT.sub = head.querySelector('small');
+  CHAT.botView = h('div', { class: 'adv-view' }); CHAT.botView.append(ADV.body, form);
+  CHAT.view = h('div', { class: 'adv-view hidden', 'aria-live': 'polite' });
+  const tab = (id, label) => h('button', { type: 'button', class: 'adv-tab', role: 'tab', 'aria-selected': 'false', onclick: () => chatSetTab(id) }, label);
+  CHAT.tabs.bot = tab('bot', 'Asystent');
+  CHAT.tabs.cnt = h('span', { class: 'cnt hidden' });
+  CHAT.tabs.msgs = tab('msgs', ['Wiadomości', CHAT.tabs.cnt]);
+  const tabs = h('div', { class: 'adv-tabs', role: 'tablist', 'aria-label': 'Asystent i wiadomości' }, CHAT.tabs.bot, CHAT.tabs.msgs);
+  head.after(tabs); tabs.after(CHAT.botView, CHAT.view);
+  ADV.panel.setAttribute('aria-label', 'Asystent i wiadomości Strike Tech Lab');
+  ADV.fab.setAttribute('aria-label', 'Otwórz asystenta i wiadomości');
+  CHAT.badge = h('span', { class: 'chat-badge hidden', 'aria-hidden': 'true' }); ADV.fab.append(CHAT.badge);
+  chatSetTab(CHAT.tab, false);
+  chatBadge();
+}
+function chatIsOpen() { return !!ADV.panel?.classList.contains('open') && CHAT.tab === 'msgs' && document.visibilityState === 'visible'; }
+function chatSetTab(t, focus = true) {
+  CHAT.tab = t;
+  for (const k of ['bot', 'msgs']) { CHAT.tabs[k].setAttribute('aria-selected', String(k === t)); CHAT.tabs[k].tabIndex = k === t ? 0 : -1; }
+  CHAT.botView.classList.toggle('hidden', t !== 'bot'); CHAT.view.classList.toggle('hidden', t !== 'msgs');
+  CHAT.sub.textContent = t === 'bot' ? 'Automatyczny asystent · odpowiada od razu' : isAdmin ? 'Wiadomości od klientów' : 'Rozmowa z naszym zespołem';
+  if (t === 'bot') { if (!ADV.started && ADV.panel.classList.contains('open')) { ADV.started = true; advReply(ADV_INTENTS[0]); } if (focus) setTimeout(() => ADV.input.focus(), 30); }
+  else chatRender(focus);
+}
+function chatOpen(tab = 'msgs') {
+  initAdvisor();
+  ADV.panel.classList.add('open'); ADV.panel.removeAttribute('hidden'); ADV.fab.setAttribute('aria-expanded', 'true');
+  chatSetTab(tab);
+}
+function chatBadge() {
+  const n = CHAT.unread;
+  if (CHAT.badge) { CHAT.badge.textContent = n > 9 ? '9+' : String(n); CHAT.badge.classList.toggle('hidden', !n); ADV.fab.classList.toggle('has-msg', !!n); }
+  if (CHAT.tabs.cnt) { CHAT.tabs.cnt.textContent = n > 9 ? '9+' : String(n); CHAT.tabs.cnt.classList.toggle('hidden', !n); }
+}
+
+/* --- widoki --- */
+function chatEmpty(...kids) { return h('div', { class: 'chat-empty' }, kids); }
+function chatRender(focus = false) {
+  if (!CHAT.view || CHAT.view.classList.contains('hidden')) return;
+  if (!sb) { CHAT.view.replaceChildren(chatEmpty(h('p', { text: 'Czat jest chwilowo niedostępny. Napisz przez formularz kontaktowy.' }))); return; }
+  if (!session) {
+    CHAT.view.replaceChildren(chatEmpty(
+      h('div', { class: 'adv-avatar', html: ICO.chat }), h('b', { text: 'Napisz do nas na czacie' }),
+      h('span', { text: 'Wiadomości są prywatne – widzisz je tylko Ty i nasz zespół. Żeby pisać, zaloguj się albo załóż konto (wystarczy Google lub Discord).' }),
+      h('button', { type: 'button', class: 'btn btn-gold btn-sm', text: 'Zaloguj się, żeby napisać', onclick: () => askLogin('chat', { title: 'Zaloguj się, żeby napisać', text: 'Rozmowa jest prywatna i zostaje na Twoim koncie – odpowiemy, nawet gdy zamkniesz stronę.' }) }),
+      h('button', { type: 'button', class: 'link', text: 'Mam szybkie pytanie – zapytam asystenta', onclick: () => chatSetTab('bot') })));
+    return;
+  }
+  if (isAdmin) { CHAT.sel ? chatThreadView(focus) : chatInboxView(focus); return; }
+  chatThreadView(focus);
+}
+function chatComposer(onSend, placeholder) {
+  const ta = h('textarea', { class: 'adv-input', rows: 1, maxlength: '2000', placeholder, 'aria-label': 'Treść wiadomości' });
+  const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(130, ta.scrollHeight) + 'px'; };
+  ta.addEventListener('input', fit);
+  ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit(); } });
+  const btn = h('button', { type: 'submit', class: 'btn btn-gold btn-sm', text: 'Wyślij' });
+  const form = h('form', { class: 'chat-form', onsubmit: async (e) => {
+    e.preventDefault(); const v = ta.value.trim(); if (!v || CHAT.sending) return;
+    CHAT.sending = true; btn.disabled = true;
+    const ok = await onSend(v);
+    CHAT.sending = false; btn.disabled = false;
+    if (ok) { ta.value = ''; fit(); } ta.focus();
+  } }, ta, btn);
+  return { form, ta };
+}
+function chatThreadView(focus) {
+  const admin = isAdmin, c = CHAT.sel;
+  CHAT.list = h('div', { class: 'chat-list' });
+  const comp = chatComposer(chatSend, admin ? `Odpowiedz${c?.full_name ? ' – ' + c.full_name.split(' ')[0] : ''}…` : 'Napisz wiadomość…');
+  const parts = [];
+  if (admin && c) {
+    parts.push(h('div', { class: 'chat-head' },
+      h('button', { type: 'button', class: 'chat-back', 'aria-label': 'Wróć do listy klientów', text: '←', onclick: () => { CHAT.sel = null; CHAT.loadedFor = null; chatRender(true); } }),
+      h('span', { class: 'chat-av', text: (c.full_name || c.email || '?').trim()[0].toUpperCase() }),
+      h('div', { class: 'chat-who' }, h('b', { text: c.full_name || c.email }), h('small', { text: [c.email, c.phone].filter(Boolean).join(' · ') }))));
+    const acts = h('div', { class: 'chat-actions' });
+    if (discordUrl(c.discord_id)) acts.append(...discordButtons(c.discord_id, c.discord_username, c.discord_name, true));
+    acts.append(h('button', { type: 'button', class: 'btn btn-ghost', text: 'Zlecenia klienta', onclick: () => { adm.q = String(c.email || '').toLowerCase(); navigate('/konto'); showTab('admin'); renderAdmin?.(); if (matchMedia('(max-width: 640px)').matches) advClose(); } }));
+    if (c.email) acts.append(h('a', { class: 'btn btn-ghost', href: `mailto:${c.email}`, text: 'E-mail' }));
+    parts.push(acts);
+  }
+  parts.push(CHAT.list, comp.form);
+  if (!admin) parts.push(h('p', { class: 'chat-note', text: 'Odpowiadamy zwykle tego samego dnia. Wiadomości widzisz tylko Ty i nasz zespół.' }));
+  CHAT.view.replaceChildren(...parts);
+  CHAT.ta = comp.ta;
+  const who = admin ? c.customer_id : session.user.id;
+  if (CHAT.loadedFor === who) chatPaint(); else chatLoad(who);
+  if (focus && !matchMedia('(pointer: coarse)').matches) setTimeout(() => comp.ta.focus(), 30);
+}
+function chatPaint() {
+  const box = CHAT.list; if (!box) return;
+  box.replaceChildren();
+  if (!CHAT.msgs.length) {
+    box.append(chatEmpty(isAdmin ? h('span', { text: 'Brak wiadomości. Napisz pierwszą – klient zobaczy ją w okienku czatu i w Strefie Klienta.' })
+      : [h('b', { text: 'Cześć! 👋' }), h('span', { text: 'Opisz sprawę – sprzęt, objawy, termin. Odpowie ktoś z naszego zespołu.' })]));
+    return;
+  }
+  let day = '';
+  for (const m of CHAT.msgs) {
+    const d = chatDay(m.created_at); if (d !== day) { day = d; box.append(h('div', { class: 'chat-day', text: d })); }
+    box.append(chatBubble(m));
+  }
+  box.scrollTop = box.scrollHeight;
+}
+function chatBubble(m) {
+  const mine = isAdmin ? !m.from_customer : m.from_customer;
+  return h('div', { class: `adv-msg ${mine ? 'me' : 'bot'}`, 'data-id': m.id },
+    !mine ? h('span', { class: 'chat-from', text: isAdmin ? (CHAT.sel?.full_name || 'Klient') : 'Strike Tech Lab' }) : null,
+    h('span', { class: 'chat-txt', text: m.body }), h('time', { class: 'chat-time', datetime: m.created_at, text: chatTime(m.created_at) }));
+}
+async function chatLoad(customerId) {
+  CHAT.list?.replaceChildren(h('p', { class: 'muted small', style: 'margin:auto', text: 'Ładuję wiadomości…' }));
+  const { data, error } = await sb.from('support_messages')
+    .select('id,body,from_customer,created_at,conversation_id,support_conversations!inner(customer_id)')
+    .eq('support_conversations.customer_id', customerId).order('created_at', { ascending: false }).limit(200);
+  if ((isAdmin ? CHAT.sel?.customer_id : session?.user?.id) !== customerId) return;   // w międzyczasie wybrano kogoś innego
+  if (error) { CHAT.list?.replaceChildren(chatEmpty(h('span', { text: chatErr(error) }))); return; }
+  CHAT.msgs = (data || []).reverse(); CHAT.loadedFor = customerId; CHAT.convId = CHAT.msgs.at(-1)?.conversation_id || null;
+  chatPaint(); chatMarkRead();
+}
+function chatAdd(m) {
+  if (CHAT.msgs.some((x) => x.id === m.id)) return;
+  CHAT.msgs.push(m); CHAT.convId ||= m.conversation_id;
+  if (!CHAT.list?.isConnected) return;
+  if (CHAT.msgs.length === 1) { chatPaint(); return; }
+  const prev = CHAT.msgs.at(-2); if (chatDay(prev.created_at) !== chatDay(m.created_at)) CHAT.list.append(h('div', { class: 'chat-day', text: chatDay(m.created_at) }));
+  CHAT.list.append(chatBubble(m)); CHAT.list.scrollTop = CHAT.list.scrollHeight;
+}
+async function chatSend(text) {
+  const args = { p_body: text }; if (isAdmin) { if (!CHAT.sel) return false; args.p_customer = CHAT.sel.customer_id; }
+  const { data, error } = await sb.rpc('chat_send', args);
+  if (error) { toast('err', chatErr(error)); return false; }
+  const m = Array.isArray(data) ? data[0] : data;
+  if (m?.id) { CHAT.loadedFor = isAdmin ? CHAT.sel.customer_id : session.user.id; chatAdd(m); }
+  if (isAdmin) chatInboxLoad(true);
+  return true;
+}
+async function chatMarkRead() {
+  if (!session || !chatIsOpen()) return;
+  if (isAdmin) {
+    if (!CHAT.sel) return;
+    await sb.rpc('chat_mark_read', { p_customer: CHAT.sel.customer_id }).then(() => {}, () => {});
+    const row = CHAT.inbox.find((r) => r.customer_id === CHAT.sel.customer_id); if (row) row.unread = 0;
+    chatInboxLoad(true);
+  } else {
+    if (!CHAT.unread) return;
+    await sb.rpc('chat_mark_read').then(() => {}, () => {});
+    CHAT.unread = 0; chatBadge();
+  }
+}
+
+/* --- skrzynka administratora --- */
+function chatInboxView(focus) {
+  const q = h('input', { class: 'input', type: 'search', placeholder: 'Szukaj klienta: imię, e-mail, telefon, Discord', 'aria-label': 'Szukaj klienta', value: CHAT.q,
+    oninput: debounce((e) => { CHAT.q = e.target.value.trim(); chatInboxLoad(); }, 300) });
+  CHAT.inboxBox = h('div', { class: 'chat-inbox' }, h('p', { class: 'muted small', style: 'padding:14px', text: 'Ładuję rozmowy…' }));
+  CHAT.view.replaceChildren(h('div', { class: 'chat-search' }, q), CHAT.inboxBox);
+  if (focus && !matchMedia('(pointer: coarse)').matches) setTimeout(() => q.focus(), 30);
+  chatInboxPaint(); chatInboxLoad();
+}
+let inboxSeq = 0;
+async function chatInboxLoad(silent = false) {
+  if (!isAdmin || !sb) return;
+  const seq = ++inboxSeq, q = CHAT.q;
+  const { data, error } = await sb.rpc('chat_inbox', { p_search: q || null, p_limit: 80 });
+  if (seq !== inboxSeq) return;
+  if (error) { CHAT.err = /Brak dostępu/.test(error.message) ? 'mfa' : chatErr(error); if (!silent || CHAT.inboxBox) chatInboxPaint(); return; }
+  const wasErr = CHAT.err === 'mfa'; CHAT.err = '';
+  CHAT.inbox = data || [];
+  if (!q) { CHAT.unread = CHAT.inbox.reduce((s, r) => s + (r.unread || 0), 0); chatBadge(); }
+  if (wasErr) chatSubscribe();            // po potwierdzeniu 2FA – nasłuch z nowymi uprawnieniami
+  chatInboxPaint();
+}
+function chatInboxPaint() {
+  const box = CHAT.inboxBox; if (!box?.isConnected) return;
+  if (CHAT.err === 'mfa') {
+    box.replaceChildren(chatEmpty(h('b', { text: 'Potwierdź logowanie kodem 2FA' }),
+      h('span', { text: 'Wiadomości klientów widać dopiero po wpisaniu kodu z aplikacji uwierzytelniającej – tak samo jak zamówienia.' }),
+      h('button', { type: 'button', class: 'btn btn-gold btn-sm', text: 'Przejdź do panelu', onclick: () => { navigate('/konto'); showTab('admin'); } })));
+    return;
+  }
+  if (CHAT.err) { box.replaceChildren(chatEmpty(h('span', { text: CHAT.err }))); return; }
+  const rows = CHAT.inbox;
+  if (!rows.length) { box.replaceChildren(chatEmpty(h('span', { text: CHAT.q ? 'Nie znaleziono klienta.' : 'Brak rozmów. Wyszukaj klienta powyżej, żeby napisać pierwszy.' }))); return; }
+  const withMsg = rows.filter((r) => r.last_message_at), without = rows.filter((r) => !r.last_message_at);
+  const row = (r) => h('button', { type: 'button', class: `chat-row${r.unread ? ' unread' : ''}`, onclick: () => chatOpenClient(r.customer_id, r) },
+    h('span', { class: 'chat-av', text: (r.full_name || r.email || '?').trim()[0].toUpperCase() }),
+    h('span', { class: 'meta' },
+      h('span', { class: 'top' }, h('b', { text: r.full_name || r.email }), r.discord_id ? h('span', { class: 'dc', title: `Discord: ${r.discord_username || ''}`, html: ICO.discord }) : null,
+        r.last_message_at ? h('time', { text: chatShort(r.last_message_at) }) : null, r.unread ? h('span', { class: 'cnt', text: String(r.unread) }) : null),
+      h('p', { text: r.last_message_at ? `${r.last_from_customer ? '' : 'Ty: '}${r.last_preview || ''}` : (r.email + (r.phone ? ` · ${r.phone}` : '')) })));
+  box.replaceChildren(...withMsg.map(row), without.length ? h('div', { class: 'chat-sec', text: 'Klienci bez rozmowy' }) : '', ...without.map(row));
+}
+async function chatOpenClient(id, row = null) {
+  if (!isAdmin || !/^[0-9a-f-]{36}$/i.test(String(id))) return;
+  let c = row || CHAT.inbox.find((r) => r.customer_id === id);
+  if (!c) {
+    const { data } = await sb.from('profiles').select('id,email,full_name,phone').eq('id', id).maybeSingle();
+    if (!data) { toast('err', 'Nie znaleziono klienta (albo potwierdź logowanie kodem 2FA).'); return; }
+    c = { customer_id: data.id, email: data.email, full_name: data.full_name, phone: data.phone };
+  }
+  CHAT.sel = { ...c }; CHAT.loadedFor = null; CHAT.msgs = []; CHAT.convId = null;
+  chatOpen('msgs');
+  getSocial(id, true).then((list) => {          // świeże dane Discorda
+    const d = list.find((x) => x.provider === 'discord');
+    if (CHAT.sel?.customer_id !== id) return;
+    const changed = (d?.provider_user_id || null) !== (CHAT.sel.discord_id || null);
+    Object.assign(CHAT.sel, { discord_id: d?.provider_user_id || null, discord_username: d?.username || null, discord_name: d?.display_name || null });
+    if (changed && CHAT.tab === 'msgs') { const keep = CHAT.loadedFor; chatThreadView(false); CHAT.loadedFor = keep; }
+  });
+}
+
+/* --- na żywo --- */
+function chatSubscribe() {
+  chatUnsubscribe(); if (!sb || !session) return;
+  sb.auth.getSession().then(({ data }) => {
+    if (!session || CHAT.channel) return;
+    if (data.session?.access_token) sb.realtime.setAuth?.(data.session.access_token);
+    CHAT.channel = sb.channel(`stl-chat-${session.user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_messages' }, (p) => chatIncoming(p.new))
+      .subscribe();
+  });
+}
+function chatUnsubscribe() { if (CHAT.channel && sb) sb.removeChannel(CHAT.channel); CHAT.channel = null; }
+function chatIncoming(m) {
+  if (!m?.id) return;
+  if (isAdmin) {
+    const viewing = CHAT.sel && (CHAT.convId ? CHAT.convId === m.conversation_id : false);
+    if (viewing) { chatAdd(m); if (chatIsOpen()) chatMarkRead(); }
+    if (m.from_customer && !(viewing && chatIsOpen())) toast('info', '💬 Nowa wiadomość od klienta.');
+    chatInboxLoadSoon();
+    return;
+  }
+  if (CHAT.loadedFor === session?.user?.id) chatAdd(m);
+  if (!m.from_customer) {
+    if (chatIsOpen()) { CHAT.unread = 1; chatMarkRead(); }
+    else { CHAT.unread += 1; chatBadge(); toast('info', '💬 Nowa odpowiedź od Strike Tech Lab – otwórz czat w prawym dolnym rogu.'); }
+  }
+}
+const chatInboxLoadSoon = debounce(() => chatInboxLoad(true), 500);
+async function chatRefreshUnread() {
+  if (!sb || !session) { CHAT.unread = 0; chatBadge(); return; }
+  if (isAdmin) { if (!CHAT.q) chatInboxLoad(true); return; }
+  const { data, error } = await sb.rpc('chat_my_unread');
+  if (!error) { CHAT.unread = Number(data) || 0; chatBadge(); if (chatIsOpen()) chatMarkRead(); }
+}
+function chatOnSession() {
+  CHAT.msgs = []; CHAT.loadedFor = null; CHAT.convId = null; CHAT.sel = null; CHAT.inbox = []; CHAT.err = ''; CHAT.unread = 0;
+  chatUnsubscribe(); chatBadge();
+  if (session) { chatSubscribe(); chatRefreshUnread(); }
+  if (CHAT.mounted) { chatSetTab(CHAT.tab, false); }
+}
+setInterval(() => { if (session && document.visibilityState === 'visible') chatRefreshUnread(); }, 90000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && chatIsOpen()) chatMarkRead(); });
+
+/* --- Discord i kontakt z klientem w panelu administratora --- */
+const SOCIAL_CACHE = new Map();
+function getSocial(id, fresh = false) {
+  if (!fresh && SOCIAL_CACHE.has(id)) return SOCIAL_CACHE.get(id);
+  const p = sb.rpc('sync_social_accounts', { p_user: id }).then(({ data, error }) => (error ? [] : data || []), () => []);
+  SOCIAL_CACHE.set(id, p); return p;
+}
+function discordButtons(id, username, name, compact = false) {
+  const url = discordUrl(id); if (!url) return [];
+  const label = username ? `@${username}` : (name || 'profil');
+  return [
+    h('a', { class: `btn btn-discord${compact ? '' : ' btn-sm'}`, href: url, target: '_blank', rel: 'noopener noreferrer', title: 'Otwiera profil w Discordzie – tam dodasz do znajomych albo napiszesz' },
+      h('span', { html: ICO.discord, style: 'display:inline-flex' }), h('span', { text: `Discord: ${label}` })),
+    username ? h('button', { type: 'button', class: `btn btn-ghost${compact ? '' : ' btn-sm'}`, text: 'Kopiuj nazwę', onclick: () => navigator.clipboard?.writeText(username).then(() => toast('ok', `Skopiowano „${username}” – w Discordzie: Znajomi → Dodaj znajomego.`), () => toast('err', 'Nie udało się skopiować.')) }) : null,
+  ].filter(Boolean);
+}
+function clientContact(userId) {
+  if (!userId || !sb) return null;
+  const disc = h('span', { class: 'muted small', text: 'Sprawdzam Discord…' });
+  const box = h('div', { class: 'client-contact' },
+    h('button', { type: 'button', class: 'btn btn-gold btn-sm', onclick: () => chatOpenClient(userId) }, h('span', { html: ICO.chat, style: 'display:inline-flex;width:18px;height:18px' }), h('span', { text: 'Napisz na czacie' })), disc);
+  getSocial(userId).then((list) => {
+    const d = list.find((x) => x.provider === 'discord');
+    const btns = d ? discordButtons(d.provider_user_id, d.username, d.display_name) : [];
+    disc.replaceWith(...(btns.length ? btns : [h('span', { class: 'muted small', text: 'Klient nie połączył Discorda.' })]));
+  });
+  return box;
 }
 
 /* ------------------------------------------------------------------ raport STRIKE PROOF w panelu admina (szablon usługi → PDF) */
@@ -3195,6 +3777,7 @@ function adminDetail(o) {
       h('div', {}, h('small', { text: 'Przekazanie' }), o.handover ? `${o.handover === 'courier' ? 'Kurier' : 'Osobiście'}${o.city ? `, ${o.city}` : ''}` : '–'),
       h('div', {}, h('small', { text: 'Kod' }), o.discount_code || o.referral_code_used || '–'),
       h('div', {}, h('small', { text: 'Zgody' }), o.consents?.at ? `${Object.entries({ terms: 'Regulamin', privacy: 'RODO', withdrawal: 'pouczenie o odstąpieniu', earlyStart: 'start przed 14 dniami', marketing: 'marketing' }).filter(([k]) => o.consents[k]).map(([, v]) => v).join(', ')} (${fmt(o.consents.at)})` : '–')),
+    clientContact(o.user_id),
     o.customer_note ? h('p', {}, h('b', { text: 'Uwagi klienta: ' }), o.customer_note) : null,
     Object.keys(o.spec || {}).length ? h('ul', { class: 'sum-spec' }, Object.entries(o.spec).map(([k, v]) => h('li', { text: `${k}: ${v}` }))) : null,
     h('div', { class: 'grid g2', style: 'margin-top:16px' },
@@ -3621,7 +4204,7 @@ setInterval(() => { if (document.visibilityState === 'visible') findNextFree(); 
 /* ------------------------------------------------------------------ teksty prawne
    Dane sprzedawcy pochodzą z window.STL_CONFIG.COMPANY (góra pliku). Dopóki NAME lub ADDRESS są puste,
    w dokumentach widać żółte pola [UZUPEŁNIJ]. Teksty przygotowano starannie, ale nie zastępują porady prawnika. */
-const LEGAL_VERSION = '27 października 2026';
+const LEGAL_VERSION = '1 listopada 2026';
 const escH = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fill = (v, what) => v ? escH(v) : `<mark>[UZUPEŁNIJ: ${what}]</mark>`;
 const COMPANY_OK = !!(CO.NAME && CO.ADDRESS);
@@ -3641,6 +4224,8 @@ const LEGAL = {
     `<h4>1. Kto jest administratorem danych</h4><p>Administratorem Twoich danych osobowych jest ${SELLER} – prowadzący serwis Strike Tech Lab. We wszystkich sprawach dotyczących danych napisz na ${MAIL}. Nie wyznaczyliśmy inspektora ochrony danych.</p>` +
     '<h4>2. Jakie dane, w jakim celu i na jakiej podstawie</h4><ul>' +
     '<li><b>Konto w Strefie Klienta</b> – e-mail, hasło (przechowywane wyłącznie jako skrót kryptograficzny), imię i nazwisko, telefon (jeśli go podasz). Podstawa: umowa o prowadzenie konta (art. 6 ust. 1 lit. b RODO).</li>' +
+    '<li><b>Logowanie przez Google lub Discord</b> (jeśli je wybierzesz) – od dostawcy otrzymujemy adres e-mail, imię lub nazwę i zdjęcie profilowe, a z Discorda także nazwę użytkownika i identyfikator konta. Dzięki nim możemy się z Tobą skontaktować również przez Discord. Hasła do tych serwisów nie poznajemy. Konto odłączysz w Strefie Klienta. Podstawa: umowa o prowadzenie konta (art. 6 ust. 1 lit. b RODO).</li>' +
+    '<li><b>Czat w Strefie Klienta</b> – treść wiadomości i ich daty. Rozmowę widzisz tylko Ty i osoby z naszego zespołu. Podstawa: umowa i działania przed jej zawarciem (art. 6 ust. 1 lit. b RODO) oraz nasz prawnie uzasadniony interes – obsługa zapytań (art. 6 ust. 1 lit. f RODO).</li>' +
     '<li><b>Rezerwacja i realizacja zamówienia</b> – imię i nazwisko, e-mail, telefon (opcjonalnie), dla firm: nazwa i NIP, sposób przekazania sprzętu i miasto (opcjonalnie), uwagi do zlecenia, wybrany termin, konfiguracja, specyfikacja i wyniki pomiarów Twojego komputera oraz raporty. Podstawa: zawarcie i wykonanie umowy (art. 6 ust. 1 lit. b RODO).</li>' +
     '<li><b>Płatności</b> – kwota, status i identyfikator płatności. Danych karty ani kodu BLIK nie otrzymujemy – przetwarza je Stripe. Podstawa: art. 6 ust. 1 lit. b i c RODO.</li>' +
     '<li><b>Rachunkowość i podatki</b> – dane z dokumentów sprzedaży. Podstawa: obowiązek prawny (art. 6 ust. 1 lit. c RODO).</li>' +
@@ -3651,9 +4236,9 @@ const LEGAL = {
     '<li><b>Dochodzenie roszczeń i obrona przed nimi</b> – dane z zamówień i korespondencji. Podstawa: art. 6 ust. 1 lit. f RODO.</li>' +
     '</ul>' +
     '<h4>3. Sesja zdalna</h4><p>Podczas sesji przez AnyDesk możemy zobaczyć na ekranie Twoje pliki. Nie kopiujemy ich – zapisujemy tylko specyfikację sprzętu i wyniki pomiarów potrzebne do raportu. Przed sesją zamknij dokumenty i programy z danymi prywatnymi. Klientom firmowym, u których możemy mieć dostęp do danych osobowych ich klientów lub pracowników, zawieramy na życzenie umowę powierzenia przetwarzania danych.</p>' +
-    `<h4>4. Komu przekazujemy dane</h4><ul><li>Supabase Inc. (USA) – baza danych, logowanie i przechowywanie raportów, na podstawie umowy powierzenia.</li><li>Stripe Payments Europe Ltd. (Irlandia) – obsługa płatności; w części dotyczącej płatności Stripe działa jako odrębny administrator i stosuje własną politykę prywatności.</li><li>Dostawca wysyłki e-maili z systemu: ${fill(CO.MAIL_PROVIDER, 'nazwa dostawcy wysyłki e-mail')}.</li><li>Dostawca hostingu strony i poczty: ${fill(CO.HOSTING, 'nazwa firmy hostingowej')}.</li><li>Google (arkusz Google Sheets: rozliczenia – kwoty i numery zleceń, przy zakupach firmowych nazwa firmy i NIP – oraz kopia wiadomości z formularza kontaktowego) – tylko jeśli ta funkcja jest włączona.</li>${CFG.TURNSTILE_SITE_KEY ? '<li>Cloudflare, Inc. (zabezpieczenie Turnstile przy logowaniu i rejestracji – ochrona przed botami; przetwarza m.in. adres IP i dane przeglądarki).</li>' : ''}<li>Biuro rachunkowe, firmy kurierskie i operatorzy pocztowi – gdy jest to potrzebne do rozliczeń lub wysyłki.</li><li>Organy publiczne – wyłącznie gdy wymagają tego przepisy.</li></ul><p>AnyDesk Software GmbH (Niemcy) przetwarza dane połączenia jako odrębny administrator – na podstawie Twojej umowy z AnyDesk.</p>` +
+    `<h4>4. Komu przekazujemy dane</h4><ul><li>Google Ireland Ltd. oraz Discord Inc. (USA) – tylko jeśli logujesz się kontem w ich serwisie; przy logowaniu działają jako odrębni administratorzy i stosują własne polityki prywatności.</li><li>Supabase Inc. (USA) – baza danych, logowanie i przechowywanie raportów, na podstawie umowy powierzenia.</li><li>Stripe Payments Europe Ltd. (Irlandia) – obsługa płatności; w części dotyczącej płatności Stripe działa jako odrębny administrator i stosuje własną politykę prywatności.</li><li>Dostawca wysyłki e-maili z systemu: ${fill(CO.MAIL_PROVIDER, 'nazwa dostawcy wysyłki e-mail')}.</li><li>Dostawca hostingu strony i poczty: ${fill(CO.HOSTING, 'nazwa firmy hostingowej')}.</li><li>Google (arkusz Google Sheets: rozliczenia – kwoty i numery zleceń, przy zakupach firmowych nazwa firmy i NIP – oraz kopia wiadomości z formularza kontaktowego) – tylko jeśli ta funkcja jest włączona.</li>${CFG.TURNSTILE_SITE_KEY ? '<li>Cloudflare, Inc. (zabezpieczenie Turnstile przy logowaniu i rejestracji – ochrona przed botami; przetwarza m.in. adres IP i dane przeglądarki).</li>' : ''}<li>Biuro rachunkowe, firmy kurierskie i operatorzy pocztowi – gdy jest to potrzebne do rozliczeń lub wysyłki.</li><li>Organy publiczne – wyłącznie gdy wymagają tego przepisy.</li></ul><p>AnyDesk Software GmbH (Niemcy) przetwarza dane połączenia jako odrębny administrator – na podstawie Twojej umowy z AnyDesk.</p>` +
     '<h4>5. Przekazywanie danych poza Europejski Obszar Gospodarczy</h4><p>Część dostawców (np. Supabase, Google) ma siedzibę w USA lub może przetwarzać dane poza EOG. Odbywa się to na podstawie decyzji Komisji Europejskiej o adekwatności (EU-US Data Privacy Framework – jeśli dostawca jest certyfikowany) albo standardowych klauzul umownych. Kopię zabezpieczeń możesz otrzymać, pisząc do nas.</p>' +
-    '<h4>6. Jak długo przechowujemy dane</h4><ul><li>Konto – do jego usunięcia (zrobisz to samodzielnie w Strefie Klienta).</li><li>Zamówienia i dokumenty sprzedaży – do upływu terminów przedawnienia zobowiązań podatkowych (5 lat od końca roku, w którym upłynął termin płatności podatku) i roszczeń z umowy (art. 118 Kodeksu cywilnego), w zależności od tego, który termin jest dłuższy. Po usunięciu konta zamówienia zostają bez powiązania z kontem.</li><li>Wiadomości z formularza – 12 miesięcy od otrzymania, chyba że stały się częścią zamówienia.</li><li>Skrót adresu IP – 24 godziny.</li><li>Zgoda marketingowa – do jej wycofania.</li></ul>' +
+    '<h4>6. Jak długo przechowujemy dane</h4><ul><li>Konto, połączone konta Google/Discord i wiadomości z czatu – do usunięcia konta (zrobisz to samodzielnie w Strefie Klienta).</li><li>Zamówienia i dokumenty sprzedaży – do upływu terminów przedawnienia zobowiązań podatkowych (5 lat od końca roku, w którym upłynął termin płatności podatku) i roszczeń z umowy (art. 118 Kodeksu cywilnego), w zależności od tego, który termin jest dłuższy. Po usunięciu konta zamówienia zostają bez powiązania z kontem.</li><li>Wiadomości z formularza – 12 miesięcy od otrzymania, chyba że stały się częścią zamówienia.</li><li>Skrót adresu IP – 24 godziny.</li><li>Zgoda marketingowa – do jej wycofania.</li></ul>' +
     '<h4>7. Twoje prawa</h4><p>Masz prawo dostępu do danych, ich sprostowania, usunięcia, ograniczenia przetwarzania i przeniesienia (w Strefie Klienta pobierzesz je jako plik JSON), a także prawo wniesienia sprzeciwu wobec przetwarzania opartego na prawnie uzasadnionym interesie i prawo wycofania zgody. Napisz na ' + MAIL + '. Masz też prawo wnieść skargę do Prezesa Urzędu Ochrony Danych Osobowych (ul. Stawki 2, 00-193 Warszawa, uodo.gov.pl).</p>' +
     '<h4>8. Czy musisz podać dane</h4><p>Podanie danych jest dobrowolne, ale bez danych oznaczonych jako wymagane nie zawrzemy umowy ani nie odpowiemy na wiadomość. Pola opcjonalne są tak oznaczone.</p>' +
     '<h4>9. Zautomatyzowane decyzje</h4><p>Nie podejmujemy decyzji wywołujących wobec Ciebie skutki prawne wyłącznie automatycznie i nie profilujemy Cię w celach marketingowych. System automatycznie sprawdza jedynie poprawność kodów rabatowych.</p>' +
@@ -3664,7 +4249,7 @@ const LEGAL = {
     '<h4>Co zapisujemy w Twojej przeglądarce</h4><ul>' +
     '<li><code>sb-…-auth-token</code> (pamięć lokalna) – utrzymuje zalogowanie w Strefie Klienta; usuwany po wylogowaniu.</li>' +
     '<li><code>stl_remember</code> (pamięć lokalna) – zapisuje się tylko, gdy przy logowaniu odznaczysz „Nie wylogowuj mnie”; wtedy dane logowania trzymamy w pamięci sesji i znikają po zamknięciu karty.</li><li><code>stl-guide-…</code> (pamięć lokalna) – tylko dla administratora: zaznaczone kroki w instrukcjach serwisowych.</li><li><code>stl_booking_draft</code> (pamięć sesji) – wersja robocza formularza rezerwacji, żeby wpisane dane nie zniknęły po odświeżeniu; znika po zamknięciu karty i po opłaceniu zamówienia.</li>' +
-    '<li><code>stl_last_order</code> (pamięć sesji) – numer ostatniego zamówienia na czas powrotu ze strony płatności; znika po zamknięciu karty.</li></ul><p>Zdjęcia i filmy na stronie są serwowane z naszego serwera.</p>' +
+    '<li><code>stl_last_order</code> (pamięć sesji) – numer ostatniego zamówienia na czas powrotu ze strony płatności; znika po zamknięciu karty.</li><li><code>stl_auth_return_v1</code> (pamięć sesji) – dokąd wrócić po zalogowaniu (np. do rezerwacji albo czatu); usuwany zaraz po powrocie.</li><li><code>stl_intro</code> (pamięć sesji) – czy animacja startowa była już pokazana, żeby przy kolejnych odsłonach trwała krócej; znika po zamknięciu karty.</li></ul><p>Zdjęcia i filmy na stronie są serwowane z naszego serwera.</p>' +
     '<p>Strona nie zapisuje plików cookies w przeglądarce.</p>' +
     '<h4>Połączenia z innymi serwerami</h4><ul><li>Supabase – serwer bazy danych i logowania (nasz dostawca, przetwarza dane na nasze zlecenie).</li><li>Stripe (checkout.stripe.com) – strona płatności, na którą przechodzisz po złożeniu zamówienia. Stripe stosuje na swojej stronie własne cookies.</li><li>cdn.jsdelivr.net – tylko gdy nie działa lokalna kopia biblioteki połączenia z serwerem; wtedy serwer CDN widzi Twój adres IP.</li>' + (CFG.TURNSTILE_SITE_KEY ? '<li>challenges.cloudflare.com – zabezpieczenie „nie jestem robotem” (Cloudflare Turnstile) w formularzu logowania i rejestracji. Służy wyłącznie ochronie przed botami, więc zgodnie z art. 399 Prawa komunikacji elektronicznej nie wymaga zgody.</li>' : '') + '</ul><p>Czcionka i pozostałe pliki strony są serwowane z naszego serwera.</p>' +
     '<h4>Jak usunąć zapisane dane</h4><p>Wyloguj się albo wyczyść dane witryny w ustawieniach przeglądarki.</p>' },
@@ -3853,13 +4438,6 @@ function initChrome() {
     const href = a.getAttribute('href');
     if (a.hasAttribute('data-link')) {
       e.preventDefault();
-      const targetPath = new URL(href, location.origin).pathname.replace(/\/+$/, '') || '/';
-      const bookingPath = new URL(BASE + 'rezerwacja', location.origin).pathname.replace(/\/+$/, '') || '/';
-      if (targetPath === bookingPath && !session) {
-        saveDraft(); saveAuthReturn('booking');
-        openAuth('login', 'Zaloguj się lub utwórz konto, aby przejść do rezerwacji.');
-        return;
-      }
       navigate(href); return;
     }
     if (href.startsWith('#') && href.length > 1) { e.preventDefault(); const t = document.getElementById(href.slice(1)); if (t) { t.setAttribute('tabindex', '-1'); t.focus(); } }
@@ -3890,8 +4468,7 @@ function initChrome() {
 
 /* ------------------------------------------------------------------ start */
 async function boot() {
-  $('#authGoogle')?.addEventListener('click', () => startOAuth('google'));
-  $('#authDiscord')?.addEventListener('click', () => startOAuth('discord'));
+  bindGate();
   initChrome(); initBenchmark(); initEffects(); bindBooking(); restoreDraft();
   setMotion(document.documentElement.classList.contains('paused'), false);
   $('#budget')?.addEventListener('input', renderBudget);
@@ -3901,7 +4478,7 @@ async function boot() {
   const cfg = resolveConfig();
   if (!cfg) {
     setConn('config', 'Uzupełnij SUPABASE_URL i SUPABASE_KEY w konfiguracji na górze pliku index.html.');
-    log('brak konfiguracji serwera – tryb katalogu'); refreshSummary(); renderConsole(); return;
+    log('brak konfiguracji serwera – tryb katalogu'); refreshSummary(); renderConsole(); window.stlIntroDone?.(); return;
   }
   setConn('connecting'); log('ładuję bibliotekę połączenia');
   let createClient;
@@ -3909,20 +4486,31 @@ async function boot() {
     try { createClient = await loadSupabaseLib(); }
     catch { setConn('connecting'); await new Promise((r) => setTimeout(r, 2000 * (i + 1))); }
   }
-  if (!createClient) { setConn('offline', 'Kalendarz rezerwacji jest chwilowo niedostępny. Odśwież stronę za chwilę albo napisz do nas.'); addEventListener('online', () => location.reload(), { once: true }); return; }
+  if (!createClient) { window.stlIntroDone?.(); setConn('offline', 'Kalendarz rezerwacji jest chwilowo niedostępny. Odśwież stronę za chwilę albo napisz do nas.'); addEventListener('online', () => location.reload(), { once: true }); return; }
   sb = createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: AUTH_STORE }, realtime: { params: { eventsPerSecond: 5 } } });
+  loadProviders(cfg);
   sb.auth.onAuthStateChange((event, s) => {
     if (event === 'PASSWORD_RECOVERY') { authMode = 'newpass'; setTimeout(() => openAuth('newpass'), 50); }
     setTimeout(() => onSession(s), 0);                // poza wywołaniem zwrotnym (zalecenie supabase-js)
   });
   await heartbeat();
   await loadCatalog();
+  window.stlIntroDone?.();
   if (B.item) { $('#bItem').value = B.item; onItemChange(true); }
   const { data } = await sb.auth.getSession(); await onSession(data.session);
+  authKnown = true;
+  if (route === '/rezerwacja' && !session) askLogin('booking');
+  const czat = new URLSearchParams(location.search).get('czat');   // link z powiadomienia push w Centrum
+  if (czat) {
+    const q = new URLSearchParams(location.search); q.delete('czat'); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
+    if (!session) askLogin('chat', { title: 'Zaloguj się, żeby odczytać wiadomość' });
+    else if (isAdmin && /^[0-9a-f-]{36}$/i.test(czat)) { initAdvisor(); chatOpenClient(czat); }
+    else chatOpen('msgs');
+  }
   await handleStripeReturn();
   findNextFree(); refreshSummary();
 }
-boot().catch((e) => { console.error(e); toast('err', 'Wystąpił błąd strony. Odśwież ją.'); });
+boot().catch((e) => { console.error(e); toast('err', 'Wystąpił błąd strony. Odśwież ją.'); }).finally(() => window.stlIntroDone?.());
 </script>
 </body>
 </html>

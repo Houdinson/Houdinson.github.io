@@ -2,7 +2,7 @@
    • powłoka aplikacji (HTML/CSS/JS/ikony) z pamięci → start natychmiast, także bez zasięgu
    • biblioteka supabase-js i czcionki: stale-while-revalidate
    • dane (Supabase API, Edge Functions, Storage) NIGDY nie są buforowane – zawsze świeże i prywatne */
-const VERSION = 'stl-centrum-v11';
+const VERSION = 'stl-centrum-v12';
 const SHELL = ['./', './index.html', './app.css', './app.js', './config.js', './stl-report.js', './social-hub.js', './social-hub.css', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
@@ -65,6 +65,8 @@ self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const target = new URL(e.notification.data?.url || './', self.registration.scope).href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    // adres spoza Centrum (np. czat na stronie) – osobne okno, Centrum zostaje otwarte
+    if (!target.startsWith(self.registration.scope)) return self.clients.openWindow(target);
     for (const c of list) if (c.url.startsWith(self.registration.scope)) { c.navigate(target).catch(() => {}); return c.focus(); }
     return self.clients.openWindow(target);
   }));
