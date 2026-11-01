@@ -228,6 +228,20 @@ p{margin:0 0 1em}
 .svc-sum{color:var(--muted);font-size:.93rem;margin-bottom:14px}
 .svc .check-list{flex:1}
 .svc-foot{margin-top:auto;padding-top:16px;border-top:1px solid var(--line)}
+.svc-pop{border-color:rgba(255,187,0,.45);box-shadow:0 0 0 1px rgba(255,187,0,.18),0 18px 50px -24px rgba(255,187,0,.35)}
+.pill.pop{color:var(--gold);border-color:rgba(255,187,0,.45)}
+.svc-facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0 0 14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02);font-size:.85rem}
+.svc-facts dt{color:var(--muted)}
+.svc-facts dd{margin:0;color:#e9e9ee;font-weight:600}
+.sol-group{margin-bottom:34px}
+.sol-head{margin-bottom:14px}
+.sol-head h4{font-size:1.15rem;margin:0 0 4px;letter-spacing:.02em}
+.sol-head p{margin:0;font-size:.92rem}
+.sol-addons{padding:24px 22px;background:var(--panel)}
+.addon-list{list-style:none;margin:0 0 16px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 28px}
+.addon-list li{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:.92rem;color:#d4d4d9}
+.addon-list b{color:var(--gold);white-space:nowrap;font-weight:700;text-align:right}
+.sol-cta{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;color:var(--muted);font-size:.92rem}
 .price{margin-bottom:12px}
 .price small{display:block;color:var(--muted);font-size:.78rem}
 .price b{display:block;font-size:1.6rem;line-height:1.25;color:var(--gold)}
@@ -804,3 +818,11 @@ html.intro-on,html.intro-on body{overflow:hidden}
 .consult-line .link{color:var(--gold);text-decoration:underline;text-underline-offset:3px;font-weight:600}
 .consult-card{display:grid;gap:8px;justify-items:start;margin:18px 0;padding:16px 18px;border:1px solid rgba(255,187,0,.35);border-radius:14px;background:var(--gold-soft)}
 .consult-card b{font-size:1rem}.consult-card span{color:var(--text-2);font-size:.9rem;line-height:1.5}
+
+/* dane do przelewu (Strefa Klienta) */
+.transfer-box{margin:14px 0 8px;padding:16px;border:1px solid rgba(255,187,0,.4);border-radius:12px;background:rgba(255,187,0,.05)}
+.transfer-box h5{margin:0 0 4px;font-size:1rem;color:var(--gold)}
+.tr-row{display:grid;grid-template-columns:120px 1fr auto;align-items:center;gap:6px 12px;padding:8px 0;border-top:1px solid var(--line)}
+.tr-row small{color:var(--muted)}
+.tr-row b{font-variant-numeric:tabular-nums;word-break:break-word}
+@media (max-width:520px){.tr-row{grid-template-columns:1fr auto}.tr-row small{grid-column:1/-1}}

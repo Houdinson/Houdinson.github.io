@@ -363,9 +363,9 @@ function adminDetail(o) {
       h('div', {}, h('h4', { text: 'Status' }), h('div', { class: 'field' }, status), h('div', { class: 'field' }, note),
         h('div', { class: 'cta-row', style: 'margin:0' },
           h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Zmień status', onclick: (e) => act(e.currentTarget, 'Zmień status', { action: 'set_status', order_id: o.id, status: status.value, note: note.value }, () => 'Status zmieniony. Klient widzi go od razu (przy „Testy” i „Zakończone” dostaje maila).') }),
-          !o.order_number && o.status !== 'ANULOWANE' ? [['gotowka', 'Opłacone gotówką'], ['blik', 'Opłacone BLIK-iem na telefon'], ['przelew', 'Opłacone przelewem']].map(([m, t]) => h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} poza Stripe (${({ gotowka: 'gotówka', blik: 'BLIK na telefon', przelew: 'przelew' })[m]})?`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number}`); } })) : null),
+          !o.order_number && o.status !== 'ANULOWANE' ? [['przelew', 'Przelew zaksięgowany'], ['blik_tel', 'BLIK na telefon otrzymany']].map(([m, t]) => h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} (${({ blik_tel: 'BLIK na telefon', przelew: 'przelew na rachunek' })[m]})? Sprawdź, czy tytuł zawiera numer rachunku i usługę.`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number}`); } })) : null),
         paymentBox(o),
-        o.order_number ? orderBills(o) : null,
+        o.status !== 'ANULOWANE' ? orderBills(o) : null,
         o.order_events?.length ? h('ul', { class: 'timeline', style: 'margin-top:14px' }, [...o.order_events].sort((a, b) => a.at.localeCompare(b.at)).map((ev) => h('li', {}, h('time', { text: fmt(ev.at) }), (STATUS[ev.status]?.[0] || ev.status) + (ev.note ? ` – ${ev.note}` : '')))) : null),
       h('div', {}, h('h4', { text: 'Raport STRIKE PROOF' }),
         cat.hasV2 ? reportEditor(o) : h('p', { class: 'note', text: 'Raporty wymagają migracji v2 w bazie.' }),
@@ -414,7 +414,7 @@ async function loadInquiries() {
 
 /* ------------------------------------------------------------------ finanse: przychody, wydatki, limity, arkusz rozliczeń */
 const EXP_CAT = { czesci: 'Części i materiały', narzedzia: 'Narzędzia i sprzęt', oprogramowanie: 'Programy i licencje', hosting: 'Domena, hosting, usługi IT', reklama: 'Reklama i marketing', transport: 'Transport i wysyłka', biuro: 'Biuro i telefon', oplaty: 'Opłaty i prowizje', inne: 'Inne' };
-const PAY_METHOD = { karta: 'karta', blik: 'BLIK', p24: 'Przelewy24', przelew: 'przelew', gotowka: 'gotówka', inna: 'inna' };
+const PAY_METHOD = { karta: 'karta', blik: 'BLIK (Stripe)', blik_tel: 'BLIK na telefon', p24: 'Przelewy24', przelew: 'przelew', gotowka: 'gotówka (stare wpisy)', inna: 'inna' };
 const MONTHS_PL = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 const monthName = (m) => `${MONTHS_PL[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`;
 const pctTxt = (x) => `${(Math.round(x * 1000) / 10).toLocaleString('pl-PL')}%`;
@@ -597,11 +597,11 @@ function paymentBox(o) {
       has ? ` · ${PAY_METHOD[o.pay_method] || 'Stripe'}${o.stripe_fee_grosze ? ` · prowizja ${zlFull(o.stripe_fee_grosze)}` : ''}` : '',
       has && o.refund_grosze ? h('b', { class: 'bad', text: ` · zwrot ${zlFull(o.refund_grosze)} (${fmt(o.refunded_at, { dateStyle: 'medium' })})` }) : null),
     has ? h('div', { class: 'code-row' }, amt, day, btn) : h('p', { class: 'note', text: 'Zwroty wymagają migracji v10.' }),
-    has ? h('p', { class: 'muted small', text: 'Kwota łączna zwrotu. Zwrot zrobiony w Stripe zapisuje się automatycznie – tutaj wpisuj tylko zwroty gotówką lub przelewem.' }) : null);
+    has ? h('p', { class: 'muted small', text: 'Kwota łączna zwrotu. Zwrot zrobiony w Stripe zapisuje się automatycznie – tutaj wpisuj tylko zwroty zrobione przelewem.' }) : null);
 }
 
 /* ------------------------------------------------------------------ rachunki i faktury bez VAT (migracja v11) */
-const BILL_PAY = { stripe: 'Płatność online (Stripe)', karta: 'Karta (Stripe)', blik: 'BLIK (Stripe)', p24: 'Przelewy24 (Stripe)', przelew: 'Przelew', gotowka: 'Gotówka', inna: 'Inna' };
+const BILL_PAY = { stripe: 'Płatność online (Stripe)', karta: 'Karta (Stripe)', blik: 'BLIK (Stripe)', p24: 'Przelewy24 (Stripe)', przelew: 'Przelew na rachunek', blik_tel: 'BLIK na telefon (osobiste oddanie sprzętu)', inna: 'Inna' };   // bez gotówki
 /** PDF tworzy serwer (funkcja admin) – tu tylko otwieramy plik z prywatnego archiwum. */
 async function openBillPdf(b) {
   const w = window.open('', '_blank');
@@ -624,6 +624,15 @@ async function sendBill(b, to, btn) {
 }
 function b64Pdf(b64) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: 'application/pdf' }); }
 
+/** Prosty opis usługi na rachunek (jak services.doc_name w bazie). */
+function docName(id) {
+  const sv = cat.services.get(id), c = sv?.category || SVC[id]?.cat;
+  if (/^strike-auto|automation/.test(id || '')) return 'Wdrożenie automatyzacji procesów';
+  if (id === 'strike-web-shop') return 'Wykonanie sklepu internetowego';
+  if (c === 'solutions') return 'Wykonanie strony internetowej';
+  return ({ 'strike-overhaul': 'Przegląd i czyszczenie komputera', 'strike-custom-assembly': 'Montaż komputera', 'strike-thermal-shield': 'Serwis układu chłodzenia komputera', 'strike-revival': 'Diagnostyka i naprawa komputera' })[id]
+    || (c === 'optimization' ? 'Optymalizacja komputera' : c === 'service' ? 'Serwis komputera' : 'Usługa informatyczna');
+}
 /** Formularz rachunku; o = zlecenie (opcjonalnie) – dane klienta i pozycja wpisują się same. */
 function billEditor(o) {
   const c = o?.customer || {}, biz = c.type === 'business';
@@ -650,7 +659,7 @@ function billEditor(o) {
     const r = h('div', { class: 'bill-row' }, n, q2, p, h('button', { class: 'x-btn', type: 'button', 'aria-label': 'Usuń pozycję', text: '×', onclick: () => { if (rows.children.length > 1) { r.remove(); recalc(); } } }));
     Object.assign(r, { _n: n, _q: q2, _p: p }); rows.append(r); recalc(); return n;
   };
-  if (o) addRow(o.service_name + (o.express ? ' + Express' : ''), 1, o.amount_due_grosze ? String(o.amount_due_grosze / 100).replace('.', ',') : '');
+  if (o) addRow(`${docName(o.service_id)} – ${o.service_name}${o.express ? ' + Express' : ''}`, 1, o.amount_due_grosze ? String(o.amount_due_grosze / 100).replace('.', ',') : '');
   else addRow();
   const out = h('div');
   const btn = h('button', { class: 'btn btn-gold btn-sm', type: 'submit', text: 'Wystaw i utwórz PDF' });
@@ -696,7 +705,7 @@ function billEditor(o) {
 function billList() {
   const box = h('div', { class: 'card', style: 'margin-top:18px' }, h('div', { class: 'order-h' }, h('h3', { style: 'margin:0', text: 'Rachunki i faktury' })));
   if (fin.billErr === 'missing') { box.append(h('p', { class: 'note', text: 'Rachunki wymagają migracji v11 (npx supabase db push --linked) i nowej funkcji admin.' })); return box; }
-  box.append(h('details', { class: 'more', style: 'margin:10px 0 14px' }, h('summary', { text: '+ Nowy rachunek (np. wpłata gotówką, zlecenie spoza strony)' }), billEditor(null)));
+  box.append(h('details', { class: 'more', style: 'margin:10px 0 14px' }, h('summary', { text: '+ Nowy rachunek (np. zlecenie spoza strony)' }), billEditor(null)));
   if (fin.billErr) { box.append(h('p', { class: 'bad', text: fin.billErr })); return box; }
   if (!fin.bills?.length) { box.append(h('p', { class: 'muted', text: 'Brak wystawionych dokumentów. Po płatności przez Stripe rachunek wystawia się i wysyła klientowi automatycznie.' })); return box; }
   box.append(h('div', { class: 'scroll-x' }, h('table', { class: 'adm fin-table' },
@@ -725,7 +734,7 @@ function orderBills(o) {
     if (error || !data?.length) return;
     form.hidden = data.some((b) => !b.cancelled_at);
     list.replaceChildren(...data.map((b) => h('div', { class: 'code-row', style: 'align-items:center;margin-bottom:6px' },
-      h('span', { class: 'grow small' }, h('b', { text: b.number }), ` · ${zlFull(b.total_grosze)} · ${b.cancelled_at ? 'anulowany' : b.sent_at ? `wysłany na ${b.sent_to}` : 'nie wysłany'}`),
+      h('span', { class: 'grow small' }, h('b', { text: b.number }), ` · ${zlFull(b.total_grosze)} · ${b.cancelled_at ? 'anulowany' : (b.paid_on ? 'zapłacony' : 'czeka na wpłatę') + ' · ' + (b.sent_at ? `wysłany na ${b.sent_to}` : 'nie wysłany')}`, b.pay_title && !b.cancelled_at && !b.paid_on ? h('span', { class: 'muted', style: 'display:block', text: `Tytuł przelewu: ${b.pay_title}` }) : null),
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'PDF', onclick: () => openBillPdf(b) }),
       b.cancelled_at ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Wyślij', onclick: (e) => { const to = prompt('Wyślij na adres e-mail:', b.sent_to || b.buyer?.email || ''); if (to) sendBill(b, to.trim(), e.currentTarget); } }))));
   });
@@ -765,7 +774,8 @@ async function loadAdminReviews() {
     }));
 }
 
-/* ------------------------------------------------------------------ zlecenie ręczne: klient płacący gotówką / BLIK-iem na telefon */
+/* ------------------------------------------------------------------ zlecenie ręczne: przelew albo BLIK na telefon (bez gotówki) */
+let manualOut = null;
 function manualOrderCard() {
   const svcs = [...cat.services.values()].filter((x) => x.kind === 'USLUGA').sort((a, b) => a.name.localeCompare(b.name, 'pl'));
   const f = (attrs) => h('input', { class: 'input', ...attrs });
@@ -774,30 +784,42 @@ function manualOrderCard() {
   const email = f({ type: 'email', placeholder: 'E-mail (opcjonalnie – jeśli ma konto, zlecenie pojawi się w jego Strefie Klienta)', maxlength: 120 });
   const price = f({ type: 'number', min: 1, step: '0.01', placeholder: 'Kwota zł (puste = z cennika)' });
   const day = f({ type: 'date' }), time = f({ type: 'time', step: 900 });
-  const pay = h('select', { class: 'select' }, [['gotowka', 'Opłacone gotówką'], ['blik', 'Opłacone BLIK-iem na telefon'], ['nieoplacone', 'Jeszcze nieopłacone (zapłaci przy odbiorze)']].map(([v, t]) => h('option', { value: v, text: t })));
-  const line1 = f({ placeholder: 'Ulica i numer (do rachunku, opcjonalnie)', maxlength: 120 }), postal = f({ placeholder: 'Kod', maxlength: 12 }), city = f({ placeholder: 'Miasto', maxlength: 80 });
-  const note = h('textarea', { class: 'textarea', rows: 2, maxlength: 2000, placeholder: 'Notatka: sprzęt, objawy, co zrobić' });
+  const pay = h('select', { class: 'select', 'aria-label': 'Płatność' }, [['czeka_przelew', 'Wystaw rachunek – klient zapłaci przelewem'], ['czeka_blik', 'Wystaw rachunek – BLIK na telefon (oddaje sprzęt osobiście)'], ['oplacone_przelew', 'Przelew już zaksięgowany'], ['oplacone_blik', 'BLIK na telefon już otrzymany']].map(([v, t]) => h('option', { value: v, text: t })));
+  const line1 = f({ placeholder: 'Ulica i numer (do rachunku)', maxlength: 120 }), postal = f({ placeholder: 'Kod', maxlength: 12 }), city = f({ placeholder: 'Miasto', maxlength: 80 });
+  const note = h('textarea', { class: 'textarea', rows: 2, maxlength: 2000, placeholder: 'Notatka: sprzęt, objawy, zakres projektu' });
+  const out = (manualOut ||= h('div'));   // wynik zostaje po odświeżeniu panelu
   svc.addEventListener('change', () => { const x = cat.services.get(svc.value); price.placeholder = x ? `Kwota zł (z cennika: ${zl(x.price_grosze)})` : 'Kwota zł (puste = z cennika)'; });
   const btn = h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Utwórz zlecenie', onclick: async () => {
     if (!svc.value) return toast('err', 'Wybierz usługę.');
     if (name.value.trim().length < 2) return toast('err', 'Podaj imię i nazwisko klienta.');
-    setBusy(btn, true);
+    if (pay.value.startsWith('czeka_') && !(line1.value.trim() && city.value.trim())) return toast('err', 'Rachunek wymaga adresu klienta (ulica i numer, miasto).');
+    setBusy(btn, true); out.replaceChildren();
     try {
       const d = await callFn('admin', { action: 'create_manual', service_id: svc.value, name: name.value.trim(), email: email.value.trim() || undefined, phone: phone.value.trim() || undefined,
         price_zl: price.value || undefined, date: day.value || undefined, time: time.value || undefined, payment: pay.value, note: note.value.trim() || undefined,
         address: line1.value.trim() && city.value.trim() ? { line1: line1.value.trim(), postal_code: postal.value.trim(), city: city.value.trim() } : undefined });
-      toast('ok', d.order_number ? `Zlecenie ${d.order_number} utworzone i opłacone.${line1.value.trim() ? ' Rachunek wystawi się sam.' : ' Rachunek wystawisz w szczegółach zlecenia.'}` : 'Zlecenie utworzone jako nieopłacone – po wpłacie kliknij w nim „Opłacone…”.');
+      if (d.bill) {
+        const t = d.bill.pay_title || d.bill.number;
+        const copy = (txt) => navigator.clipboard?.writeText(txt).then(() => toast('ok', 'Skopiowano.'), () => {});
+        out.replaceChildren(h('div', { class: 'banner ok', style: 'margin-top:12px' },
+          h('b', { text: `Rachunek ${d.bill.number} na ${zlFull(d.bill.total_grosze)} – czeka na wpłatę.` }),
+          h('div', { class: 'code-row', style: 'margin-top:8px' }, h('span', { class: 'grow small', text: `Tytuł przelewu: ${t}` }), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Kopiuj', onclick: () => copy(t) })),
+          d.account ? h('div', { class: 'code-row' }, h('span', { class: 'grow small', text: `Nr rachunku: ${d.account}` }), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Kopiuj', onclick: () => copy(d.account) })) : h('p', { class: 'bad small', style: 'margin:6px 0 0', text: 'Brak numeru konta na rachunku – ustaw sekret SELLER_BANK_ACCOUNT (README) i wystaw dokument ponownie.' }),
+          h('p', { class: 'muted small', style: 'margin:6px 0 0', text: d.bill.sent_at ? `PDF z danymi do przelewu wysłany na ${d.bill.sent_to}.` : 'PDF jest w szczegółach zlecenia – wyślij go klientowi albo podyktuj tytuł. Po wpłacie kliknij w zleceniu „Przelew zaksięgowany” / „BLIK na telefon otrzymany”.' })));
+        toast('ok', `Wystawiono ${d.bill.number}. Klient płaci z tytułem: ${t}`, 9000);
+      } else if (d.bill_error) toast('err', `Zlecenie utworzone, ale rachunek się nie wystawił: ${d.bill_error}. Wystaw go w szczegółach zlecenia.`, 12000);
+      else toast('ok', d.order_number ? `Zlecenie ${d.order_number} utworzone i opłacone.${line1.value.trim() ? ' Rachunek wystawi się sam.' : ' Rachunek wystawisz w szczegółach zlecenia.'}` : 'Zlecenie utworzone.');
       [name, phone, email, price, day, time, line1, postal, city].forEach((x) => { x.value = ''; }); note.value = ''; svc.value = '';
       await loadAdmin(true);
     } catch (err) { toast('err', err.message); }
     setBusy(btn, false, 'Utwórz zlecenie');
   } });
-  return h('div', { class: 'card', style: 'grid-column:1/-1' }, h('h3', { text: 'Nowe zlecenie ręczne (gotówka / BLIK na telefon)' }),
-    h('p', { class: 'muted small', text: 'Dla klientów, którzy umawiają się telefonicznie albo na miejscu. Przy BLIK-u poproś o tytuł przelewu z imieniem i nazwą usługi – to Twój dowód wpłaty. Gotówkę wpisz od razu w dniu przyjęcia.' }),
+  return h('div', { class: 'card', style: 'grid-column:1/-1' }, h('h3', { text: 'Nowe zlecenie ręczne (przelew / BLIK na telefon)' }),
+    h('p', { class: 'muted small', text: 'Dla klientów, którzy umawiają się telefonicznie albo na miejscu, i dla projektów po wycenie. Gotówki nie przyjmujemy. Najpierw wystaw rachunek – klient dostaje numer rachunku, numer konta i tytuł przelewu (numer rachunku + usługa), więc każdą wpłatę da się przypisać do usługi. BLIK na telefon tylko wtedy, gdy klient oddaje sprzęt osobiście.' }),
     h('div', { class: 'row2' }, h('div', { class: 'field' }, svc), h('div', { class: 'field' }, pay)),
     h('div', { class: 'row2' }, h('div', { class: 'field' }, name), h('div', { class: 'field' }, phone)),
     h('div', { class: 'field' }, email),
     h('div', { class: 'row2' }, h('div', { class: 'field' }, price), h('div', { class: 'row2' }, h('div', { class: 'field' }, day), h('div', { class: 'field' }, time))),
     h('div', { class: 'row2' }, h('div', { class: 'field' }, line1), h('div', { class: 'row2' }, h('div', { class: 'field' }, postal), h('div', { class: 'field' }, city))),
-    h('div', { class: 'field' }, note), btn);
+    h('div', { class: 'field' }, note), btn, out);
 }

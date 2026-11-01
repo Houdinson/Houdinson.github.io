@@ -271,9 +271,9 @@ function orderSheet(id) {
     Object.keys(o.spec || {}).length ? [h('h4', { text: 'Specyfikacja' }), h('div', { class: 'kv' }, Object.entries(o.spec).map(([k, v]) => h('div', {}, h('span', { text: k }), h('b', { text: String(v) }))))] : null,
     o.order_number ? [h('h4', { text: 'Zmiana statusu' }), h('label', { class: 'field' }, status), h('label', { class: 'field' }, note), changeBtn] : null,
     !o.order_number && o.status === 'OCZEKUJE_NA_PLATNOSC' ? [h('h4', { text: 'Płatność' }),
-      h('div', { class: 'row2' }, [['gotowka', '💵 Gotówką'], ['przelew', '🏦 Przelewem']].map(([m, t]) => h('button', { class: 'btn btn-ghost', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} ${m === 'gotowka' ? 'gotówką' : 'przelewem'}?`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number || ''}`); } })))] : null,
+      h('div', { class: 'row2' }, [['przelew', '🏦 Przelew zaksięgowany'], ['blik_tel', '📱 BLIK na telefon']].map(([m, t]) => h('button', { class: 'btn btn-ghost', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} ${m === 'blik_tel' ? 'BLIK-iem na telefon' : 'przelewem'}? Sprawdź tytuł: numer rachunku + usługa.`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number || ''}`); } })))] : null,
     paymentTools(o),
-    o.order_number ? orderBillsC(o) : null,
+    o.status !== 'ANULOWANE' ? orderBillsC(o) : null,
     o.user_id && o.order_number ? [h('h4', { text: 'Raport STRIKE PROOF' }),
       h('button', { class: 'btn btn-gold btn-block', type: 'button', text: '📊 Wpisz pomiary i utwórz raport PDF', onclick: () => reportSheet(o) })] : null,
     o.user_id ? [h('h4', { text: 'Zdjęcia przy przyjęciu' }), photoTools(o, thumbs)] : null,
@@ -659,7 +659,7 @@ function renderFinance() {
 
 /* ================================================================== ROZLICZENIA: wydatki, limity, arkusz (migracja v10) */
 const EXP_CAT = { czesci: 'Części i materiały', narzedzia: 'Narzędzia i sprzęt', oprogramowanie: 'Programy i licencje', hosting: 'Domena, hosting, IT', reklama: 'Reklama i marketing', transport: 'Transport i wysyłka', biuro: 'Biuro i telefon', oplaty: 'Opłaty i prowizje', inne: 'Inne' };
-const PAY_METHOD = { karta: 'karta', blik: 'BLIK', p24: 'Przelewy24', przelew: 'przelew', gotowka: 'gotówka', inna: 'inna' };
+const PAY_METHOD = { karta: 'karta', blik: 'BLIK (Stripe)', blik_tel: 'BLIK na telefon', p24: 'Przelewy24', przelew: 'przelew', gotowka: 'gotówka (stare wpisy)', inna: 'inna' };
 const MONTHS_PL = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 const zl2 = (g) => (g / 100).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 2 });
 const pctTxt = (x) => `${(Math.round(x * 1000) / 10).toLocaleString('pl-PL')}%`;
@@ -800,7 +800,7 @@ function paymentTools(o) {
     const btn = h('button', { class: 'btn btn-ghost', type: 'button', text: 'Zapisz zwrot', onclick: async () => {
       const g = amt.value.trim() ? parseZl(amt.value) : 0;
       if (!(g >= 0)) return toast('err', 'Wpisz kwotę (0 = brak zwrotu).');
-      if (!confirm(g ? `Zapisać zwrot ${zl2(g)} (gotówką / przelewem)?` : 'Usunąć zapisany zwrot?')) return;
+      if (!confirm(g ? `Zapisać zwrot ${zl2(g)} (przelewem)?` : 'Usunąć zapisany zwrot?')) return;
       busy(btn, true);
       try { await callFn('admin', { action: 'record_refund', order_id: o.id, amount_zl: g / 100 }); toast('ok', 'Zwrot zapisany w rozliczeniach.'); sheet.close(); loadOrders(); }
       catch (err) { toast('err', err.message); } busy(btn, false, 'Zapisz zwrot');
@@ -811,13 +811,13 @@ function paymentTools(o) {
         p.stripe_fee_grosze ? h('div', {}, h('span', { text: 'Prowizja Stripe' }), h('b', { text: `−${zl2(p.stripe_fee_grosze)}` })) : null,
         p.refund_grosze ? h('div', {}, h('span', { text: 'Zwrot' }), h('b', { class: 'down', text: `−${zl2(p.refund_grosze)} · ${fmt(p.refunded_at, { dateStyle: 'medium' })}` })) : null),
       h('div', { class: 'row2', style: 'margin-top:10px;grid-template-columns:1fr auto' }, amt, btn),
-      h('p', { class: 'hint', style: 'margin:6px 2px 0', text: 'Zwroty w Stripe zapisują się same – tu wpisuj tylko zwroty gotówką lub przelewem.' }));
+      h('p', { class: 'hint', style: 'margin:6px 2px 0', text: 'Zwroty w Stripe zapisują się same – tu wpisuj tylko zwroty zrobione przelewem.' }));
   });
   return box;
 }
 
 /* ================================================================== RACHUNKI (migracja v11) */
-const BILL_PAY = { stripe: 'Online (Stripe)', karta: 'Karta (Stripe)', blik: 'BLIK (Stripe)', p24: 'Przelewy24 (Stripe)', przelew: 'Przelew', gotowka: 'Gotówka', inna: 'Inna' };
+const BILL_PAY = { stripe: 'Online (Stripe)', karta: 'Karta (Stripe)', blik: 'BLIK (Stripe)', p24: 'Przelewy24 (Stripe)', przelew: 'Przelew', blik_tel: 'BLIK na telefon', inna: 'Inna' };   // bez gotówki
 async function openBillPdf(b) {
   try {
     if (!b.pdf_path) b.pdf_path = (await callFn('admin', { action: 'bill_pdf', bill_id: b.id })).path;
@@ -841,7 +841,7 @@ function orderBillsC(o) {
     const active = (data || []).some((b) => !b.cancelled_at);
     box.replaceChildren(h('h4', { text: 'Rachunek' }),
       data?.length ? h('div', { class: 'card exp-list' }, data.map((b) => h('div', { class: 'exp-row' },
-        h('div', { class: 'grow' }, h('b', { text: `${b.number} · ${zl2(b.total_grosze)}` }), h('span', { class: 'muted small', text: b.cancelled_at ? 'anulowany' : b.sent_at ? `wysłany na ${b.sent_to}` : 'nie wysłany' })),
+        h('div', { class: 'grow' }, h('b', { text: `${b.number} · ${zl2(b.total_grosze)}` }), h('span', { class: 'muted small', text: b.cancelled_at ? 'anulowany' : `${b.paid_on ? 'zapłacony' : 'czeka na wpłatę'} · ${b.sent_at ? `wysłany na ${b.sent_to}` : 'nie wysłany'}` }), b.pay_title && !b.paid_on && !b.cancelled_at ? h('span', { class: 'muted small', style: 'display:block', text: `Tytuł: ${b.pay_title}` }) : null),
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': `PDF ${b.number}`, text: '📄', onclick: () => openBillPdf(b) }),
         b.cancelled_at ? null : h('button', { class: 'icon-btn', type: 'button', 'aria-label': `Wyślij ${b.number}`, text: '✉', onclick: (e) => { const to = prompt('Wyślij na e-mail:', b.sent_to || b.buyer?.email || ''); if (to) sendBill(b, to.trim(), e.currentTarget); } })))) : h('p', { class: 'muted small', style: 'margin:0', text: 'Brak – po płatności przez Stripe wystawi się sam.' }),
       active ? null : h('button', { class: 'btn btn-ghost btn-block', style: 'margin-top:10px', type: 'button', text: '🧾 Wystaw rachunek', onclick: () => billSheet(o) }));
@@ -889,7 +889,7 @@ function billSheet(o) {
     h('h4', { text: 'Pozycja' }), F('Nazwa usługi / towaru', iname),
     h('div', { class: 'row2' }, F('Ilość', iqty), F('Cena (zł)', iprice)),
     F('Data zapłaty (puste = niezapłacone)', paidOn),
-    h('p', { class: 'hint', text: 'Po płatności przez Stripe rachunek wystawia się i wysyła sam – ręcznie tylko przy gotówce, przelewie albo poprawce. Więcej pozycji: panel na stronie (Finanse).' }),
+    h('p', { class: 'hint', text: 'Po płatności przez Stripe rachunek wystawia się i wysyła sam – ręcznie tylko przy przelewie, BLIK-u na telefon albo poprawce. Gotówki nie przyjmujemy. Więcej pozycji: panel na stronie (Finanse).' }),
     go, res);
 }
 

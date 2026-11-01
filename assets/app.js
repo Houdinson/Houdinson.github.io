@@ -132,13 +132,48 @@ const SVC = {
   'strike-custom-assembly': { cat: 'service', mode: 'workshop', dur: 60, price: 19900, pct: 100, forWho: 'Dla osób, które mają części (własne lub powierzone) i chcą profesjonalnego montażu.', summary: 'Montaż z części własnych lub powierzonych wraz z cable management.', includes: ['Weryfikacja kompatybilności części przed montażem', 'Montaż, aktualizacja BIOS i włączenie XMP/EXPO', 'Cable management i przepływ powietrza', 'Instalacja Windows i sterowników (opcjonalnie)', 'Testy stabilności i temperatur przed wydaniem', '3 miesiące gwarancji na montaż'], note: 'Części liczone osobno według wyceny, jeśli to my je zamawiamy.' },
   'strike-thermal-shield': { cat: 'service', mode: 'workshop', dur: 60, price: 29900, pct: 100, forWho: 'Dla komputerów z wysokimi temperaturami, throttlingiem lub głośnym chłodzeniem.', summary: 'Regeneracja układów chłodzenia, delid i ciecz termoprzewodząca.', includes: ['Czyszczenie radiatorów i wentylatorów, kontrola docisku', 'Wymiana pasty lub, po akceptacji, ciekły metal dobrany do radiatora', 'Delid procesora (opcjonalnie, tylko za pisemną zgodą – zabieg nieodwracalny, zwykle oznacza utratę gwarancji producenta)', 'Optymalizacja przepływu powietrza w obudowie', 'Pomiar temperatur w obciążeniu przed i po'], note: 'Delid i ciekły metal wykonujemy tylko po potwierdzeniu zgodności podzespołów.' },
   'strike-revival': { cat: 'service', mode: 'workshop', dur: 60, price: 14900, pct: 100, fromLabel: 'za diagnostykę', forWho: 'Dla sprzętu, który nie startuje, restartuje się, daje artefakty lub został uszkodzony.', summary: 'Zaawansowana diagnostyka i naprawa uszkodzonego sprzętu.', includes: ['Diagnostyka: zasilanie, płyta główna, RAM, GPU, dyski', 'Testy na podzespołach referencyjnych', 'Pisemna diagnoza z kosztorysem naprawy', 'Naprawa po akceptacji kosztorysu', 'Wstępna ocena możliwości odzysku danych'], note: 'Online płacisz tylko diagnostykę. Koszt naprawy poznasz z kosztorysu.' },
-  'strike-business-web': { cat: 'solutions', mode: 'project', dur: 60, price: 99000, pct: 100, forWho: 'Dla firm lokalnych i e-commerce, które potrzebują nowoczesnej, szybkiej strony.', summary: 'Projekt i wykonanie strony WWW dla biznesu.', includes: ['Responsywny projekt dopasowany do marki', 'SEO techniczne i szybkość (Core Web Vitals)', 'Formularze, mapy i integracje (kalendarz, płatności)', 'Mechanizmy pod RODO i cookies (treść dokumentów prawnych weryfikuje prawnik klienta)', 'Domena, SSL i szkolenie z obsługi'], note: 'Rezerwujesz rozmowę startową. Płatność 100% z góry, przed rozpoczęciem prac.' },
-  'strike-smart-automation': { cat: 'solutions', mode: 'project', dur: 60, price: 120000, pct: 100, forWho: 'Dla firm, które tracą czas na ręczne przepisywanie danych i powtarzalne zadania.', summary: 'Automatyzacja procesów firmowych i przepływu danych.', includes: ['Audyt procesów i wybór zadań do automatyzacji', 'Integracje: formularze, CRM, arkusze, e-mail, płatności', 'Automatyczne przepływy danych (n8n, Make lub Apps Script)', 'Powiadomienia i raporty wysyłane automatycznie', 'Dokumentacja i szkolenie zespołu'], note: 'Rezerwujesz rozmowę startową. Płatność 100% z góry, przed rozpoczęciem prac.' },
+  // --- strony WWW (ceny końcowe: działalność nierejestrowana, bez VAT) ---
+  'strike-web-start': { cat: 'solutions', group: 'web', mode: 'project', dur: 60, price: 129000, pct: 100, label: 'Wizytówka', term: '5–7 dni roboczych', rev: '2 rundy poprawek', forWho: 'Dla fryzjera, mechanika, gabinetu czy freelancera, który chce być widoczny w Google i na telefonie.', summary: 'Strona-wizytówka na jednej przewijanej stronie.', includes: ['Do 5 sekcji: o firmie, usługi, cennik, galeria, kontakt', 'Projekt w kolorach Twojej marki, wygląd dopracowany na telefonie', 'Formularz kontaktowy, mapa dojazdu, kliknij-i-zadzwoń', 'Podstawowe SEO: tytuły, opisy, mapa strony, Google Search Console', 'Podpięcie domeny i certyfikat SSL'], note: 'Najpierw bezpłatna rozmowa i wycena na piśmie. Płatność 100% z góry, po akceptacji zakresu.' },
+  'strike-web-landing': { cat: 'solutions', group: 'web', mode: 'project', dur: 60, price: 179000, pct: 100, label: 'Landing page', term: '7–10 dni roboczych', rev: '2 rundy poprawek', forWho: 'Dla jednej usługi, produktu, wydarzenia lub kampanii reklamowej, która ma przynosić zapytania.', summary: 'Strona sprzedażowa nastawiona na jeden cel: telefon, zapis lub zakup.', includes: ['Układ sprzedażowy: nagłówek z korzyścią, oferta, opinie, FAQ, wezwania do działania', 'Formularz zapisu lub zamówienia z powiadomieniem na e-mail', 'Statystyki odwiedzin i mierzenie konwersji (Google Analytics / Meta Pixel)', 'Baner zgód cookies, gdy używasz narzędzi śledzących', 'Optymalizacja szybkości pod reklamy (Core Web Vitals)'], note: 'Najpierw bezpłatna rozmowa i wycena na piśmie. Płatność 100% z góry, po akceptacji zakresu.' },
+  'strike-web-business': { cat: 'solutions', group: 'web', mode: 'project', dur: 60, price: 299000, pct: 100, label: 'Strona firmowa', popular: true, term: '2–3 tygodnie', rev: '3 rundy poprawek', forWho: 'Dla firm usługowych, które chcą osobnych podstron dla każdej usługi i lepszej pozycji w Google.', summary: 'Strona firmowa do 6 podstron z łatwą edycją treści.', includes: ['Do 6 podstron (np. start, o nas, 3× usługa, kontakt) + polityka prywatności', 'Indywidualny projekt graficzny strony głównej i podstron', 'Prosty panel do edycji tekstów, zdjęć i aktualności', 'SEO na każdą podstronę, dane strukturalne, profil firmy w Google', 'Formularze, mapa, galeria, opinie klientów', 'Instrukcja obsługi i 30 dni wsparcia po starcie'], note: 'Najpierw bezpłatna rozmowa i wycena na piśmie. Płatność 100% z góry, po akceptacji zakresu.' },
+  'strike-web-pro': { cat: 'solutions', group: 'web', mode: 'project', dur: 60, price: 549000, pct: 100, label: 'Strona rozbudowana', term: '3–5 tygodni', rev: '3 rundy poprawek', forWho: 'Dla firm, które chcą przyjmować rezerwacje lub płatności przez stronę i prowadzić bloga.', summary: 'Rozbudowana strona do 12 podstron z rezerwacjami lub płatnościami online.', includes: ['Do 12 podstron, blog lub aktualności z kategoriami', 'Rezerwacje terminów online z przypomnieniami e-mail', 'Płatności online (Stripe, Przelewy24) albo strefa klienta', 'Druga wersja językowa (teksty dostarczasz lub zlecasz tłumaczenie)', 'Integracje: kalendarz, newsletter, CRM, arkusz Google', 'Testy szybkości i dostępności, 60 dni wsparcia po starcie'], note: 'Najpierw bezpłatna rozmowa i wycena na piśmie. Płatność 100% z góry, po akceptacji zakresu.' },
+  'strike-web-shop': { cat: 'solutions', group: 'web', mode: 'project', dur: 60, price: 699000, pct: 100, label: 'Sklep internetowy', term: '4–6 tygodni', rev: '3 rundy poprawek', forWho: 'Dla małych sklepów i rękodzieła, które chcą sprzedawać online bez prowizji od marketplace.', summary: 'Sklep internetowy z płatnościami, dostawą i panelem zamówień.', includes: ['Sklep na WooCommerce lub Shopify, dobrany do budżetu i liczby produktów', 'Wprowadzenie do 50 produktów (zdjęcia i opisy od Ciebie)', 'Płatności online (BLIK, karta, przelew) i metody dostawy (InPost, kurier)', 'Regulamin i polityka zwrotów – podpinamy dokumenty dostarczone przez Ciebie', 'Maile transakcyjne, kody rabatowe, podstawowe SEO kategorii i produktów', 'Szkolenie z obsługi zamówień i 60 dni wsparcia po starcie'], note: 'Najpierw bezpłatna rozmowa i wycena na piśmie. Płatność 100% z góry, po akceptacji zakresu. Opłaty sklepu (np. abonament Shopify, prowizje płatności) płacisz bezpośrednio dostawcom.' },
+  // --- automatyzacje ---
+  'strike-auto-start': { cat: 'solutions', group: 'auto', mode: 'project', dur: 60, price: 59000, pct: 100, label: 'Jedna automatyzacja', term: '3–5 dni roboczych', rev: '14 dni poprawek po wdrożeniu', forWho: 'Dla firmy, która codziennie ręcznie przepisuje dane z jednego miejsca w drugie.', summary: 'Jeden automatyczny przepływ łączący 2–3 narzędzia.', includes: ['Przykład: formularz ze strony → arkusz Google → powiadomienie e-mail lub SMS', 'Albo: nowe zamówienie → faktura → wiadomość do klienta', 'Konfiguracja w n8n, Make lub Google Apps Script', 'Testy na prawdziwych danych i obsługa błędów', 'Krótka instrukcja, jak sprawdzić, że wszystko działa'], note: 'Najpierw bezpłatna analiza procesu i wycena na piśmie. Płatność 100% z góry, po akceptacji zakresu. Abonamenty narzędzi (jeśli są potrzebne) opłacasz bezpośrednio u dostawcy.' },
+  'strike-auto-flow': { cat: 'solutions', group: 'auto', mode: 'project', dur: 60, price: 169000, pct: 100, label: 'Pakiet procesów', popular: true, term: '1–2 tygodnie', rev: '30 dni poprawek po wdrożeniu', forWho: 'Dla firm, które chcą zautomatyzować obsługę klienta od zapytania do płatności.', summary: 'Do 3 powiązanych przepływów z logiką warunkową.', includes: ['Analiza procesu i mapa: co dzieje się ręcznie, co można przejąć', 'Do 3 przepływów, np. zapytanie → oferta → przypomnienie → faktura', 'Warunki i rozgałęzienia (np. inna ścieżka dla firm i osób prywatnych)', 'Automatyczne raporty dzienne lub tygodniowe na e-mail', 'Powiadomienia o błędach i dokumentacja przepływów'], note: 'Najpierw bezpłatna analiza procesu i wycena na piśmie. Płatność 100% z góry, po akceptacji zakresu. Abonamenty narzędzi (jeśli są potrzebne) opłacasz bezpośrednio u dostawcy.' },
+  'strike-auto-system': { cat: 'solutions', group: 'auto', mode: 'project', dur: 60, price: 399000, pct: 100, label: 'System i integracje', term: '3–5 tygodni', rev: '60 dni poprawek po wdrożeniu', forWho: 'Dla firm, w których dane krążą między sklepem, CRM, magazynem i księgowością.', summary: 'Do 8 przepływów, integracje przez API i panel z raportami.', includes: ['Audyt narzędzi i plan integracji etapami', 'Do 8 przepływów, integracje przez API (sklep, CRM, BaseLinker, fakturowanie)', 'Własny serwer n8n na Twoim koncie (bez opłat za liczbę operacji)', 'Panel lub arkusz z raportami i wskaźnikami', 'Monitoring, kopie zapasowe przepływów i szkolenie zespołu'], note: 'Najpierw bezpłatna analiza procesu i wycena na piśmie. Płatność 100% z góry, po akceptacji zakresu. Abonamenty narzędzi (jeśli są potrzebne) opłacasz bezpośrednio u dostawcy.' },
 };
 /* Zestawy PC – treści 1:1 z catalog.json / realizacje.html (ceny i dopłaty w groszach; bazę cen i tak liczy serwer) */
 /* Zestawy poglądowe – części i ceny z list x-kom użytkownika (stan cen: 26.10.2026).
    light l79zudvlk · value r7mxcru54 · pulse ymat5gyun · venom l96rdhr7d · beast zy89qs2zl */
 const PRICES_AT = '26.10.2026';
+const SOL_GROUPS = [
+  { id: 'web', name: 'Strony internetowe', tagline: 'Od wizytówki po sklep. Każda strona jest szybka, działa na telefonie i należy do Ciebie: domena i hosting są na Twoim koncie.' },
+  { id: 'auto', name: 'Automatyzacje', tagline: 'Łączymy narzędzia, których już używasz, żeby powtarzalne zadania działy się same.' },
+];
+const SOL_ADDONS = [
+  ['Dodatkowa podstrona', 'od 190 zł'],
+  ['Dodatkowa runda poprawek', '150 zł'],
+  ['Dodatkowa wersja językowa', 'od 390 zł'],
+  ['Kolejny przepływ automatyzacji', 'od 390 zł'],
+  ['Przeniesienie lub odświeżenie istniejącej strony', 'od 690 zł'],
+  ['Opieka techniczna: aktualizacje, kopie zapasowe, drobne zmiany do 1 h', '99 zł / mies.'],
+  ['Monitoring automatyzacji i poprawki po zmianach w narzędziach', '79 zł / mies.'],
+  ['Domena i hosting – zawsze na Twoim koncie', 'wg cennika dostawcy'],
+];
+const QUOTE_TEXT = {
+  web: (n) => `Dzień dobry, interesuje mnie pakiet ${n}.\nFirma / branża: \nCo ma robić strona (telefony, zapisy, sprzedaż): \nMam już: domenę / logo / teksty / zdjęcia: \nPrzykładowe strony, które mi się podobają: \nTermin: `,
+  auto: (n) => `Dzień dobry, interesuje mnie pakiet ${n}.\nJakich narzędzi używamy (np. arkusz, CRM, sklep, fakturowanie): \nCo dziś robimy ręcznie: \nJak często (dziennie / tygodniowo): \nTermin: `,
+};
+/** Projekty (strony, automatyzacje): najpierw wycena – formularz kontaktowy z wybranym pakietem. */
+function askQuote(id) {
+  const s = svcOf(id), d = SVC[id] || {};
+  if (!s) return;
+  navigate('/kontakt');
+  const sel = $('#cTopic'); if (sel) { if (![...sel.options].some((o) => o.text === s.name)) sel.append(h('option', { text: s.name })); sel.value = s.name; }
+  const msg = $('#cMsg'); if (msg && (!msg.value.trim() || msg.dataset.quote)) { msg.value = (QUOTE_TEXT[d.group] || QUOTE_TEXT.web)(s.name); msg.dataset.quote = '1'; }
+  setTimeout(() => { $('#cName')?.focus(); }, 60);
+}
 const ASSEMBLY_GROSZE = 19900;   // STRIKE Custom Assembly – złożenie i testy (od)
 const SETS = [
  {
@@ -517,7 +552,7 @@ function priceBlock(s, label) {
     h('small', { text: label || 'Cena' }),
     h('b', { text: `Od ${zl(s.price_grosze)}${SVC[s.id]?.fromLabel ? ' ' + SVC[s.id].fromLabel : ''}` }),
     info?.reduction && info.lowest30_grosze ? h('span', { class: 'omni', text: `Najniższa cena z 30 dni przed obniżką: ${zl(info.lowest30_grosze)}` }) : null,
-    h('span', { text: `${MODE[s.mode] || ''} · ${payText(s)}` }),
+    h('span', { text: s.mode === 'project' ? 'Cena końcowa, bez VAT · płatność z góry po akceptacji wyceny' : `${MODE[s.mode] || ''} · ${payText(s)}` }),
     !cat.live ? h('span', { class: 'stale', text: 'Cena orientacyjna – aktualną pokaże formularz po połączeniu.' }) : null);
 }
 let activeCat = new URLSearchParams(location.search).get('kategoria') || 'optimization';
@@ -538,19 +573,36 @@ function renderCatalog() {
     const list = inCat(c);
     box.append(h('div', { class: 'cat', id: `kat-${c.id}`, role: 'tabpanel', 'aria-labelledby': `cattab-${c.id}`, hidden: c.id !== activeCat },
       h('div', { class: 'cat-head' }, h('h3', { text: c.name }), h('p', { text: c.tagline })),
-      h('div', { class: 'grid g3' }, list.map((s) => {
-        const d = SVC[s.id] || {};
-        return h('article', { class: 'card hud svc', id: s.id },
-          h('div', { class: 'svc-top' }, h('span', { class: 'pill', text: MODE_PILL[s.mode] || 'Usługa' }), s.express_eligible ? h('span', { class: 'pill ghost', text: 'Express' }) : null, h('span', { class: 'pill ghost', text: `${s.duration_min / 60} h` })),
-          h('h4', { text: s.name }),
-          d.forWho ? h('p', { class: 'svc-for', text: d.forWho }) : null,
-          d.summary ? h('p', { class: 'svc-sum', text: d.summary }) : null,
-          d.includes ? h('ul', { class: 'check-list' }, d.includes.map((t) => h('li', { text: t }))) : h('div', { style: 'flex:1' }),
-          d.note ? h('p', { class: 'note', text: d.note }) : null,
-          h('div', { class: 'svc-foot' }, priceBlock(s), h('button', { class: 'btn btn-gold btn-block', type: 'button', text: s.mode === 'project' ? 'Umów rozmowę startową' : 'Zarezerwuj termin', 'aria-label': `${s.mode === 'project' ? 'Umów rozmowę startową' : 'Zarezerwuj termin'}: ${s.name}`, onclick: () => pickItem(s.id) })));
-      }))));
+      ...(c.id === 'solutions' ? solBlocks(list) : [h('div', { class: 'grid g3' }, list.map(svcCard))])));
   }
   renderSets(); renderItemSelect(); renderContactTopics(); renderConsole(); renderTiles(); initAdvisor();
+}
+function svcCard(s) {
+  const d = SVC[s.id] || {}, proj = s.mode === 'project', cta = proj ? 'Zapytaj o wycenę' : 'Zarezerwuj termin';
+  return h('article', { class: `card hud svc${d.popular ? ' svc-pop' : ''}`, id: s.id },
+    h('div', { class: 'svc-top' }, h('span', { class: 'pill', text: proj ? (d.label || MODE_PILL.project) : (MODE_PILL[s.mode] || 'Usługa') }), s.express_eligible ? h('span', { class: 'pill ghost', text: 'Express' }) : null, d.popular ? h('span', { class: 'pill ghost pop', text: 'Najczęściej wybierany' }) : null, proj ? null : h('span', { class: 'pill ghost', text: `${s.duration_min / 60} h` })),
+    h('h4', { text: s.name }),
+    d.forWho ? h('p', { class: 'svc-for', text: d.forWho }) : null,
+    d.summary ? h('p', { class: 'svc-sum', text: d.summary }) : null,
+    proj && (d.term || d.rev) ? h('dl', { class: 'svc-facts' }, d.term ? [h('dt', { text: 'Realizacja' }), h('dd', { text: d.term })] : null, d.rev ? [h('dt', { text: 'Poprawki' }), h('dd', { text: d.rev })] : null) : null,
+    d.includes ? h('ul', { class: 'check-list' }, d.includes.map((t) => h('li', { text: t }))) : h('div', { style: 'flex:1' }),
+    d.note ? h('p', { class: 'note', text: d.note }) : null,
+    h('div', { class: 'svc-foot' }, priceBlock(s, proj ? 'Cena pakietu' : undefined), h('button', { class: 'btn btn-gold btn-block', type: 'button', text: cta, 'aria-label': `${cta}: ${s.name}`, onclick: () => (proj ? askQuote(s.id) : pickItem(s.id)) })));
+}
+/** Zakładka stron i automatyzacji: dwie grupy pakietów + dodatki. */
+function solBlocks(list) {
+  const out = [];
+  for (const g of SOL_GROUPS) {
+    const items = list.filter((s) => (SVC[s.id]?.group || 'web') === g.id);
+    if (!items.length) continue;
+    out.push(h('div', { class: 'sol-group' }, h('div', { class: 'sol-head' }, h('h4', { text: g.name }), h('p', { class: 'muted', text: g.tagline })),
+      h('div', { class: 'grid g3' }, items.map(svcCard))));
+  }
+  out.push(h('div', { class: 'card hud sol-addons' },
+    h('div', { class: 'sol-head' }, h('h4', { text: 'Dodatki i opieka' }), h('p', { class: 'muted', text: 'Ceny końcowe – nie doliczamy VAT. Zakres i cenę potwierdzamy na piśmie przed startem, a każda zmiana zakresu to osobna, wcześniej podana kwota.' })),
+    h('ul', { class: 'addon-list' }, SOL_ADDONS.map(([t, p]) => h('li', {}, h('span', { text: t }), h('b', { text: p })))),
+    h('div', { class: 'sol-cta' }, h('span', { text: 'Nie wiesz, który pakiet wybrać?' }), h('button', { type: 'button', class: 'btn btn-ghost btn-sm', 'data-consult': '', text: 'Bezpłatna konsultacja – 15 min' }))));
+  return out;
 }
 function renderTiles() {
   $$('[data-from]').forEach((el) => {
@@ -724,16 +776,17 @@ function renderItemSelect() {
   const sel = $('#bItem'); const cur = B.item || sel.value;
   sel.replaceChildren(h('option', { value: '', text: '— wybierz usługę —' }));
   for (const c of CATS) {
-    const list = [...cat.services.values()].filter((s) => s.kind === 'USLUGA' && (s.category || SVC[s.id]?.cat) === c.id);
+    const list = [...cat.services.values()].filter((s) => s.kind === 'USLUGA' && s.mode !== 'project' && (s.category || SVC[s.id]?.cat) === c.id);
     if (!list.length) continue;
     sel.append(h('optgroup', { label: c.name }, list.map((s) => h('option', { value: s.id, text: `${s.name} – od ${zl(s.price_grosze)}` }))));
   }
-  if (cur && svcOf(cur)?.kind === 'USLUGA') { sel.value = cur; B.item = cur; } else { B.item = ''; sel.value = ''; }
+  if (cur && svcOf(cur)?.kind === 'USLUGA' && svcOf(cur).mode !== 'project') { sel.value = cur; B.item = cur; } else { B.item = ''; sel.value = ''; }
   onItemChange(false);
 }
 /** Otwiera rezerwację usługi (np. z cennika). */
 function pickItem(id) {
   if (!svcOf(id) || svcOf(id).kind !== 'USLUGA') return;
+  if (svcOf(id).mode === 'project') { askQuote(id); return; }
   setBookMode('svc');
   if (B.item !== id) { B.item = id; B.extras = B.extras.filter((x) => x !== id); }
   $('#bItem').value = id; onItemChange(true);
@@ -1348,7 +1401,8 @@ function orderCard(o) {
   const spec = Object.entries(o.spec || {}).filter(([k]) => k !== 'Usługa');
   if (spec.length) card.append(h('ul', { class: 'sum-spec' }, spec.map(([k, v]) => h('li', { text: `${k}: ${v}` }))));
   const res = resultsTable(o.order_results || []); if (res) card.append(h('h4', { style: 'margin:14px 0 0;font-size:.95rem', text: 'Raport STRIKE PROOF – pomiary' }), res);
-  if (o.paid_at) card.append(clientBillBox(o));
+  const payActs = h('div');
+  if (o.paid_at || o.status === 'OCZEKUJE_NA_PLATNOSC') card.append(clientBillBox(o, payActs));
   const files = h('div', { class: 'files' }); card.append(files);
   if (['OPLACONE', 'W_REALIZACJI', 'TESTY', 'ZAKONCZONE'].includes(o.status)) loadFiles(o, files);
   if (o.order_events?.length) card.append(h('details', { class: 'more' }, h('summary', { text: 'Historia zlecenia' }), h('ul', { class: 'timeline' }, [...o.order_events].sort((a, b) => a.at.localeCompare(b.at)).map((e) => h('li', {}, h('time', { text: fmt(e.at) }), (STATUS[e.status]?.[0] || e.status) + (e.note ? ` – ${e.note}` : ''))))));
@@ -1358,7 +1412,7 @@ function orderCard(o) {
     const iv = setInterval(() => { if (!card.isConnected) return clearInterval(iv); tick(); }, 1000); tick();
     const payB = h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Dokończ płatność', disabled: !left, onclick: async () => { setBusy(payB, true); try { const d = await callFn('create-checkout', { resume_order_id: o.id }); location.href = d.url; } catch (e) { setBusy(payB, false, 'Dokończ płatność'); toast('err', e.message); loadPanelData(); } } });
     const cancelB = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Anuluj rezerwację', onclick: async () => { setBusy(cancelB, true); try { await callFn('cancel-checkout', { order_id: o.id }); toast('info', 'Rezerwacja anulowana, termin wrócił do kalendarza.'); } catch (e) { toast('err', e.message); } loadPanelData(); loadSlots(true); } });
-    card.append(h('div', { class: 'order-actions' }, payB, cancelB, timer));
+    payActs.append(h('div', { class: 'order-actions' }, payB, cancelB, timer)); card.append(payActs);
   }
   if (o.status === 'ZAKONCZONE') card.append(reviewBox(o));
   return card;
@@ -1383,22 +1437,39 @@ function resultsTable(results) {
       return h('tr', {}, h('td', { text: LBL[k] || k.replace(/_/g, ' ') }), h('td', { text: x ?? '–' }), h('td', { text: y ?? '–' }), h('td', { class: cls, text: d }));
     }))));
 }
-/** Rachunek / faktura do zamówienia (Strefa Klienta) – PDF z plików zamówienia. */
-function clientBillBox(o) {
+/** Rachunek / faktura do zamówienia (Strefa Klienta) – PDF z plików zamówienia. Gdy rachunek czeka na wpłatę: dane do przelewu. */
+function clientBillBox(o, payActs) {
   const box = h('div');
   if (!cat.hasV2) return box;
-  sb.from('bills').select('id,kind,number,issued_on,total_grosze,client_path,sent_at,sent_to').eq('order_id', o.id).then(({ data, error }) => {
+  sb.from('bills').select('id,kind,number,issued_on,total_grosze,client_path,sent_at,sent_to,paid_on,pay_title,pay_method,seller').eq('order_id', o.id).then(({ data, error }) => {
     if (error || !data?.length) return;
-    box.replaceChildren(...data.map((b) => h('div', { class: 'bill-chip' },
+    const due = !o.paid_at ? data.find((b) => !b.paid_on && b.seller?.account) : null;
+    if (due && payActs) payActs.replaceChildren();   // płatność przelewem / BLIK-iem zamiast Stripe
+    box.replaceChildren(due ? transferBox(due) : null, ...data.map((b) => h('div', { class: 'bill-chip' },
       h('span', { class: 'bill-ico', 'aria-hidden': 'true', text: '🧾' }),
       h('div', { class: 'grow' }, h('b', { text: `${b.kind === 'faktura' ? 'Faktura' : 'Rachunek'} ${b.number}` }),
-        h('div', { class: 'muted small', text: `${zl(b.total_grosze)} · ${fmt(`${b.issued_on}T12:00:00Z`, { dateStyle: 'medium' })}${b.sent_at ? ` · wysłany na ${b.sent_to}` : ''}` })),
+        h('div', { class: 'muted small', text: `${zl(b.total_grosze)} · ${fmt(`${b.issued_on}T12:00:00Z`, { dateStyle: 'medium' })}${b.paid_on ? ' · zapłacony' : ' · czeka na wpłatę'}${b.sent_at ? ` · wysłany na ${b.sent_to}` : ''}` })),
       b.client_path ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Pobierz PDF', onclick: async () => {
         const { data: u, error: e } = await sb.storage.from('reports').createSignedUrl(b.client_path, 120);
         if (e) return toast('err', 'Nie udało się pobrać rachunku.'); window.open(u.signedUrl, '_blank', 'noopener');
       } }) : null)));
   });
   return box;
+}
+/** Dane do przelewu: odbiorca, numer konta, kwota i tytuł (numer rachunku + usługa) z przyciskami „Kopiuj”. */
+function transferBox(b) {
+  const copy = (txt, what) => navigator.clipboard?.writeText(txt).then(() => toast('ok', `Skopiowano ${what}.`), () => toast('err', 'Nie udało się skopiować – zaznacz tekst ręcznie.'));
+  const row = (label, val, what) => h('div', { class: 'tr-row' }, h('small', { text: label }), h('b', { text: val }), what ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Kopiuj', 'aria-label': `Kopiuj: ${label}`, onclick: () => copy(val, what) }) : h('span'));
+  const kw = (b.total_grosze / 100).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return h('div', { class: 'transfer-box' },
+    h('h5', { text: 'Dane do przelewu' }),
+    h('p', { class: 'muted small', text: 'Płatność 100% z góry, przed wykonaniem usługi. Wpisz tytuł dokładnie tak, jak poniżej – po nim przypiszemy wpłatę do Twojego zlecenia.' }),
+    row('Odbiorca', b.seller?.name || 'Strike Tech Lab'),
+    row('Nr rachunku', b.seller.account, 'numer rachunku'),
+    row('Kwota', `${kw} zł`, null),
+    row('Tytuł przelewu', b.pay_title || b.number, 'tytuł przelewu'),
+    b.pay_method === 'blik_tel' && b.seller?.blik_phone ? row('BLIK na telefon', b.seller.blik_phone, 'numer telefonu') : null,
+    h('p', { class: 'muted small', style: 'margin:8px 0 0', text: b.pay_method === 'blik_tel' ? 'BLIK na telefon przyjmujemy tylko przy osobistym oddaniu sprzętu – z tym samym tytułem. Nie przyjmujemy gotówki.' : 'Nie przyjmujemy gotówki. Status zmieni się na „Opłacone”, gdy wpłata do nas dotrze (zwykle 1 dzień roboczy).' }));
 }
 const BILL_FILE_RE = /-(Rachunek|Faktura)-[RF]-\d+-\d{4}\.pdf$/;
 async function loadFiles(o, box, ownerId) {
@@ -1494,8 +1565,8 @@ const PROGRAMS = [
   { id: 'strike-custom-assembly', need: [], during: ['hwinfo', 'occt'], prep: ['Dostarcz wszystkie części razem z pudełkami i akcesoriami (śrubki, kable, zaślepki).', 'Jeśli masz licencję Windows, przygotuj klucz albo konto Microsoft.'] },
   { id: 'strike-thermal-shield', need: [], during: ['hwinfo', 'occt'], prep: ['Zrób kopię ważnych danych.', 'Zanotuj, kiedy komputer jest najgłośniejszy (gra, render) – odtworzymy to w testach.'] },
   { id: 'strike-revival', need: [], during: ['hwinfo'], prep: ['Opisz objawy: kiedy się zaczęły, co robiłeś tuż przed awarią, czy są sygnały dźwiękowe.', 'Jeśli komputer się uruchamia, zrób kopię danych.'] },
-  { id: 'strike-business-web', need: [], during: [], prep: ['Przygotuj logo, teksty i zdjęcia (albo listę, czego brakuje).', 'Dostęp do panelu domeny i hostingu, jeśli już je masz.'], note: 'Do projektu strony nie musisz nic instalować – pracujemy na naszych narzędziach i wysyłamy podgląd.' },
-  { id: 'strike-smart-automation', need: [], during: [], prep: ['Lista procesów do automatyzacji i przykładowe pliki (np. eksport z arkusza).', 'Dostęp do kont, które mają się łączyć (np. Google Workspace) – nadasz go w trakcie wdrożenia.'], note: 'Narzędzia dobieramy do Twoich systemów – nic nie instalujesz przed rozmową startową.' },
+  ...['strike-web-start', 'strike-web-landing', 'strike-web-business', 'strike-web-pro', 'strike-web-shop', 'strike-business-web'].map((id) => ({ id, need: [], during: [], prep: ['Przygotuj logo, teksty i zdjęcia (albo listę, czego brakuje).', 'Dostęp do panelu domeny i hostingu, jeśli już je masz.'], note: 'Do projektu strony nie musisz nic instalować – pracujemy na naszych narzędziach i wysyłamy podgląd.' })),
+  ...['strike-auto-start', 'strike-auto-flow', 'strike-auto-system', 'strike-smart-automation'].map((id) => ({ id, need: [], during: [], prep: ['Lista procesów do automatyzacji i przykładowe pliki (np. eksport z arkusza).', 'Dostęp do kont, które mają się łączyć (np. Google Workspace) – nadasz go w trakcie wdrożenia.'], note: 'Narzędzia dobieramy do Twoich systemów – nic nie instalujesz przed rozmową startową.' })),
 ];
 const GENERAL_PREP = ['Zrób kopię ważnych danych (zdjęcia, dokumenty, zapisy gier).', 'Zamknij zbędne programy i podłącz komputer do stabilnego internetu (najlepiej kablem).', 'ID i hasło jednorazowe RustDesk podawaj dopiero w umówionym terminie, osobie z naszego zespołu.', 'Miej pod ręką konto Windows z uprawnieniami administratora i klucz BitLocker, jeśli go używasz.', 'Nigdy nie podawaj nam haseł do banku ani kont prywatnych.'];
 let progSel = '';
@@ -1536,7 +1607,7 @@ const advSvc = (id) => svcOf(id) || (SVC[id] ? { id, name: nameOf(id), price_gro
 const advName = (id) => advSvc(id)?.name || nameOf(id);
 const advPrice = (id) => { const s = advSvc(id); return s ? `od ${zl(s.price_grosze)}${SVC[id]?.fromLabel ? ' ' + SVC[id].fromLabel : ''}` : ''; };
 const advSvcLi = (id, why) => h('li', {}, h('b', { text: advName(id) }), ` – ${advPrice(id)}${why ? `. ${why}` : ''}`);
-const advLink = (text, to) => h('a', { href: to, text, onclick: (e) => { e.preventDefault(); navigate(to); if (matchMedia('(max-width: 640px)').matches) advClose(); } });
+const advLink = (text, to) => h('a', { href: to, text, onclick: (e) => { e.preventDefault(); const [path, q] = to.split('?'); navigate(path); const k = new URLSearchParams(q || '').get('kategoria'); if (k) { showCat(k); $('#svcCats')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } if (matchMedia('(max-width: 640px)').matches) advClose(); } });
 const advLegal = (text, key) => h('button', { type: 'button', class: 'link', text, onclick: () => openLegal(key) });
 const advP = (...k) => h('p', {}, ...k);
 const advUl = (...li) => h('ul', {}, ...li);
@@ -1574,12 +1645,12 @@ const ADV_INTENTS = [
       advUl(...SETS.map((m) => h('li', {}, h('b', { text: m.name }), ` – ${m.kicker}, ok. ${zl(m.parts_grosze)}`))),
       advP('Napisz swój budżet, np. „komputer za 7000”, albo ', advLink('zobacz zestawy →', '/zestawy'))] },
   { id: 'web', k: ['strona', 'strony', 'www', 'witryna', 'sklep internetowy', 'automatyzacja', 'automatyzacje', 'firma', 'firmy', 'crm', 'arkusz', 'n8n', 'make'], o: ['prices', 'contact'],
-    a: () => [advP('Dla firm:'), advUl(advSvcLi('strike-business-web', 'Projekt i wykonanie strony'), advSvcLi('strike-smart-automation', 'Automatyzacja powtarzalnych zadań')), advP('Zaczynamy od rozmowy startowej, na której ustalamy zakres i termin. ', advLink('Umów rozmowę →', '/rezerwacja'))] },
+    a: () => [advP('Dla firm:'), advUl(advSvcLi('strike-web-start', 'Wizytówka na jednej stronie'), advSvcLi('strike-web-business', 'Strona firmowa do 6 podstron'), advSvcLi('strike-web-shop', 'Sklep internetowy'), advSvcLi('strike-auto-start', 'Jedna automatyzacja'), advSvcLi('strike-auto-flow', 'Pakiet do 3 procesów')), advP('Najpierw bezpłatna wycena na piśmie, potem płatność z góry. ', advLink('Zobacz wszystkie pakiety →', '/uslugi?kategoria=solutions'))] },
   { id: 'remote', k: ['zdalnie', 'zdalna', 'zdalnej', 'anydesk', 'sesja', 'jak to wyglada', 'przygotowac', 'przygotowanie', 'programy', 'na odleglosc'], o: ['optim', 'when', 'pay'],
     a: () => [advP('Optymalizacje robimy zdalnie przez RustDesk (darmowy, szyfrowany) – widzisz wszystko na swoim ekranie i możesz przerwać w każdej chwili. Przed zmianami tworzymy punkt przywracania, a każdą zmianę zapisujemy, więc da się ją cofnąć.'),
       advP('Co zainstalować i jak się przygotować do konkretnej usługi, znajdziesz po zalogowaniu: ', advLink('Strefa Klienta → Programy →', '/konto')), advP('Nigdy nie podawaj nam haseł do banku ani kont prywatnych.')] },
   { id: 'pay', k: ['platnosc', 'platnosci', 'zaplacic', 'placic', 'blik', 'karta', 'karte', 'przelew', 'przelewy24', 'stripe', 'zaliczka', 'zaliczke', 'z gory', 'raty'], o: ['when', 'returns', 'refs'],
-    a: () => [advP('Płacisz online 100% z góry przy rezerwacji – kartą, BLIK-iem albo Przelewy24 (zależnie od dostępności), przez operatora Stripe. Nie pobieramy zaliczek.'), advP('Przy komputerze na zamówienie najpierw dostajesz bezpłatną wycenę mailem, a płacisz dopiero po jej akceptacji.')] },
+    a: () => [advP('Płacisz online 100% z góry przy rezerwacji – kartą, BLIK-iem albo Przelewy24 (zależnie od dostępności), przez operatora Stripe. Nie pobieramy zaliczek. Gotówki nie przyjmujemy.'), advP('Strony i automatyzacje opłacasz przelewem po akceptacji wyceny – dostajesz rachunek z numerem konta i gotowym tytułem przelewu (widać go też w Strefie Klienta).'), advP('Przy komputerze na zamówienie najpierw dostajesz bezpłatną wycenę mailem, a płacisz dopiero po jej akceptacji.')] },
   { id: 'when', k: ['termin', 'terminy', 'kiedy', 'godziny', 'otwarte', 'czynne', 'kalendarz', 'dzisiaj', 'jutro', 'weekend', 'sobota', 'express', 'ekspres', 'pilne', 'szybko'], o: ['pay', 'remote', 'prices'],
     a: () => [advP('Pracujemy od poniedziałku do soboty, 10:00–20:00. Wolne godziny widzisz w kalendarzu przy rezerwacji, a termin trzymamy dla Ciebie 35 minut na płatność.'),
       advP('Express (+50 zł) przy usługach zdalnych skraca minimalny czas do terminu do 2 godzin – o ile są wolne godziny.'), advP(advLink('Wybierz termin →', '/rezerwacja'))] },
@@ -2205,7 +2276,7 @@ const LEGAL = {
     `<h4>§1 Sprzedawca i definicje</h4><p>Serwis internetowy Strike Tech Lab prowadzi ${SELLER} („Sprzedawca”). <b>Klient</b> – osoba lub firma korzystająca z serwisu. <b>Konsument</b> – osoba fizyczna zawierająca umowę niezwiązaną bezpośrednio z jej działalnością gospodarczą lub zawodową. <b>Przedsiębiorca na prawach konsumenta</b> – osoba fizyczna prowadząca jednoosobową działalność, dla której umowa nie ma charakteru zawodowego (art. 38a ustawy o prawach konsumenta); ma ona prawa konsumenta opisane w §7 i §8.</p>` +
     '<h4>§2 Usługi elektroniczne i wymagania techniczne</h4><p>Bezpłatnie udostępniamy: konto w Strefie Klienta, formularz rezerwacji, formularz kontaktowy i program poleceń. Potrzebujesz urządzenia z internetem, aktualnej przeglądarki z włączonym JavaScriptem i aktywnego adresu e-mail. Zakazane jest przesyłanie treści bezprawnych. Umowę o konto zawieramy na czas nieokreślony – możesz ją rozwiązać w każdej chwili, usuwając konto w Strefie Klienta. Możemy ją wypowiedzieć z 14-dniowym wyprzedzeniem z ważnych powodów (np. naruszenie regulaminu), informując o tym mailem. Umowa dotycząca formularza kontaktowego kończy się z chwilą wysłania wiadomości.</p>' +
     '<h4>§3 Zamówienie i zawarcie umowy</h4><p>Zamówienie może złożyć osoba pełnoletnia lub – w imieniu firmy – osoba do tego upoważniona. Do zamówienia potrzebne jest konto. Wybierasz usługę (kilka usług możesz połączyć w jednym terminie i jednej płatności), termin, podajesz dane i klikasz „Zamawiam z obowiązkiem zapłaty”. Termin jest zarezerwowany przez 35 minut na płatność; potem rezerwacja wygasa. Umowa zostaje zawarta z chwilą zaksięgowania płatności całej ceny. Potwierdzenie zamówienia z najważniejszymi informacjami wysyłamy e-mailem.</p>' +
-    '<h4>§4 Ceny i płatności</h4><p>Ceny są cenami końcowymi w złotych polskich. Płacisz online przez operatora Stripe (karta, BLIK lub Przelewy24 – zależnie od dostępności). Za wszystkie usługi i komputery na zamówienie płacisz 100% ceny z góry, przed rozpoczęciem prac (przy komputerze na zamówienie – po akceptacji wyceny). Nie pobieramy zaliczek. Sprzedawca korzysta ze zwolnienia podmiotowego z VAT (art. 113 ust. 1 ustawy o VAT), więc ceny nie zawierają VAT. Na Twoje żądanie wystawiamy rachunek, a jeśli o to poprosisz – fakturę bez VAT. Składając zamówienie, zgadzasz się na otrzymywanie rachunków i faktur w formie elektronicznej (PDF) na adres e-mail konta; zawsze możesz poprosić o wersję papierową. Cena „od” to cena zakresu podstawowego opisanego przy usłudze. Dodatkowe prace lub części wykonujemy wyłącznie po Twojej akceptacji wyceny – bez akceptacji płacisz tylko za zakres podstawowy.</p>' +
+    '<h4>§4 Ceny i płatności</h4><p>Ceny są cenami końcowymi w złotych polskich. Płacisz online przez operatora Stripe (karta, BLIK lub Przelewy24 – zależnie od dostępności). Za projekty (strony, automatyzacje) i zlecenia przyjęte poza stroną płacisz przelewem na rachunek bankowy wskazany na rachunku – w tytule przelewu podajesz numer rachunku i nazwę usługi; BLIK na telefon przyjmujemy wyłącznie przy osobistym oddaniu sprzętu. Nie przyjmujemy płatności gotówką. Za wszystkie usługi i komputery na zamówienie płacisz 100% ceny z góry, przed rozpoczęciem prac (przy komputerze na zamówienie – po akceptacji wyceny). Nie pobieramy zaliczek. Sprzedawca korzysta ze zwolnienia podmiotowego z VAT (art. 113 ust. 1 ustawy o VAT), więc ceny nie zawierają VAT. Na Twoje żądanie wystawiamy rachunek, a jeśli o to poprosisz – fakturę bez VAT. Składając zamówienie, zgadzasz się na otrzymywanie rachunków i faktur w formie elektronicznej (PDF) na adres e-mail konta; zawsze możesz poprosić o wersję papierową. Cena „od” to cena zakresu podstawowego opisanego przy usłudze. Dodatkowe prace lub części wykonujemy wyłącznie po Twojej akceptacji wyceny – bez akceptacji płacisz tylko za zakres podstawowy.</p>' +
     '<h4>§5 Realizacja usług</h4><p>Usługi zdalne wykonujemy w zarezerwowanym terminie przez program RustDesk. Zapewniasz dostęp do komputera z uprawnieniami administratora i możesz przerwać sesję w każdej chwili. Usługi warsztatowe wymagają dostarczenia sprzętu osobiście lub kurierem; koszt wysyłki do nas ponosisz Ty, chyba że ustalimy inaczej. Opcja Express (+50 zł) dotyczy wybranych usług zdalnych i skraca minimalny czas do terminu do 2 godzin, o ile są wolne godziny. Prace nieodwracalne – aktualizację BIOS-u, delid, nałożenie ciekłego metalu – wykonujemy wyłącznie po Twojej wyraźnej zgodzie wyrażonej mailowo, po informacji o ryzyku i możliwej utracie gwarancji producenta. Jeśli nie możemy wykonać usługi w terminie, zaproponujemy nowy termin, a jeśli go nie przyjmiesz – zwrócimy całą wpłatę. Zmianę terminu z Twojej strony ustalamy mailowo.</p>' +
     SETS_TERMS +
     '<h4>§7 Prawo odstąpienia od umowy</h4><p>Konsument i przedsiębiorca na prawach konsumenta mogą odstąpić od umowy zawartej na odległość w terminie 14 dni bez podania przyczyny – zasady opisuje <button type="button" class="link" data-legal="withdrawal">pouczenie o odstąpieniu od umowy</button>. Prawo to nie przysługuje w przypadkach z art. 38 ustawy o prawach konsumenta, w szczególności gdy usługa została w pełni wykonana za Twoją wyraźną zgodą, a przed jej rozpoczęciem wiedziałeś, że po wykonaniu usługi utracisz prawo odstąpienia. O ewentualnym wyłączeniu prawa odstąpienia dla zestawu składanego według Twojej indywidualnej specyfikacji informujemy w ofercie, przed zawarciem umowy.</p>' +
