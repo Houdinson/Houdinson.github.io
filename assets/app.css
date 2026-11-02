@@ -843,3 +843,15 @@ html.intro-on,html.intro-on body{overflow:hidden}
 .chat-from.team{display:flex;align-items:center;gap:6px}
 .chat-from.team em{font-style:normal;font-weight:700;color:var(--muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.05em}
 @media(max-width:380px){.team-card{padding:7px 8px;gap:8px}.team-av{width:36px;height:36px}}
+
+/* ---------- Panel admina: Cennik (v23) ---------- */
+.pr-table td{vertical-align:middle}
+.pr-cell{display:flex;align-items:center;gap:8px}
+.pr-in{width:120px;padding:8px 10px;font-weight:700;text-align:right}
+.pr-table small{display:block;margin-top:4px}
+.pr-off td:first-child{opacity:.5}
+.pr-bar{position:sticky;bottom:12px;z-index:5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end;padding:12px 14px;border:1px solid rgba(255,187,0,.35);border-radius:14px;background:rgba(14,14,15,.95);backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.pr-bar .muted{margin-right:auto}
+.pr-addons{display:grid;gap:8px}
+.pr-addon{display:grid;grid-template-columns:minmax(0,1fr) 170px auto auto;gap:8px;align-items:center}
+@media(max-width:640px){.pr-addon{grid-template-columns:1fr auto auto}.pr-addon input:first-child{grid-column:1/-1}.pr-in{width:100px}}

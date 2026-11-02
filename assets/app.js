@@ -151,7 +151,7 @@ const SOL_GROUPS = [
   { id: 'web', name: 'Strony internetowe', tagline: 'Od wizytówki po sklep. Każda strona jest szybka, działa na telefonie i należy do Ciebie: domena i hosting są na Twoim koncie.' },
   { id: 'auto', name: 'Automatyzacje', tagline: 'Łączymy narzędzia, których już używasz, żeby powtarzalne zadania działy się same.' },
 ];
-const SOL_ADDONS = [
+let SOL_ADDONS = [
   ['Dodatkowa podstrona', 'od 190 zł'],
   ['Dodatkowa runda poprawek', '150 zł'],
   ['Dodatkowa wersja językowa', 'od 390 zł'],
@@ -543,6 +543,7 @@ async function loadCatalog() {
   }
   for (const r of p.data || []) cat.info.set(r.service_id, r);
   cat.live = true;
+  if (cat.hasV2) { const a = await sb.from('price_addons').select('label,price_text').order('sort'); if (!a.error && a.data?.length) SOL_ADDONS = a.data.map((x) => [x.label, x.price_text]); }   // „Dodatki i opieka” z panelu Cennik (v23)
   renderCatalog();
 }
 function payText(s) { return s.payment_percent < 100 ? `Zaliczka ${s.payment_percent}% online, reszta ${s.kind === 'ZESTAW_PC' ? 'przy odbiorze' : 'wg etapów'}` : 'Płatność online z góry'; }
@@ -1344,9 +1345,10 @@ function renderPanel() {
   $('#adminTabBtn').classList.toggle('hidden', !isAdmin);
   $('#guidesTabBtn').classList.toggle('hidden', !isAdmin);
   $('#financeTabBtn').classList.toggle('hidden', !isAdmin);
+  $('#pricesTabBtn')?.classList.toggle('hidden', !isAdmin);
   // Administrator nie składa zleceń sam sobie – zamiast „Zleceń” od razu widzi „Administrację”
   $('#panelTabs [data-tab=orders]').classList.toggle('hidden', isAdmin);
-  if (!isAdmin && ['admin', 'guides', 'finance'].includes(activeTab)) activeTab = 'orders';
+  if (!isAdmin && ['admin', 'guides', 'finance', 'prices'].includes(activeTab)) activeTab = 'orders';
   if (isAdmin && activeTab === 'orders') activeTab = 'admin';
   showTab(activeTab);
 }
@@ -1360,6 +1362,7 @@ function showTab(t) {
   if (t === 'programs') renderPrograms();
   if (t === 'guides') withAdmin(() => loadGuides());
   if (t === 'finance') withAdmin(() => loadFinance());
+  if (t === 'prices') withAdmin(() => loadPrices());
 }
 const ORDER_COLS = 'id,order_number,service_id,service_name,kind,status,express,base_grosze,discount_grosze,express_fee_grosze,total_grosze,amount_due_grosze,discount_code,referral_code_used,spec,handover,slot_conflict,created_at,paid_at,cancel_reason,calendar_slots(starts_at,ends_at,status,hold_expires_at),order_events(status,note,at),order_results(phase,metrics)';
 const ORDER_COLS_V1 = 'id,order_number,service_id,service_name,kind,status,base_grosze,discount_grosze,total_grosze,amount_due_grosze,referral_code_used,slot_conflict,created_at,paid_at,cancel_reason,calendar_slots(starts_at,ends_at,status,hold_expires_at)';
@@ -2089,7 +2092,8 @@ function chatInboxView(focus) {
   const q = h('input', { class: 'input', type: 'search', placeholder: 'Szukaj klienta: imię, e-mail, telefon, Discord', 'aria-label': 'Szukaj klienta', value: CHAT.q,
     oninput: debounce((e) => { CHAT.q = e.target.value.trim(); chatInboxLoad(); }, 300) });
   CHAT.inboxBox = h('div', { class: 'chat-inbox' }, h('p', { class: 'muted small', style: 'padding:14px', text: 'Ładuję rozmowy…' }));
-  CHAT.view.replaceChildren(h('div', { class: 'chat-search' }, q), CHAT.inboxBox);
+  teamLoad();
+  CHAT.view.replaceChildren(chatTeamBar(), h('div', { class: 'chat-search' }, q), CHAT.inboxBox);   // zespół widoczny też dla admina – tak samo jak u klienta
   if (focus && !matchMedia('(pointer: coarse)').matches) setTimeout(() => q.focus(), 30);
   chatInboxPaint(); chatInboxLoad();
 }

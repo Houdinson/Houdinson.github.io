@@ -823,3 +823,110 @@ function manualOrderCard() {
     h('div', { class: 'row2' }, h('div', { class: 'field' }, line1), h('div', { class: 'row2' }, h('div', { class: 'field' }, postal), h('div', { class: 'field' }, city))),
     h('div', { class: 'field' }, note), btn, out);
 }
+
+/* ------------------------------------------------------------------ CENNIK: edycja cen bez zmian w kodzie (migracja v23)
+   Ceny usług są w bazie (services.price_grosze) – strona i płatności biorą je stamtąd, więc zmiana działa od razu.
+   Historia cen (price_history) służy do informacji Omnibus: po obniżce strona sama pokazuje najniższą cenę z 30 dni. */
+const pr = { list: null, addons: null, draft: new Map(), loading: false, err: '' };
+const parseZl = (v) => { const n = Number(String(v).replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) : NaN; };
+const zlInput = (g) => (g / 100).toFixed(g % 100 ? 2 : 0).replace('.', ',');
+async function loadPrices(force) {
+  const box = $('#pricesOut'); if (!box || pr.loading) return;
+  if (pr.list && !force) { renderPrices(); return; }
+  pr.loading = true; if (!pr.list) box.replaceChildren(h('p', { class: 'muted', text: 'Ładuję cennik…' }));
+  const [l, a] = await Promise.all([sb.rpc('admin_price_list'), sb.from('price_addons').select('label,price_text').order('sort')]);
+  pr.loading = false;
+  if (l.error) { pr.err = /admin_price_list|schema cache|does not exist/i.test(l.error.message) ? 'Edycja cennika wymaga migracji v23 – uruchom: npx supabase db push --linked' : l.error.message; renderPrices(); return; }
+  pr.err = ''; pr.list = l.data || []; pr.addons = a.error ? SOL_ADDONS.map(([label, price_text]) => ({ label, price_text })) : (a.data || []);
+  pr.draft.clear(); renderPrices();
+}
+function priceChanged(s) { const d = pr.draft.get(s.id); return !!d && ((d.price !== undefined && d.price !== s.price_grosze) || (d.active !== undefined && d.active !== s.active)); }
+function renderPrices() {
+  const box = $('#pricesOut'); if (!box) return;
+  if (pr.err) { box.replaceChildren(h('div', { class: 'banner err', text: pr.err })); return; }
+  if (!pr.list) return;
+  const changed = pr.list.filter(priceChanged);
+  const saveBtn = h('button', { class: 'btn btn-gold btn-sm', type: 'button', disabled: !changed.length, text: changed.length ? `Zapisz zmiany (${changed.length})` : 'Brak zmian', onclick: (e) => savePrices(e.currentTarget) });
+  const undoBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', disabled: !changed.length, text: 'Cofnij', onclick: () => { pr.draft.clear(); renderPrices(); } });
+  const row = (s) => {
+    const d = pr.draft.get(s.id) || {};
+    const price = h('input', { class: 'input pr-in', inputmode: 'decimal', value: d.priceText ?? zlInput(s.price_grosze), 'aria-label': `Cena: ${s.name}` });
+    const err = h('span', { class: 'err' });
+    price.addEventListener('input', () => {
+      const g = parseZl(price.value), ok = g >= 100 && g <= 10000000;
+      err.textContent = ok ? '' : 'Od 1 do 100 000 zł'; price.setAttribute('aria-invalid', String(!ok));
+      pr.draft.set(s.id, { ...pr.draft.get(s.id), priceText: price.value, price: ok ? g : undefined, bad: !ok });
+      refreshBar();
+    });
+    const vis = h('input', { type: 'checkbox', checked: d.active ?? s.active, 'aria-label': `Widoczna na stronie: ${s.name}`, onchange: (e) => { pr.draft.set(s.id, { ...pr.draft.get(s.id), active: e.target.checked }); refreshBar(); tr.classList.toggle('pr-off', !e.target.checked); } });
+    const diff = d.price !== undefined && d.price !== s.price_grosze ? h('small', { class: d.price < s.price_grosze ? 'up' : 'muted', text: `${d.price < s.price_grosze ? 'obniżka' : 'podwyżka'} z ${zl(s.price_grosze)}` }) : null;
+    const tr = h('tr', { class: `${(d.active ?? s.active) ? '' : 'pr-off'}` },
+      h('td', {}, h('b', { text: s.name }), h('br'), h('span', { class: 'muted small', text: MODE_PILL[s.mode] || '' })),
+      h('td', {}, h('div', { class: 'pr-cell' }, price, h('span', { class: 'muted', text: 'zł' })), err, diff),
+      h('td', {}, h('label', { class: 'check', style: 'margin:0' }, vis, h('span', { text: 'widoczna' }))),
+      h('td', { class: 'muted small', text: s.changed_at ? fmt(s.changed_at, { dateStyle: 'medium' }) : '–' }));
+    return tr;
+  };
+  const groups = [...CATS.map((c) => ({ id: c.id, name: c.name })), { id: null, name: 'Inne' }]
+    .map((g) => ({ ...g, items: pr.list.filter((s) => g.id ? s.category === g.id : !CATS.some((c) => c.id === s.category)) })).filter((g) => g.items.length);
+  const bar = h('div', { class: 'pr-bar' }, h('span', { class: 'muted small', text: 'Zmiany są widoczne na stronie od razu po zapisaniu.' }), undoBtn, saveBtn);
+  function refreshBar() {
+    const n = pr.list.filter(priceChanged).length, bad = [...pr.draft.values()].some((d) => d.bad);
+    saveBtn.disabled = !n || bad; undoBtn.disabled = !n && !bad;
+    saveBtn.textContent = bad ? 'Popraw błędną cenę' : n ? `Zapisz zmiany (${n})` : 'Brak zmian';
+  }
+  box.replaceChildren(
+    h('div', { class: 'card hud', style: 'margin-bottom:18px' }, h('h3', { text: 'Cennik usług' }),
+      h('p', { class: 'muted', style: 'margin:0', text: 'Wpisz nową cenę i kliknij „Zapisz zmiany”. Ceny są końcowe (bez VAT). Odznacz „widoczna”, żeby ukryć usługę na stronie i w rezerwacji – złożone zamówienia zostają bez zmian. Po obniżce strona sama pokaże najniższą cenę z ostatnich 30 dni (wymóg Omnibus).' })),
+    ...groups.map((g) => h('div', { class: 'card', style: 'margin-bottom:18px' }, h('h3', { text: g.name }),
+      h('div', { class: 'scroll-x' }, h('table', { class: 'adm pr-table' },
+        h('thead', {}, h('tr', {}, ['Usługa', 'Cena', 'Na stronie', 'Ostatnia zmiana'].map((t) => h('th', { text: t })))),
+        h('tbody', {}, g.items.map(row)))))),
+    bar, addonsCard(),
+    h('p', { class: 'note', style: 'margin-top:14px', text: 'Poza tym ekranem: dopłata Express (+50 zł) jest liczona w bazie, a ceny części w zestawach PC pochodzą z list x-kom – napisz, jeśli też mają być edytowalne.' }));
+  refreshBar();
+}
+async function savePrices(btn) {
+  const list = pr.list.filter(priceChanged); if (!list.length) return;
+  const hides = list.filter((s) => pr.draft.get(s.id).active === false && s.active);
+  if (hides.length && !confirm(`Ukryć na stronie: ${hides.map((s) => s.name).join(', ')}?`)) return;
+  setBusy(btn, true, 'Zapisuję…');
+  let ok = 0; const errs = [];
+  for (const s of list) {
+    const d = pr.draft.get(s.id);
+    const { error } = await sb.rpc('admin_set_service', { p_id: s.id, p_price_grosze: d.price !== undefined && d.price !== s.price_grosze ? d.price : null, p_active: d.active !== undefined && d.active !== s.active ? d.active : null });
+    if (error) errs.push(`${s.name}: ${error.message}`); else ok++;
+  }
+  setBusy(btn, false);
+  if (ok) toast('ok', `Zapisano ${ok} ${ok === 1 ? 'zmianę' : ok < 5 ? 'zmiany' : 'zmian'}. Strona pokazuje już nowe ceny.`);
+  if (errs.length) toast('err', errs.join(' · '), 12000);
+  await loadPrices(true);
+  if (typeof loadCatalog === 'function') loadCatalog();     // odśwież ceny na stronie w tej karcie
+}
+function addonsCard() {
+  const rows = h('div', { class: 'pr-addons' });
+  const msg = h('p', { class: 'form-msg' });
+  const items = pr.addons.map((x) => ({ ...x }));
+  const paint = () => rows.replaceChildren(...items.map((it, i) => h('div', { class: 'pr-addon' },
+    h('input', { class: 'input', value: it.label, maxlength: 120, placeholder: 'Nazwa, np. Dodatkowa podstrona', 'aria-label': `Dodatek ${i + 1}: nazwa`, oninput: (e) => { it.label = e.target.value; } }),
+    h('input', { class: 'input', value: it.price_text, maxlength: 40, placeholder: 'np. od 190 zł', 'aria-label': `Dodatek ${i + 1}: cena`, oninput: (e) => { it.price_text = e.target.value; } }),
+    h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': `Przesuń wyżej: ${it.label}`, text: '↑', disabled: !i, onclick: () => { [items[i - 1], items[i]] = [items[i], items[i - 1]]; paint(); } }),
+    h('button', { class: 'btn btn-danger btn-sm', type: 'button', 'aria-label': `Usuń: ${it.label}`, text: '×', onclick: () => { items.splice(i, 1); paint(); } }))));
+  paint();
+  return h('div', { class: 'card', style: 'margin-top:18px' }, h('h3', { text: 'Dodatki i opieka (strony i automatyzacje)' }),
+    h('p', { class: 'muted small', text: 'Lista pod pakietami stron. Cenę wpisz tak, jak ma się wyświetlać, np. „od 190 zł” albo „99 zł / mies.”.' }),
+    rows,
+    h('div', { class: 'cta-row', style: 'margin-top:10px' },
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '+ Dodaj pozycję', onclick: () => { items.push({ label: '', price_text: '' }); paint(); rows.lastChild?.querySelector('input')?.focus(); } }),
+      h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Zapisz dodatki', onclick: async (e) => {
+        const clean = items.map((x) => ({ label: x.label.trim(), price_text: x.price_text.trim() })).filter((x) => x.label || x.price_text);
+        if (clean.some((x) => x.label.length < 2 || !x.price_text)) { msg.className = 'form-msg err'; msg.textContent = 'Każda pozycja potrzebuje nazwy i ceny.'; return; }
+        const b = e.currentTarget; setBusy(b, true, 'Zapisuję…');
+        const { error } = await sb.rpc('admin_save_addons', { p_items: clean });
+        setBusy(b, false, 'Zapisz dodatki');
+        if (error) { msg.className = 'form-msg err'; msg.textContent = error.message; return; }
+        pr.addons = clean; SOL_ADDONS = clean.map((x) => [x.label, x.price_text]);
+        msg.className = 'form-msg ok'; msg.textContent = 'Zapisano – lista na stronie jest już zaktualizowana.';
+        if (typeof renderCatalog === 'function') renderCatalog();
+      } })), msg);
+}
