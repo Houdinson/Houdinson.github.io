@@ -6,6 +6,9 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
   Cross-Origin-Opener-Policy: same-origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Permitted-Cross-Domain-Policies: none
+  Cross-Origin-Resource-Policy: same-site
+  X-DNS-Prefetch-Control: off
 /media/*
   Cache-Control: public, max-age=0, must-revalidate
 /fonts/*

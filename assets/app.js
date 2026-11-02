@@ -1863,6 +1863,52 @@ const chatShort = (iso) => { const d = new Date(iso); return (Date.now() - d) < 
 const chatErr = (e) => { const m = e?.message || String(e); return /function .*does not exist|Could not find the function|schema cache/i.test(m) ? 'Czat nie jest jeszcze włączony w bazie (migracja v17).' : /JWT|token/i.test(m) ? 'Sesja wygasła – odśwież stronę.' : m; };
 const discordUrl = (id) => (/^\d{5,25}$/.test(String(id || '')) ? `https://discord.com/users/${id}` : '');
 
+/* ------------------------------------------------------------------ zespół na czacie: Mikołaj i Dawid
+   Okienka są widoczne dla każdego klienta (także przed zalogowaniem). Dane z tabeli team_members (migracja v22),
+   a gdy jej jeszcze nie ma – z listy poniżej. Przy odpowiedzi na czacie widać, kto z zespołu odpisał. */
+const TEAM_DEFAULT = [
+  { slug: 'mikolaj', display_name: 'Mikołaj', role_label: 'Administrator', photo: 'media/zespol/mikolaj-avatar.webp', user_id: null },
+  { slug: 'dawid', display_name: 'Dawid', role_label: 'Administrator', photo: null, user_id: null },
+];
+const TEAM = { list: TEAM_DEFAULT.map((x) => ({ ...x })), loaded: false, tried: 0 };
+async function teamLoad() {
+  if (!sb || TEAM.loaded || Date.now() - TEAM.tried < 60000) return;
+  TEAM.tried = Date.now();
+  const { data, error } = await sb.from('team_members').select('user_id,slug,display_name,role_label,photo,sort').eq('active', true).order('sort');
+  if (error || !data?.length) return;                    // brak migracji v22 albo pusta tabela – zostają dane domyślne
+  TEAM.loaded = true;
+  const bySlug = new Map(TEAM_DEFAULT.map((x) => [x.slug, x]));
+  TEAM.list = data.map((r) => ({ ...(bySlug.get(r.slug) || {}), ...r, photo: r.photo || bySlug.get(r.slug)?.photo || null }));
+  $$('.chat-team').forEach((el) => el.replaceWith(chatTeamBar()));
+  if (CHAT.list?.isConnected && CHAT.msgs.length) chatPaint();
+}
+const teamBySender = (id) => (id && TEAM.list.find((t) => t.user_id === id)) || null;
+/** Godziny pracy: pn–sb 10:00–20:00 (czas polski). */
+function teamOnline() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'short', hour: '2-digit', hour12: false }).formatToParts(new Date()).map((x) => [x.type, x.value]));
+  return p.weekday !== 'Sun' && +p.hour >= 10 && +p.hour < 20;
+}
+function teamAvatar(t, cls = 'team-av') {
+  const el = h('span', { class: cls, 'aria-hidden': 'true' });
+  if (t?.photo) {
+    const img = h('img', { src: mediaUrl(t.photo.replace(/^media\//, '')), alt: '', loading: 'lazy', decoding: 'async', width: 64, height: 64 });
+    img.addEventListener('error', () => { img.remove(); el.textContent = (t.display_name || '?')[0]; });
+    el.append(img);
+  } else el.textContent = (t?.display_name || 'S')[0];
+  return el;
+}
+function chatTeamBar() {
+  const on = teamOnline();
+  return h('div', { class: 'chat-team', role: 'list', 'aria-label': 'Nasz zespół na czacie' },
+    TEAM.list.slice(0, 2).map((t) => h('div', { class: 'team-card', role: 'listitem' },
+      h('span', { class: 'team-ph' }, teamAvatar(t), h('i', { class: `team-dot${on ? ' on' : ''}`, 'aria-hidden': 'true' })),
+      h('span', { class: 'team-txt' },
+        h('b', { text: t.display_name }),
+        h('span', { class: 'team-role', text: t.role_label || 'Administrator' }),
+        h('small', { text: on ? 'Dostępny teraz' : 'Odpisze od 10:00' })))));
+}
+setInterval(() => { if (document.visibilityState === 'visible') $$('.chat-team').forEach((el) => el.replaceWith(chatTeamBar())); }, 300000);
+
 function chatMount() {
   if (CHAT.mounted || !ADV.panel) return; CHAT.mounted = true;
   const head = ADV.panel.querySelector('.adv-head'), form = ADV.panel.querySelector('.adv-form');
@@ -1919,8 +1965,9 @@ function chatRender(focus = false) {
   if (!CHAT.view || CHAT.view.classList.contains('hidden')) return;
   if (!sb) { CHAT.view.replaceChildren(chatEmpty(h('p', { text: 'Czat jest chwilowo niedostępny. Napisz przez formularz kontaktowy.' }))); return; }
   if (!session) {
-    CHAT.view.replaceChildren(chatEmpty(
-      h('div', { class: 'adv-avatar', html: ICO.chat }), h('b', { text: 'Napisz do nas na czacie' }),
+    teamLoad();
+    CHAT.view.replaceChildren(chatTeamBar(), chatEmpty(
+      h('b', { text: 'Napisz do nas na czacie' }),
       h('span', { text: 'Wiadomości są prywatne – widzisz je tylko Ty i nasz zespół. Żeby pisać, zaloguj się albo załóż konto (wystarczy Google lub Discord).' }),
       h('button', { type: 'button', class: 'btn btn-gold btn-sm', text: 'Zaloguj się, żeby napisać', onclick: () => askLogin('chat', { title: 'Zaloguj się, żeby napisać', text: 'Rozmowa jest prywatna i zostaje na Twoim koncie – odpowiemy, nawet gdy zamkniesz stronę.' }) }),
       h('button', { type: 'button', class: 'link', text: 'Mam szybkie pytanie – zapytam asystenta', onclick: () => chatSetTab('bot') })));
@@ -1960,6 +2007,7 @@ function chatThreadView(focus) {
     if (c.email) acts.append(h('a', { class: 'btn btn-ghost', href: `mailto:${c.email}`, text: 'E-mail' }));
     parts.push(acts);
   }
+  if (!admin) { parts.push(chatTeamBar()); teamLoad(); }
   parts.push(CHAT.list, comp.form);
   if (!admin) parts.push(h('p', { class: 'chat-note', text: 'Odpowiadamy zwykle tego samego dnia. Wiadomości widzisz tylko Ty i nasz zespół.' }));
   CHAT.view.replaceChildren(...parts);
@@ -1974,7 +2022,7 @@ function chatPaint() {
   box.replaceChildren();
   if (!CHAT.msgs.length) {
     box.append(chatEmpty(isAdmin ? h('span', { text: 'Brak wiadomości. Napisz pierwszą – klient zobaczy ją w okienku czatu i w Strefie Klienta.' })
-      : [h('b', { text: 'Cześć! 👋' }), h('span', { text: 'Opisz sprawę – sprzęt, objawy, termin. Odpowie ktoś z naszego zespołu.' })]));
+      : [h('b', { text: 'Cześć! 👋' }), h('span', { text: `Opisz sprawę – sprzęt, objawy, termin. Odpowie ${TEAM.list.map((t) => t.display_name).join(' albo ')}.` })]));
     return;
   }
   let day = '';
@@ -1986,14 +2034,19 @@ function chatPaint() {
 }
 function chatBubble(m) {
   const mine = isAdmin ? !m.from_customer : m.from_customer;
-  return h('div', { class: `adv-msg ${mine ? 'me' : 'bot'}`, 'data-id': m.id },
-    !mine ? h('span', { class: 'chat-from', text: isAdmin ? (CHAT.sel?.full_name || 'Klient') : 'Strike Tech Lab' }) : null,
+  const t = !m.from_customer ? teamBySender(m.sender_id) : null;
+  let from = null;
+  if (!mine) from = isAdmin ? h('span', { class: 'chat-from', text: CHAT.sel?.full_name || 'Klient' })
+    : h('span', { class: 'chat-from team' }, t ? teamAvatar(t, 'team-av xs') : null, h('span', { text: t ? t.display_name : 'Strike Tech Lab' }), t ? h('em', { text: t.role_label || 'Administrator' }) : null);
+  else if (isAdmin && m.sender_id && m.sender_id !== session?.user?.id) from = h('span', { class: 'chat-from', text: t ? `${t.display_name} (zespół)` : 'Zespół' });   // odpowiedź drugiego administratora
+  const bubble = h('div', { class: `adv-msg ${mine ? 'me' : 'bot'}`, 'data-id': m.id }, from,
     h('span', { class: 'chat-txt', text: m.body }), h('time', { class: 'chat-time', datetime: m.created_at, text: chatTime(m.created_at) }));
+  return bubble;
 }
 async function chatLoad(customerId) {
   CHAT.list?.replaceChildren(h('p', { class: 'muted small', style: 'margin:auto', text: 'Ładuję wiadomości…' }));
   const { data, error } = await sb.from('support_messages')
-    .select('id,body,from_customer,created_at,conversation_id,support_conversations!inner(customer_id)')
+    .select('id,body,from_customer,sender_id,created_at,conversation_id,support_conversations!inner(customer_id)')
     .eq('support_conversations.customer_id', customerId).order('created_at', { ascending: false }).limit(200);
   if ((isAdmin ? CHAT.sel?.customer_id : session?.user?.id) !== customerId) return;   // w międzyczasie wybrano kogoś innego
   if (error) { CHAT.list?.replaceChildren(chatEmpty(h('span', { text: chatErr(error) }))); return; }
@@ -2116,7 +2169,7 @@ function chatIncoming(m) {
   if (CHAT.loadedFor === session?.user?.id) chatAdd(m);
   if (!m.from_customer) {
     if (chatIsOpen()) { CHAT.unread = 1; chatMarkRead(); }
-    else { CHAT.unread += 1; chatBadge(); toast('info', '💬 Nowa odpowiedź od Strike Tech Lab – otwórz czat w prawym dolnym rogu.'); }
+    else { CHAT.unread += 1; chatBadge(); const t = teamBySender(m.sender_id); toast('info', `💬 ${t ? `${t.display_name} (${t.role_label || 'Administrator'}) odpisał` : 'Nowa odpowiedź od Strike Tech Lab'} – otwórz czat w prawym dolnym rogu.`); }
   }
 }
 const chatInboxLoadSoon = debounce(() => chatInboxLoad(true), 500);
@@ -2130,6 +2183,7 @@ function chatOnSession() {
   CHAT.msgs = []; CHAT.loadedFor = null; CHAT.convId = null; CHAT.sel = null; CHAT.inbox = []; CHAT.err = ''; CHAT.unread = 0;
   chatUnsubscribe(); chatBadge();
   if (session) { chatSubscribe(); chatRefreshUnread(); }
+  teamLoad();
   if (CHAT.mounted) { chatSetTab(CHAT.tab, false); }
 }
 setInterval(() => { if (session && document.visibilityState === 'visible') chatRefreshUnread(); }, 90000);
