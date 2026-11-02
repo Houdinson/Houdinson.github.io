@@ -341,7 +341,7 @@ function renderCalendar() {
   $('#calDays [aria-pressed=true]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   const items = byDay.get(S.cal.day) || [];
   const box = $('#calList');
-  const head = h('p', { class: 'free-note', text: `${fmt(`${S.cal.day}T12:00:00Z`, { weekday: 'long', day: 'numeric', month: 'long' })}${wday(S.cal.day) === 0 ? ' · niedziela (nieczynne)' : ' · godziny 10:00–20:00'}` });
+  const head = h('p', { class: 'free-note', text: `${fmt(`${S.cal.day}T12:00:00Z`, { weekday: 'long', day: 'numeric', month: 'long' })}${[0, 6].includes(wday(S.cal.day)) ? ' · weekend (nieczynne)' : ' · godziny 9:00–18:00'}` });
   if (!items.length) { box.replaceChildren(head, h('div', { class: 'empty', text: 'Brak rezerwacji i blokad – cały dzień wolny.' })); return; }
   box.replaceChildren(head, ...items.map((s) => {
     const o = S.cal.ordersById.get(s.order_id), [lbl, tone] = SLOT_LBL[s.status] || [s.status, ''];
@@ -365,24 +365,27 @@ async function unblock(s, btn) {
 async function blockDay(date, from, to, reason) { return callFn('admin', { action: 'block', date, from, to, reason }); }
 
 $('#blockDayBtn').addEventListener('click', async (e) => {
-  if (wday(S.cal.day) === 0) return toast('info', 'W niedzielę i tak nie ma rezerwacji.');
+  if ([0, 6].includes(wday(S.cal.day))) return toast('info', 'W weekend i tak nie ma rezerwacji.');
   if (!confirm(`Zablokować cały dzień ${fmt(`${S.cal.day}T12:00:00Z`, { weekday: 'long', day: 'numeric', month: 'long' })}?`)) return;
   const b = e.currentTarget; busy(b, true);
-  try { await blockDay(S.cal.day, '10:00', '20:00', 'Dzień zablokowany'); toast('ok', 'Dzień zablokowany.'); vibrate(20); loadCalendar(); }
+  try { await blockDay(S.cal.day, '09:00', '18:00', 'Dzień zablokowany'); toast('ok', 'Dzień zablokowany.'); vibrate(20); loadCalendar(); }
   catch (err) { toast('err', err.message); }
   busy(b, false, 'Zablokuj ten dzień');
 });
 $('#blockHoursBtn').addEventListener('click', () => {
   const date = h('input', { class: 'input', type: 'date', min: todayKey(), value: S.cal.day });
-  const from = h('input', { class: 'input', type: 'time', step: 3600, value: '10:00' }), to = h('input', { class: 'input', type: 'time', step: 3600, value: '14:00' });
+  const from = h('input', { class: 'input', type: 'time', step: 3600, value: '09:00' }), to = h('input', { class: 'input', type: 'time', step: 3600, value: '13:00' });
+  const until = h('input', { class: 'input', type: 'date', min: todayKey() });
   const why = h('input', { class: 'input', maxlength: 100, placeholder: 'Powód (np. dostawa części)' });
   openSheet('Blokada godzin', h('label', { class: 'field' }, h('span', { text: 'Dzień' }), date),
     h('div', { class: 'row2' }, h('label', { class: 'field' }, h('span', { text: 'Od' }), from), h('label', { class: 'field' }, h('span', { text: 'Do' }), to)),
     h('label', { class: 'field' }, h('span', { text: 'Powód' }), why),
+    h('label', { class: 'field' }, h('span', { text: 'Powtarzaj co tydzień do (np. koniec semestru – opcjonalnie)' }), until),
     h('button', { class: 'btn btn-gold btn-block', type: 'button', text: 'Zablokuj', onclick: async (e) => {
       if (!date.value || from.value >= to.value) return toast('err', 'Sprawdź dzień i godziny.');
       const b = e.currentTarget; busy(b, true);
-      try { await blockDay(date.value, from.value, to.value, why.value.trim()); toast('ok', 'Godziny zablokowane.'); sheet.close(); S.cal.day = date.value; loadCalendar(); }
+      const days = [date.value]; if (until.value > date.value) for (let d = addDays(date.value, 7); d <= until.value && days.length < 30; d = addDays(d, 7)) days.push(d);
+      try { for (const d of days) await blockDay(d, from.value, to.value, why.value.trim() || 'Zajęcia'); toast('ok', days.length > 1 ? `Zablokowano ${days.length} tygodni.` : 'Godziny zablokowane.'); sheet.close(); S.cal.day = date.value; loadCalendar(); }
       catch (err) { toast('err', err.message); busy(b, false, 'Zablokuj'); }
     } }));
 });
@@ -390,16 +393,16 @@ $('#vacationBtn').addEventListener('click', () => {
   const d1 = h('input', { class: 'input', type: 'date', min: todayKey(), value: S.cal.day }), d2 = h('input', { class: 'input', type: 'date', min: todayKey(), value: addDays(S.cal.day, 6) });
   const why = h('input', { class: 'input', maxlength: 100, value: 'Urlop' });
   const out = h('div', { class: 'small', style: 'margin-top:12px' });
-  openSheet('Szybka blokada urlopowa', h('p', { class: 'muted small', style: 'margin-top:0', text: 'Blokuje dni pn–sb (10:00–20:00). Dni z opłaconymi rezerwacjami zostaną pominięte – zobaczysz je na liście.' }),
+  openSheet('Szybka blokada urlopowa', h('p', { class: 'muted small', style: 'margin-top:0', text: 'Blokuje dni pn–pt (9:00–18:00). Dni z opłaconymi rezerwacjami zostaną pominięte – zobaczysz je na liście.' }),
     h('div', { class: 'row2' }, h('label', { class: 'field' }, h('span', { text: 'Od' }), d1), h('label', { class: 'field' }, h('span', { text: 'Do' }), d2)),
     h('label', { class: 'field' }, h('span', { text: 'Powód' }), why),
     h('button', { class: 'btn btn-gold btn-block', type: 'button', text: 'Zablokuj urlop', onclick: async (e) => {
       if (!d1.value || !d2.value || d2.value < d1.value) return toast('err', 'Sprawdź daty.');
-      const days = []; for (let k = d1.value; k <= d2.value && days.length < 62; k = addDays(k, 1)) if (wday(k) !== 0) days.push(k);
+      const days = []; for (let k = d1.value; k <= d2.value && days.length < 62; k = addDays(k, 1)) if (![0, 6].includes(wday(k))) days.push(k);
       const b = e.currentTarget; busy(b, true, `0 / ${days.length}`);
       const failed = [];
       for (let i = 0; i < days.length; i++) {
-        try { await blockDay(days[i], '10:00', '20:00', why.value.trim() || 'Urlop'); }
+        try { await blockDay(days[i], '09:00', '18:00', why.value.trim() || 'Urlop'); }
         catch (err) { failed.push(`${fmt(`${days[i]}T12:00:00Z`, { weekday: 'short', day: 'numeric', month: 'short' })}: ${err.message}`); }
         b.lastChild.textContent = ` ${i + 1} / ${days.length}`;
       }

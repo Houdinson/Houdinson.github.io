@@ -846,7 +846,7 @@ function renderDays() {
   const start = todayKey(); const names = ['nd', 'pn', 'wt', 'śr', 'cz', 'pt', 'sb'];
   let first = null;
   for (let i = 0; i <= 45; i++) {
-    const key = addDays(start, i), w = wday(key); if (w === 0) continue;
+    const key = addDays(start, i), w = wday(key); if (w === 0 || w === 6) continue;   // pn–pt
     if (i === 0 && !B.express) continue;
     first ||= key;
     const [, m, d] = key.split('-');
@@ -1655,7 +1655,7 @@ const ADV_INTENTS = [
   { id: 'pay', k: ['platnosc', 'platnosci', 'zaplacic', 'placic', 'blik', 'karta', 'karte', 'przelew', 'przelewy24', 'stripe', 'zaliczka', 'zaliczke', 'z gory', 'raty'], o: ['when', 'returns', 'refs'],
     a: () => [advP('Płacisz online 100% z góry przy rezerwacji – kartą, BLIK-iem albo Przelewy24 (zależnie od dostępności), przez operatora Stripe. Nie pobieramy zaliczek. Gotówki nie przyjmujemy.'), advP('Strony i automatyzacje opłacasz przelewem po akceptacji wyceny – dostajesz rachunek z numerem konta i gotowym tytułem przelewu (widać go też w Strefie Klienta).'), advP('Przy komputerze na zamówienie najpierw dostajesz bezpłatną wycenę mailem, a płacisz dopiero po jej akceptacji.')] },
   { id: 'when', k: ['termin', 'terminy', 'kiedy', 'godziny', 'otwarte', 'czynne', 'kalendarz', 'dzisiaj', 'jutro', 'weekend', 'sobota', 'express', 'ekspres', 'pilne', 'szybko'], o: ['pay', 'remote', 'prices'],
-    a: () => [advP('Pracujemy od poniedziałku do soboty, 10:00–20:00. Wolne godziny widzisz w kalendarzu przy rezerwacji, a termin trzymamy dla Ciebie 35 minut na płatność.'),
+    a: () => [advP('Pracujemy od poniedziałku do piątku, 9:00–18:00. Wolne godziny widzisz w kalendarzu przy rezerwacji, a termin trzymamy dla Ciebie 35 minut na płatność.'),
       advP('Express (+50 zł) przy usługach zdalnych skraca minimalny czas do terminu do 2 godzin – o ile są wolne godziny.'), advP(advLink('Wybierz termin →', '/rezerwacja'))] },
   { id: 'returns', k: ['reklamacja', 'reklamacje', 'reklamowac', 'zwrot', 'zwroty', 'oddac', 'odstapienie', 'odstapic', 'rezygnacja', 'zrezygnowac', 'anulowac', 'gwarancja', 'gwarancji', 'regulamin'], o: ['pay', 'contact'],
     a: () => [advP('Konsument może odstąpić od umowy zawartej na odległość w ciągu 14 dni – szczegóły i wyjątki są w pouczeniu. Na reklamacje odpowiadamy w ciągu 14 dni.'),
@@ -1886,10 +1886,10 @@ async function teamLoad() {
   if (CHAT.list?.isConnected && CHAT.msgs.length) chatPaint();
 }
 const teamBySender = (id) => (id && TEAM.list.find((t) => t.user_id === id)) || null;
-/** Godziny pracy: pn–sb 10:00–20:00 (czas polski). */
+/** Godziny pracy: pn–pt 9:00–18:00 (czas polski). */
 function teamOnline() {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'short', hour: '2-digit', hour12: false }).formatToParts(new Date()).map((x) => [x.type, x.value]));
-  return p.weekday !== 'Sun' && +p.hour >= 10 && +p.hour < 20;
+  return !['Sat', 'Sun'].includes(p.weekday) && +p.hour >= 9 && +p.hour < 18;
 }
 function teamAvatar(t, cls = 'team-av') {
   const el = h('span', { class: cls, 'aria-hidden': 'true' });
@@ -1908,7 +1908,7 @@ function chatTeamBar() {
       h('span', { class: 'team-txt' },
         h('b', { text: t.display_name }),
         h('span', { class: 'team-role', text: t.role_label || 'Administrator' }),
-        h('small', { text: on ? 'Dostępny teraz' : 'Odpisze od 10:00' })))));
+        h('small', { text: on ? 'Dostępny teraz' : 'Odpisze w dzień roboczy od 9:00' })))));
 }
 setInterval(() => { if (document.visibilityState === 'visible') $$('.chat-team').forEach((el) => el.replaceWith(chatTeamBar())); }, 300000);
 
@@ -2267,7 +2267,7 @@ async function findNextFree() {
   if (!sb || !cat.live || Date.now() - nextFreeAt < 240000) return; nextFreeAt = Date.now();
   const id = cat.services.has('strike-precision-tune') ? 'strike-precision-tune' : [...cat.services.keys()][0];
   for (let i = 0; i < 14; i++) {
-    const day = addDays(todayKey(), i); if (wday(day) === 0) continue;
+    const day = addDays(todayKey(), i); if (wday(day) === 0 || wday(day) === 6) continue;
     const { data, error } = await sb.rpc('get_available_slots', { p_service_id: id, p_day: day });
     if (error) return;
     if (data?.length) { $('#cNext') && ($('#cNext').textContent = `${fmt(data[0].starts_at, { weekday: 'short', day: 'numeric', month: 'short' })} ${hm(data[0].starts_at)}`); return; }
