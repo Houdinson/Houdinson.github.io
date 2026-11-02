@@ -930,3 +930,79 @@ function addonsCard() {
         if (typeof renderCatalog === 'function') renderCatalog();
       } })), msg);
 }
+
+/* ------------------------------------------------------------------ BRIEF DNIA (migracja v27)
+   Codziennie o 9:00 baza zapisuje podsumowanie: co było wczoraj, co jest dziś w kalendarzu, co czeka na reakcję. */
+const br = { list: null, sel: null, loading: false, err: '' };
+async function loadBrief(force) {
+  const box = $('#briefOut'); if (!box || br.loading) return;
+  if (br.list && !force) { renderBrief(); return; }
+  br.loading = true; if (!br.list) box.replaceChildren(h('p', { class: 'muted', text: 'Ładuję brief…' }));
+  const { data, error } = await sb.from('daily_briefs').select('id,day,data,created_at,updated_at').order('day', { ascending: false }).limit(14);
+  br.loading = false;
+  if (error) { br.err = /daily_briefs|schema cache|does not exist/i.test(error.message) ? 'Brief wymaga migracji v27 – uruchom: npx supabase db push --linked' : error.message; renderBrief(); return; }
+  br.err = ''; br.list = data || [];
+  if (!br.sel || !br.list.some((b) => b.day === br.sel)) br.sel = br.list[0]?.day || null;
+  renderBrief();
+}
+async function makeBrief(btn) {
+  setBusy(btn, true, 'Tworzę…');
+  const { error } = await sb.rpc('generate_daily_brief', {});
+  setBusy(btn, false);
+  if (error) return toast('err', error.message);
+  br.sel = todayKey(); toast('ok', 'Brief zaktualizowany.'); loadBrief(true);
+}
+function renderBrief() {
+  const box = $('#briefOut'); if (!box) return;
+  if (br.err) { box.replaceChildren(h('div', { class: 'banner err', text: br.err })); return; }
+  if (!br.list) return;
+  const today = todayKey(), b = br.list.find((x) => x.day === br.sel);
+  const refresh = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: b?.day === today ? '↻ Odśwież dane' : 'Utwórz brief na dziś', onclick: (e) => makeBrief(e.currentTarget) });
+  const days = h('div', { class: 'cat-tabs bf-days', role: 'tablist', 'aria-label': 'Dzień briefu' }, br.list.slice(0, 7).map((x) => h('button', {
+    type: 'button', role: 'tab', class: 'cat-tab', 'aria-selected': String(x.day === br.sel), onclick: () => { br.sel = x.day; renderBrief(); },
+    text: x.day === today ? 'Dziś' : fmt(`${x.day}T12:00:00Z`, { weekday: 'short', day: 'numeric', month: 'numeric' }) })));
+  const head = h('div', { class: 'bf-head' },
+    h('div', {}, h('h3', { style: 'margin:0', text: b ? `Brief: ${fmt(`${b.day}T12:00:00Z`, { weekday: 'long', day: 'numeric', month: 'long' })}` : 'Brief dnia' }),
+      h('p', { class: 'muted small', style: 'margin:4px 0 0', text: b ? `Dane z ${fmt(b.updated_at, { hour: '2-digit', minute: '2-digit' })} · nowy brief codziennie o 9:00` : 'Nowy brief pojawia się codziennie o 9:00.' })),
+    refresh);
+  if (!b) { box.replaceChildren(head, h('div', { class: 'empty', text: 'Brief na dziś pojawi się o 9:00. Możesz go też utworzyć teraz przyciskiem powyżej.' })); return; }
+  const d = b.data || {}, y = d.yesterday || {}, t = d.todo || {}, q = d.quarter || {};
+  const stat = (v, l, gold) => h('div', { class: 'bf-stat' }, h('b', { class: gold ? 'gold' : '', text: String(v) }), h('span', { text: l }));
+  const todo = [
+    [t.chats_unanswered, 'czat bez odpowiedzi', 'Otwórz czat', () => chatOpen('msgs')],
+    [t.inquiries_open, 'zapytań ze strony do obsłużenia', 'Zapytania', () => showTab('admin')],
+    [t.slot_conflicts, 'konfliktów terminów – ustal nową godzinę', 'Zlecenia', () => showTab('admin')],
+    [t.testing_ready, 'zleceń w testach – dokończ raport', 'Zlecenia', () => showTab('admin')],
+    [t.paid_without_bill, 'opłaconych zleceń bez rachunku', 'Finanse', () => showTab('finance')],
+    [t.reviews_pending, 'opinii do zatwierdzenia', 'Opinie', () => showTab('admin')],
+    [t.posts_to_approve, 'postów do akceptacji w Centrum', 'Centrum', () => window.open(BASE + 'centrum/', '_blank', 'noopener')],
+    [t.posts_today, 'postów zaplanowanych na dziś', 'Centrum', () => window.open(BASE + 'centrum/', '_blank', 'noopener')],
+    [t.posts_failed, 'postów z błędem publikacji', 'Centrum', () => window.open(BASE + 'centrum/', '_blank', 'noopener')],
+  ].filter(([n]) => n > 0);
+  const slot = (s) => h('li', { class: `bf-slot ${s.kind}` },
+    h('time', { text: `${hm(s.starts_at)}–${hm(s.ends_at)}` }),
+    h('div', {}, h('b', { text: s.kind === 'blokada' ? (s.note || 'Blokada') : `${s.service}${s.express ? ' + Express' : ''}` }),
+      s.kind === 'zlecenie' ? h('span', { class: 'muted small', text: ` ${s.order_number || ''} · ${s.client || ''}${s.handover ? ` · ${s.handover === 'courier' ? 'kurier' : 'osobiście'}` : ''}` }) : null));
+  const pct = q.limit_grosze ? Math.min(100, Math.round(q.revenue_grosze / q.limit_grosze * 100)) : 0;
+  box.replaceChildren(days, head,
+    h('div', { class: 'grid g2', style: 'margin-top:18px' },
+      h('div', { class: 'card hud' }, h('h4', { class: 'bf-h', text: 'Do zrobienia' }),
+        todo.length ? h('ul', { class: 'bf-todo' }, todo.map(([n, l, cta, fn]) => h('li', {}, h('b', { class: 'gold', text: String(n) }), h('span', { text: l }), h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: cta, onclick: fn }))))
+          : h('p', { class: 'muted', style: 'margin:0', text: 'Nic nie czeka. Dobry moment na nagranie materiału albo porządki w warsztacie.' })),
+      h('div', { class: 'card' }, h('h4', { class: 'bf-h', text: `Dziś w kalendarzu (${(d.today || []).filter((s) => s.kind === 'zlecenie').length})` }),
+        (d.today || []).length ? h('ul', { class: 'bf-slots' }, d.today.map(slot)) : h('p', { class: 'muted', style: 'margin:0', text: 'Brak terminów i blokad.' }),
+        h('p', { class: 'note', style: 'margin:12px 0 0', text: `W kolejnych 6 dniach: ${d.week_bookings || 0} rezerwacji.` }))),
+    h('div', { class: 'card', style: 'margin-top:20px' }, h('h4', { class: 'bf-h', text: 'Wczoraj' }),
+      h('div', { class: 'bf-stats' }, stat(y.paid_count || 0, 'opłaconych zleceń'), stat(zl(y.paid_grosze || 0), 'wpłynęło', true), stat(y.finished || 0, 'zakończonych'),
+        stat(y.new_clients || 0, 'nowych kont'), stat(y.inquiries || 0, 'zapytań'), stat(y.chat_msgs || 0, 'wiadomości na czacie'), stat(y.reviews || 0, 'opinii'), stat(y.posts || 0, 'opublikowanych postów'))),
+    h('div', { class: 'grid g2', style: 'margin-top:20px' },
+      h('div', { class: 'card' }, h('h4', { class: 'bf-h', text: `Zlecenia w toku (${(d.in_progress || []).length})` }),
+        (d.in_progress || []).length ? h('ul', { class: 'bf-slots' }, d.in_progress.map((o) => h('li', {},
+          h('span', { class: `pill ${STATUS[o.status]?.[1] || ''}`, text: STATUS[o.status]?.[0] || o.status }),
+          h('div', {}, h('b', { text: o.service }), h('span', { class: 'muted small', text: ` ${o.order_number || ''} · ${o.client || ''}${o.slot ? ` · termin ${fmt(o.slot, { day: 'numeric', month: 'short' })} ${hm(o.slot)}` : ''}` })))))
+          : h('p', { class: 'muted', style: 'margin:0', text: 'Brak otwartych zleceń.' })),
+      h('div', { class: 'card' }, h('h4', { class: 'bf-h', text: 'Limit kwartalny (działalność nierejestrowana)' }),
+        h('p', { style: 'margin:0 0 10px' }, h('b', { class: pct >= 80 ? '' : 'gold', style: pct >= 80 ? 'color:var(--warn)' : '', text: zl(q.revenue_grosze || 0) }), h('span', { class: 'muted', text: ` z ${zl(q.limit_grosze || 0)} (${pct}%)` })),
+        h('div', { class: 'bf-bar' }, h('i', { style: `width:${pct}%;${pct >= 80 ? 'background:var(--warn)' : ''}` })),
+        h('p', { class: 'note', style: 'margin:10px 0 0', text: 'Liczone z opłaconych zleceń minus zwroty. Dokładne rozliczenie jest w zakładce Finanse.' }))));
+}

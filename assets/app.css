@@ -858,3 +858,22 @@ html.intro-on,html.intro-on body{overflow:hidden}
 
 /* Animacja telemetrii PRZED/PO (bez filmu): bez przyciemnienia paneli, żeby wykres był czytelny */
 .cmp:not(.has-video) .panel-before,.cmp:not(.has-video) .panel-after{background:none}
+
+/* ---------- Brief dnia (v27) ---------- */
+.bf-days{margin-bottom:18px}
+.bf-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.bf-h{margin:0 0 14px;font-size:1rem}
+.bf-todo{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.bf-todo li{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02)}
+.bf-todo li b{font-size:1.4rem;text-align:center}
+.bf-slots{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.bf-slots li{display:flex;gap:12px;align-items:baseline;padding:10px 12px;border-left:3px solid var(--gold);background:rgba(255,255,255,.025);border-radius:8px}
+.bf-slots li.blokada{border-left-color:var(--muted)}
+.bf-slots time{font-family:var(--mono);font-weight:700;color:var(--gold);white-space:nowrap}
+.bf-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:700px){.bf-stats{grid-template-columns:repeat(2,1fr)}.bf-todo li{grid-template-columns:36px 1fr}.bf-todo li .btn{grid-column:2}}
+.bf-stat{padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02)}
+.bf-stat b{display:block;font-size:1.5rem;line-height:1.2}
+.bf-stat span{color:var(--muted);font-size:.82rem}
+.bf-bar{height:10px;border-radius:10px;background:rgba(255,255,255,.08);overflow:hidden}
+.bf-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-2));border-radius:10px}

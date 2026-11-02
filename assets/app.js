@@ -1334,7 +1334,7 @@ function adminReady() {
 function withAdmin(fn) { if (!isAdmin) return; adminReady().then(fn, (e) => toast('err', e.message)); }
 
 /* ------------------------------------------------------------------ Strefa Klienta */
-let activeTab = 'orders';
+let activeTab = ((t) => ['orders', 'programs', 'refs', 'account', 'brief', 'admin', 'guides', 'finance', 'prices'].includes(t) ? t : 'orders')(new URLSearchParams(location.search).get('tab'));   // ?tab=brief z powiadomienia
 function renderPanel() {
   const on = !!session;
   const showAuth = !on || authMode === 'newpass';
@@ -1346,10 +1346,11 @@ function renderPanel() {
   $('#guidesTabBtn').classList.toggle('hidden', !isAdmin);
   $('#financeTabBtn').classList.toggle('hidden', !isAdmin);
   $('#pricesTabBtn')?.classList.toggle('hidden', !isAdmin);
+  $('#briefTabBtn')?.classList.toggle('hidden', !isAdmin);
   // Administrator nie składa zleceń sam sobie – zamiast „Zleceń” od razu widzi „Administrację”
   $('#panelTabs [data-tab=orders]').classList.toggle('hidden', isAdmin);
-  if (!isAdmin && ['admin', 'guides', 'finance', 'prices'].includes(activeTab)) activeTab = 'orders';
-  if (isAdmin && activeTab === 'orders') activeTab = 'admin';
+  if (!isAdmin && ['admin', 'guides', 'finance', 'prices', 'brief'].includes(activeTab)) activeTab = 'orders';
+  if (isAdmin && activeTab === 'orders') activeTab = 'brief';   // admin zaczyna dzień od briefu
   showTab(activeTab);
 }
 function showTab(t) {
@@ -1363,6 +1364,7 @@ function showTab(t) {
   if (t === 'guides') withAdmin(() => loadGuides());
   if (t === 'finance') withAdmin(() => loadFinance());
   if (t === 'prices') withAdmin(() => loadPrices());
+  if (t === 'brief') withAdmin(() => loadBrief());
 }
 const ORDER_COLS = 'id,order_number,service_id,service_name,kind,status,express,base_grosze,discount_grosze,express_fee_grosze,total_grosze,amount_due_grosze,discount_code,referral_code_used,spec,handover,slot_conflict,created_at,paid_at,cancel_reason,calendar_slots(starts_at,ends_at,status,hold_expires_at),order_events(status,note,at),order_results(phase,metrics)';
 const ORDER_COLS_V1 = 'id,order_number,service_id,service_name,kind,status,base_grosze,discount_grosze,total_grosze,amount_due_grosze,referral_code_used,slot_conflict,created_at,paid_at,cancel_reason,calendar_slots(starts_at,ends_at,status,hold_expires_at)';

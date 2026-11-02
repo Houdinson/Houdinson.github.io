@@ -461,6 +461,8 @@ function parsePosts(text) {
       script: platform === 'facebook' ? [] : (Array.isArray(p.script || p.scenariusz) ? (p.script || p.scenariusz) : []).slice(0, 10)
         .map((s) => ({ czas: noAI(s.czas, 20), ujecie: noAI(s.ujecie, 300), lektor: noAI(s.lektor, 300), napis: noAI(s.napis, 80) })),
       caption: noAI(p.caption || p.opis, 2100), hashtags: tags, cta: noAI(p.cta, 300) || null,
+      // termin z paczki (np. "2026-11-03T18:00:00+01:00") – tylko przyszły; publikacja i tak dopiero po Twoim zatwierdzeniu
+      scheduled_for: (() => { const d = new Date(p.scheduled_for || p.termin || ''); return !isNaN(d) && d > Date.now() ? d.toISOString() : null; })(),
     };
   });
 }
