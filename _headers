@@ -9,6 +9,8 @@
   X-Permitted-Cross-Domain-Policies: none
   Cross-Origin-Resource-Policy: same-site
   X-DNS-Prefetch-Control: off
+/assets/*
+  Cache-Control: public, max-age=0, must-revalidate
 /media/*
   Cache-Control: public, max-age=0, must-revalidate
 /fonts/*
