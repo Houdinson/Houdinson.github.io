@@ -2424,124 +2424,74 @@ function initEffects() {
 
 /* Scena za suwakiem PRZED/PO: film z gry (media/media.json → benchmark) albo animowana scena zastępcza.
    PRZED: rwany obraz (mało klatek) z czerwonym filtrem. PO: płynny obraz. */
-/* Sceny poglądowe dla suwaka PRZED/PO – osobna dla każdej gry z listy, rysowana w canvasie (bez nagrań i cudzych grafik).
-   Prosta perspektywa: kamera idzie do przodu, obiekty nadlatują z głębi. Klimat gatunku, bez map, postaci i interfejsu z gier. */
-const BENCH_SCENES = (() => {
-  const rnd = (i) => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
-  const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
-  const rgb = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
-  const P = {
-    cs2: { sky: [[150, 190, 225], [232, 214, 178]], fog: [226, 206, 168], ground: [196, 168, 120], groundLine: [160, 132, 92], wall: [214, 186, 140], wall2: [184, 152, 108], kind: 'corridor', props: 'crates', enemy: [44, 52, 40], cross: [80, 255, 80], speed: 2.2, sun: [255, 236, 190] },
-    val: { sky: [[118, 160, 196], [236, 222, 210]], fog: [228, 220, 214], ground: [196, 188, 182], groundLine: [170, 160, 156], wall: [236, 226, 214], wall2: [92, 186, 172], kind: 'arena', props: 'panels', enemy: [70, 60, 90], cross: [255, 255, 255], speed: 2.6, accent: [255, 92, 110] },
-    fn: { sky: [[64, 150, 236], [170, 220, 255]], fog: [176, 220, 250], ground: [96, 188, 72], groundLine: [76, 160, 56], kind: 'open', props: 'trees', enemy: [60, 50, 120], cross: [255, 255, 255], speed: 2.0, storm: [150, 70, 220] },
-    wz: { sky: [[112, 120, 128], [176, 180, 182]], fog: [168, 172, 174], ground: [104, 104, 102], groundLine: [86, 86, 84], wall: [128, 126, 122], wall2: [92, 90, 88], kind: 'city', props: 'cars', enemy: [30, 32, 30], cross: [255, 60, 60], speed: 1.8 },
-    apex: { sky: [[52, 120, 200], [236, 178, 120]], fog: [228, 168, 118], ground: [176, 104, 64], groundLine: [146, 84, 50], wall: [186, 98, 58], wall2: [140, 70, 42], kind: 'canyon', props: 'rocks', enemy: [40, 40, 52], cross: [255, 255, 255], speed: 2.8 },
-  };
-  function draw(game, x, t, W, H) {
-    const p = P[game] || P.cs2, s = t / 1000;
-    const sway = Math.sin(s * 1.7) * W * 0.012, bob = Math.abs(Math.sin(s * 3.4)) * H * 0.008;
-    const hz = H * 0.46 + bob, cx = W / 2 + sway, F = W * 0.75, CH = 1.7;
-    const pr = (X, Y, Z) => [cx + (X * F) / Z, hz + ((CH - Y) * F) / Z, F / Z];
-    const fogK = (Z) => Math.min(1, Math.max(0, (Z - 3) / 38));
-    // niebo
-    const g = x.createLinearGradient(0, 0, 0, hz); g.addColorStop(0, rgb(p.sky[0])); g.addColorStop(1, rgb(p.sky[1]));
-    x.fillStyle = g; x.fillRect(0, 0, W, hz + 1);
-    if (p.sun) { const r = x.createRadialGradient(W * 0.72, hz * 0.35, 2, W * 0.72, hz * 0.35, H * 0.35); r.addColorStop(0, rgb(p.sun, 0.9)); r.addColorStop(1, rgb(p.sun, 0)); x.fillStyle = r; x.fillRect(0, 0, W, hz); }
-    if (p.kind === 'open') {               // chmury i fioletowa ściana burzy na horyzoncie
-      for (let i = 0; i < 6; i++) { const yy = hz * (0.15 + rnd(i) * 0.45), xx = ((rnd(i + 9) * W * 1.4 - s * 8 * (1 + rnd(i))) % (W * 1.4) + W * 1.4) % (W * 1.4) - W * 0.2;
-        x.fillStyle = 'rgba(255,255,255,.85)'; for (let k = 0; k < 4; k++) { x.beginPath(); x.arc(xx + k * W * 0.03, yy - (k % 2) * H * 0.02, H * (0.03 + 0.01 * (k % 2)), 0, 7); x.fill(); } }
-      const st = x.createRadialGradient(W * 0.95, hz, 4, W * 0.95, hz, W * 0.45); st.addColorStop(0, rgb(p.storm, 0.6)); st.addColorStop(1, rgb(p.storm, 0));
-      x.fillStyle = st; x.fillRect(W * 0.4, 0, W * 0.6, hz);
-    }
-    if (p.kind === 'canyon' || p.kind === 'city') {   // dalekie sylwetki: mesy albo budynki
-      x.fillStyle = rgb(mix(p.fog, p.wall2, 0.35));
-      for (let i = 0; i < 14; i++) { const bw = W / 9, xx = i * W / 12 - W * 0.1, bh = H * (p.kind === 'city' ? 0.08 + rnd(i) * 0.16 : 0.05 + rnd(i) * 0.09);
-        if (p.kind === 'city') x.fillRect(xx, hz - bh, bw * 0.7, bh); else { x.beginPath(); x.moveTo(xx, hz); x.lineTo(xx + bw * 0.15, hz - bh); x.lineTo(xx + bw * 0.85, hz - bh); x.lineTo(xx + bw, hz); x.fill(); } }
-    }
-    // podłoże z perspektywicznymi liniami (ruch do przodu)
-    const gg = x.createLinearGradient(0, hz, 0, H); gg.addColorStop(0, rgb(mix(p.ground, p.fog, 0.7))); gg.addColorStop(1, rgb(p.ground));
-    x.fillStyle = gg; x.fillRect(0, hz, W, H - hz);
-    x.strokeStyle = rgb(p.groundLine, 0.55); x.lineWidth = 1;
-    const step = 2.5, off = (s * p.speed * 4) % step;
-    for (let z = 40 - off; z > 1; z -= step) { const y = pr(0, 0, z)[1]; x.globalAlpha = 1 - fogK(z); x.beginPath(); x.moveTo(0, y); x.lineTo(W, y); x.stroke(); }
-    x.globalAlpha = 1;
-    // ściany korytarza / areny / ulicy
-    if (p.wall && p.kind !== 'canyon') wallSide(x, p, pr, fogK, s, -1); if (p.wall) wallSide(x, p, pr, fogK, s, 1);
-    // obiekty nadlatujące z głębi (od najdalszych)
-    const L = 44, items = [];
-    for (let i = 0; i < 12; i++) { const z = ((rnd(i) * L - s * p.speed * 4) % L + L) % L + 1.2; items.push({ i, z }); }
-    items.sort((a, b) => b.z - a.z);
-    for (const it of items) prop(x, p, pr, fogK, it.i, it.z);
-    // przeciwnik wychylający się zza osłony
-    const ez = 14 + Math.sin(s * 0.35) * 3, ex = Math.sin(s * 0.9) * 1.6;
-    const [qx, qy, sc] = pr(ex, 0, ez);
-    const ec = mix(p.enemy, p.fog, fogK(ez) * 0.6);
-    x.fillStyle = rgb(ec); x.beginPath(); x.roundRect(qx - sc * 0.22, qy - sc * 1.55, sc * 0.44, sc * 1.55, sc * 0.12); x.fill();
-    x.beginPath(); x.arc(qx, qy - sc * 1.72, sc * 0.16, 0, 7); x.fill();
-    if (p.accent) { x.fillStyle = rgb(p.accent); x.fillRect(qx - sc * 0.22, qy - sc * 1.2, sc * 0.44, sc * 0.08); }
-    // mgła atmosferyczna
-    const fg = x.createLinearGradient(0, hz - H * 0.12, 0, hz + H * 0.1); fg.addColorStop(0, rgb(p.fog, 0)); fg.addColorStop(0.5, rgb(p.fog, p.kind === 'city' ? 0.4 : 0.3)); fg.addColorStop(1, rgb(p.fog, 0));
-    x.fillStyle = fg; x.fillRect(0, hz - H * 0.12, W, H * 0.22);
-    if (p.kind === 'city') { x.strokeStyle = 'rgba(255,210,140,.8)'; x.lineWidth = 2; const k = (s * 1.3) % 1; x.beginPath(); x.moveTo(W * (0.1 + k * 0.5), hz - H * 0.2 + k * 10); x.lineTo(W * (0.16 + k * 0.5), hz - H * 0.2 + k * 10 + 3); x.stroke(); }
-    if (p.kind === 'canyon') { x.fillStyle = 'rgba(255,220,180,.18)'; for (let i = 0; i < 30; i++) { const xx = (rnd(i) * W + s * 60 * (0.5 + rnd(i + 3))) % W, yy = hz + rnd(i + 7) * (H - hz); x.fillRect(xx, yy, 2, 1); } }
-    // broń w prawym dolnym rogu (stylizowany karabin skierowany do celownika)
-    const wb = Math.sin(s * 3.4) * H * 0.008, ox = W * 0.8 + sway * 0.5, oy = H * 0.9 + wb, u = Math.min(W, H * 1.7) / 640;
-    x.save(); x.translate(ox, oy); x.rotate(0.27); x.scale(u * 0.9, u * 0.9);
-    x.fillStyle = '#1b1c20'; x.fillRect(-10, -18, 230, 36);                 // komora
-    x.fillStyle = '#26272c'; x.fillRect(-150, -12, 150, 22);                 // łoże
-    x.fillStyle = '#121316'; x.fillRect(-250, -6, 110, 10);                  // lufa
-    x.fillStyle = '#1b1c20'; x.fillRect(40, 14, 34, 60);                     // magazynek
-    x.fillStyle = '#2c2d33'; x.fillRect(20, -30, 120, 12);                   // szyna i celownik
-    x.fillStyle = 'rgba(255,187,0,.75)'; x.fillRect(60, -2, 70, 3);          // złoty akcent
-    x.fillStyle = '#c7a081'; x.beginPath(); x.ellipse(-60, 14, 34, 20, 0.2, 0, 7); x.fill();   // dłoń
-    x.fillStyle = '#2a2b30'; x.beginPath(); x.ellipse(-60, 30, 46, 18, 0.2, 0, 7); x.fill();   // rękaw
-    x.restore();
-    const c = p.cross; x.strokeStyle = rgb(c, 0.95); x.lineWidth = 2;
-    const m = W / 2, n = H * 0.46;
-    if (game === 'val' || game === 'apex') { x.fillStyle = rgb(c); x.beginPath(); x.arc(m, n, 2.2, 0, 7); x.fill(); if (game === 'apex') { x.beginPath(); x.arc(m, n, 11, 0, 7); x.lineWidth = 1.2; x.stroke(); } }
-    else if (game === 'fn') { x.beginPath(); x.arc(m, n, 9, 0, 7); x.stroke(); }
-    else if (game === 'wz') { x.fillStyle = rgb(c); x.beginPath(); x.arc(m, n, 2.6, 0, 7); x.fill(); }
-    else { x.beginPath(); x.moveTo(m - 11, n); x.lineTo(m - 4, n); x.moveTo(m + 4, n); x.lineTo(m + 11, n); x.moveTo(m, n - 11); x.lineTo(m, n - 4); x.moveTo(m, n + 4); x.lineTo(m, n + 11); x.stroke(); }
+/* Animacja poglądowa PRZED/PO: telemetria jak w nakładce do pomiarów – czas klatki na żywo, temperatura, płynność.
+   Bez liczb: to ilustracja tego, czego szukamy i co poprawiamy, a nie wynik pomiaru. */
+const BENCH_VIS = (() => {
+  const GAMES = { cs2: 'Counter-Strike 2', val: 'Valorant', fn: 'Fortnite', wz: 'Call of Duty: Warzone', apex: 'Apex Legends' };
+  const TUNE = { cs2: [0.55, 1.0], val: [0.5, 0.9], fn: [0.7, 1.15], wz: [0.85, 1.3], apex: [0.75, 1.2] };   // [poziom bazowy, częstość przycięć]
+  const hash = (i) => { const s = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s); };
+  const smooth = (i) => { const a = Math.floor(i), f = i - a, u = f * f * (3 - 2 * f); return hash(a) * (1 - u) + hash(a + 1) * u; };
+  /** czas klatki (0..1 skali wykresu) dla próbki k */
+  function ft(k, before, game) {
+    const [lvl, sp] = TUNE[game] || TUNE.cs2;
+    if (!before) return 0.13 + 0.035 * smooth(k * 0.15) + 0.012 * hash(k * 3.1);
+    let v = 0.27 * lvl + 0.1 * smooth(k * 0.11) + 0.06 * hash(k * 1.7);
+    const h = hash(k * 0.913 + 5);
+    if (h > 1 - 0.06 * sp) v += 0.32 + 0.3 * hash(k + 11);          // duże przycięcie
+    else if (h > 1 - 0.16 * sp) v += 0.12 + 0.1 * hash(k + 3);      // mniejszy skok
+    return Math.min(0.97, v);
   }
-  function wallSide(x, p, pr, fogK, s, side) {
-    const X = side * (p.kind === 'city' ? 5.5 : p.kind === 'arena' ? 4.2 : 3.2), top = p.kind === 'city' ? 7 : p.kind === 'canyon' ? 12 : 4.2;
-    const near = 0.8, far = 40;
-    const a = pr(X, 0, near), b = pr(X, 0, far), c = pr(X, top, far), d = pr(X, top, near);
-    const gr = x.createLinearGradient(a[0], 0, b[0], 0); gr.addColorStop(0, rgb(p.kind === 'canyon' ? p.wall2 : p.wall)); gr.addColorStop(1, rgb(mix(p.wall, p.fog, 0.85)));
-    x.fillStyle = gr; x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(b[0], b[1]); x.lineTo(c[0], c[1]); x.lineTo(d[0], d[1]); x.fill();
-    // pionowe podziały (płyty, okna, łuki) przesuwające się z ruchem
-    const step = p.kind === 'city' ? 4 : 3, off = (s * p.speed * 4) % step;
-    for (let z = far - off; z > near; z -= step) {
-      const q0 = pr(X, 0, z), q1 = pr(X, top, z), k = 1 - fogK(z);
-      x.strokeStyle = rgb(p.wall2, 0.5 * k); x.lineWidth = Math.max(1, 3 * k); x.beginPath(); x.moveTo(q0[0], q0[1]); x.lineTo(q1[0], q1[1]); x.stroke();
-      if (p.kind === 'city' && z > 2.5) { x.fillStyle = `rgba(40,44,50,${0.55 * k})`; for (let f = 1; f < 3; f++) { const w0 = pr(X, f * 2.4, z), w1 = pr(X, f * 2.4 + 1, z - 1.2); x.fillRect(Math.min(w0[0], w1[0]), w1[1], Math.abs(w1[0] - w0[0]) * 0.8, w0[1] - w1[1]); } }
-      if (p.kind === 'arena' && Math.round(z / step) % 3 === 0) { const w0 = pr(X, 0.2, z), w1 = pr(X, 3.6, z - step * 0.6); x.fillStyle = rgb(p.wall2, 0.55 * k); x.fillRect(Math.min(w0[0], w1[0]), w1[1], Math.abs(w1[0] - w0[0]), w0[1] - w1[1]); }
-      if (p.kind === 'corridor' && Math.round(z / step) % 4 === 0) { const w0 = pr(X, 0, z), w1 = pr(X, 2.6, z - 1.4); x.fillStyle = `rgba(60,44,28,${0.55 * k})`; x.fillRect(Math.min(w0[0], w1[0]), w1[1], Math.abs(w1[0] - w0[0]), w0[1] - w1[1]); }
+  function rr(x, X, Y, w, h, r) { x.beginPath(); x.roundRect(X, Y, w, h, r); }
+  function draw(game, x, t, W, H, before) {
+    const red = '#ff4d4d', gold = '#FFBB00', col = before ? red : gold;
+    // tło z siatką
+    const bg = x.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, before ? '#1a0d0e' : '#0f0d07'); bg.addColorStop(1, '#070708');
+    x.fillStyle = bg; x.fillRect(0, 0, W, H);
+    x.strokeStyle = 'rgba(255,255,255,.045)'; x.lineWidth = 1;
+    for (let gx = (-(t / 40) % 32); gx < W; gx += 32) { x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, H); x.stroke(); }
+    for (let gy = 0; gy < H; gy += 32) { x.beginPath(); x.moveTo(0, gy); x.lineTo(W, gy); x.stroke(); }
+    const pad = Math.max(16, W * 0.03), fs = Math.max(11, Math.min(14, W / 55));
+    x.font = `700 ${fs}px "Plus Jakarta Sans", system-ui, sans-serif`; x.textBaseline = 'alphabetic';
+    // nagłówek
+    x.fillStyle = 'rgba(255,255,255,.55)'; x.textAlign = 'right';
+    x.fillText(`${GAMES[game] || GAMES.cs2} · ta sama scena`, W - pad, pad + fs + 34);
+    x.textAlign = 'left';
+    // --- wykres czasu klatki
+    const gTop = pad + fs + 48, gH = H * 0.5, gB = gTop + gH, n = 140, dx = W / (n - 1), k0 = t / 33;
+    x.fillStyle = 'rgba(255,255,255,.7)'; x.fillText('Czas klatki', pad, gTop - 8);
+    x.fillStyle = 'rgba(255,255,255,.35)'; x.font = `600 ${fs * 0.85}px "Plus Jakarta Sans", system-ui, sans-serif`;
+    x.textAlign = 'right'; x.fillText('↑ przycięcia', W - pad, gTop + fs); x.fillText('↓ płynnie', W - pad, gB - 6); x.textAlign = 'left';
+    x.strokeStyle = 'rgba(255,255,255,.12)'; x.setLineDash([4, 6]); x.beginPath(); x.moveTo(0, gB - gH * 0.18); x.lineTo(W, gB - gH * 0.18); x.stroke(); x.setLineDash([]);
+    const pts = []; for (let i = 0; i < n; i++) { const k = Math.floor(k0) - (n - 1 - i); pts.push([i * dx - (k0 % 1) * dx, gB - ft(k, before, game) * gH]); }
+    const area = x.createLinearGradient(0, gTop, 0, gB); area.addColorStop(0, before ? 'rgba(255,77,77,.35)' : 'rgba(255,187,0,.28)'); area.addColorStop(1, 'rgba(0,0,0,0)');
+    x.beginPath(); x.moveTo(pts[0][0], gB); for (const [px, py] of pts) x.lineTo(px, py); x.lineTo(pts[n - 1][0], gB); x.closePath(); x.fillStyle = area; x.fill();
+    x.beginPath(); pts.forEach(([px, py], i) => (i ? x.lineTo(px, py) : x.moveTo(px, py)));
+    x.strokeStyle = col; x.lineWidth = 2; x.shadowColor = col; x.shadowBlur = 10; x.stroke(); x.shadowBlur = 0;
+    // --- paski: temperatura i płynność (1% low)
+    const bars = [
+      ['Temperatura GPU', before ? 0.9 + 0.03 * Math.sin(t / 700) : 0.6 + 0.015 * Math.sin(t / 900), before ? 'za wysoka – zegary spadają' : 'w normie'],
+      ['Płynność (1% low)', before ? 0.38 + 0.08 * smooth(t / 600) : 0.9 + 0.02 * Math.sin(t / 800), before ? 'nierówna' : 'równa'],
+    ];
+    let y = gB + Math.max(26, H * 0.07);
+    const bh = Math.max(8, H * 0.025);
+    x.font = `700 ${fs}px "Plus Jakarta Sans", system-ui, sans-serif`;
+    for (const [label, v, note] of bars) {
+      x.fillStyle = 'rgba(255,255,255,.7)'; x.fillText(label, pad, y);
+      x.fillStyle = before ? 'rgba(255,120,120,.85)' : 'rgba(255,214,110,.85)'; x.textAlign = 'right'; x.fillText(note, W - pad, y); x.textAlign = 'left';
+      rr(x, pad, y + 8, W - pad * 2, bh, bh / 2); x.fillStyle = 'rgba(255,255,255,.08)'; x.fill();
+      const g = x.createLinearGradient(pad, 0, W - pad, 0);
+      if (before) { g.addColorStop(0, '#ff8a3d'); g.addColorStop(1, red); } else { g.addColorStop(0, '#ffd25e'); g.addColorStop(1, gold); }
+      rr(x, pad, y + 8, (W - pad * 2) * Math.max(0.02, Math.min(1, v)), bh, bh / 2); x.fillStyle = g; x.fill();
+      y += bh + Math.max(30, H * 0.085);
     }
   }
-  function prop(x, p, pr, fogK, i, z) {
-    const side = rnd(i + 2) < 0.5 ? -1 : 1, k = fogK(z);
-    if (p.props === 'crates') { const X = side * (1.6 + rnd(i) * 1.1), sz = 0.9 + rnd(i + 4) * 0.5; const [a, b, sc] = pr(X, 0, z); const w = sc * sz;
-      x.fillStyle = rgb(mix([150, 108, 62], p.fog, k)); x.fillRect(a - w / 2, b - w, w, w); x.strokeStyle = rgb(mix([96, 66, 36], p.fog, k)); x.lineWidth = Math.max(1, w * 0.06); x.strokeRect(a - w / 2, b - w, w, w); x.beginPath(); x.moveTo(a - w / 2, b - w); x.lineTo(a + w / 2, b); x.stroke(); }
-    else if (p.props === 'panels') { const X = side * (2 + rnd(i) * 1.4); const [a, b, sc] = pr(X, 0, z); const w = sc * 0.8, h = sc * (1 + rnd(i) * 1.2);
-      x.fillStyle = rgb(mix(rnd(i) < 0.5 ? p.wall2 : [242, 238, 232], p.fog, k)); x.beginPath(); x.moveTo(a - w / 2, b); x.lineTo(a - w / 2, b - h + w * 0.3); x.lineTo(a, b - h); x.lineTo(a + w / 2, b - h + w * 0.3); x.lineTo(a + w / 2, b); x.fill(); }
-    else if (p.props === 'trees') { const X = side * (2.5 + rnd(i) * 7); const [a, b, sc] = pr(X, 0, z);
-      if (rnd(i + 5) < 0.25) { const w = sc * 2.4, h = sc * 2; x.fillStyle = rgb(mix([206, 150, 96], p.fog, k)); x.fillRect(a - w / 2, b - h, w, h); x.fillStyle = rgb(mix([150, 96, 60], p.fog, k)); x.beginPath(); x.moveTo(a - w * 0.6, b - h); x.lineTo(a, b - h - sc); x.lineTo(a + w * 0.6, b - h); x.fill(); return; }
-      x.fillStyle = rgb(mix([120, 82, 50], p.fog, k)); x.fillRect(a - sc * 0.08, b - sc * 1.2, sc * 0.16, sc * 1.2);
-      x.fillStyle = rgb(mix([46, 150, 60], p.fog, k)); x.beginPath(); x.arc(a, b - sc * 1.6, sc * 0.65, 0, 7); x.fill(); x.fillStyle = rgb(mix([70, 180, 76], p.fog, k)); x.beginPath(); x.arc(a - sc * 0.2, b - sc * 1.8, sc * 0.35, 0, 7); x.fill(); }
-    else if (p.props === 'cars') { if (i % 3) return; const X = side * (2.2 + rnd(i) * 0.8); const [a, b, sc] = pr(X, 0, z); const w = sc * 1.9, h = sc * 0.8;
-      x.fillStyle = rgb(mix([58, 60, 62], p.fog, k)); x.beginPath(); x.roundRect(a - w / 2, b - h, w, h * 0.7, sc * 0.1); x.fill(); x.fillRect(a - w * 0.3, b - h * 1.25, w * 0.6, h * 0.6);
-      x.fillStyle = rgb(mix([20, 20, 22], p.fog, k)); x.beginPath(); x.arc(a - w * 0.3, b - h * 0.25, sc * 0.18, 0, 7); x.arc(a + w * 0.3, b - h * 0.25, sc * 0.18, 0, 7); x.fill(); }
-    else if (p.props === 'rocks') { const X = side * (1.8 + rnd(i) * 4); const [a, b, sc] = pr(X, 0, z); const w = sc * (0.8 + rnd(i + 1) * 1.4);
-      x.fillStyle = rgb(mix(p.wall2, p.fog, k)); x.beginPath(); x.moveTo(a - w / 2, b); x.lineTo(a - w * 0.35, b - w * 0.55); x.lineTo(a + w * 0.1, b - w * 0.7); x.lineTo(a + w * 0.5, b - w * 0.3); x.lineTo(a + w / 2, b); x.fill(); }
-  }
-  return { draw, has: (g) => !!P[g] };
+  return { draw };
 })();
 
 const Scene = { vid: null, file: '', running: false, visible: false, game: 'cs2' };
 function benchVideoFor(game) { return mediaGet(`benchmark.${game}`) || mediaGet('benchmark.domyslny') || ''; }
 function setBenchVideo(game) {
-  Scene.game = BENCH_SCENES.has(game) ? game : 'cs2';
+  Scene.game = game || 'cs2';
   const f = benchVideoFor(game);
   if (f === Scene.file) return;
   Scene.file = f;
@@ -2563,11 +2513,12 @@ function initBenchScene() {
     const vw = v.videoWidth, vh = v.videoHeight, s = Math.max(W / vw, H / vh);
     x.drawImage(v, (W - vw * s) / 2, (H - vh * s) / 2, vw * s, vh * s);
   };
-  const drawSynth = (x, t) => BENCH_SCENES.draw(Scene.game, x, t, W, H);   // scena poglądowa wybranej gry
+  const drawSynth = (x, t, before) => BENCH_VIS.draw(Scene.game, x, t, W, H, before);   // telemetria poglądowa
   const frame = (x, t, before) => {
     x.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (Scene.vid && Scene.vid.readyState >= 2) drawVideo(x, Scene.vid); else drawSynth(x, t);
-    if (before) {
+    const vid = Scene.vid && Scene.vid.readyState >= 2;
+    if (vid) drawVideo(x, Scene.vid); else drawSynth(x, t, before);
+    if (before && vid) {
       x.fillStyle = 'rgba(255,30,30,.22)'; x.fillRect(0, 0, W, H);
       x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(0, 0, W, H);
     }

@@ -855,3 +855,6 @@ html.intro-on,html.intro-on body{overflow:hidden}
 .pr-addons{display:grid;gap:8px}
 .pr-addon{display:grid;grid-template-columns:minmax(0,1fr) 170px auto auto;gap:8px;align-items:center}
 @media(max-width:640px){.pr-addon{grid-template-columns:1fr auto auto}.pr-addon input:first-child{grid-column:1/-1}.pr-in{width:100px}}
+
+/* Animacja telemetrii PRZED/PO (bez filmu): bez przyciemnienia paneli, żeby wykres był czytelny */
+.cmp:not(.has-video) .panel-before,.cmp:not(.has-video) .panel-after{background:none}
