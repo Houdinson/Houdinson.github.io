@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>mObywatel Prosty – koncepcja</title>
+<meta name="description" content="Klikalny prototyp trybu Prosty dla osób starszych. Koncepcja konkursowa – nie jest usługą administracji publicznej. Dane fikcyjne.">
+<style>
+:root{
+  --scale:1;
+  --bg:#eef1f6; --surface:#ffffff; --fg:#0f1b33; --muted:#45526a; --line:#cfd6e3;
+  --primary:#0b3d91; --on-primary:#ffffff; --primary-soft:#e3ebfa;
+  --red:#b70f2a; --warn-bg:#fff4d6; --warn-line:#a06e00; --ok:#0f6b37; --ok-bg:#e1f3e8; --danger-bg:#fde8eb;
+  --focus:#ff9f1c;
+}
+body.hc{
+  --bg:#000; --surface:#000; --fg:#fff; --muted:#fff; --line:#fff;
+  --primary:#ffd400; --on-primary:#000; --primary-soft:#222;
+  --warn-bg:#000; --warn-line:#ffd400; --ok:#7dffa4; --ok-bg:#000; --danger-bg:#000; --red:#ff6b6b;
+}
+*{box-sizing:border-box}
+html{font-size:calc(18px * var(--scale))}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#dde3ec;color:var(--fg)}
+body.hc{background:#111}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:4px solid var(--focus);outline-offset:2px}
+svg{width:1.4em;height:1.4em;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.stage{min-height:100vh;display:grid;grid-template-columns:minmax(280px,400px) auto;gap:40px;justify-content:center;align-items:start;padding:32px 16px}
+.notes{font-size:15px;line-height:1.5;color:#1d2840;position:sticky;top:32px}
+body.hc .notes{color:#fff}
+.notes .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px}
+.notes h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#5a6782;margin:22px 0 6px}
+body.hc .notes h2{color:#ffd400}
+.notes .now{background:#fff;border:1px solid #c9d1de;border-radius:14px;padding:14px 16px}
+body.hc .notes .now{background:#000;border-color:#fff}
+.notes .now b{display:block;font-size:16px;margin-bottom:4px}
+.notes ul{padding-left:18px;margin:6px 0}
+.notes .disc{font-size:13px;color:#5a6782;margin-top:22px}
+.mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(180deg,#fff 0 50%,#c8102e 50% 100%);border:2px solid #c8102e;flex:none}
+
+.phone{width:390px;height:844px;border-radius:46px;border:11px solid #10131a;background:var(--bg);overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 30px 60px rgba(16,19,26,.25)}
+.status{display:flex;justify-content:space-between;padding:10px 26px 4px;font-size:14px;font-weight:700;color:var(--fg)}
+#app{flex:1;overflow-y:auto;padding:8px 18px 28px}
+nav.bottom{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom));border-top:2px solid var(--line);background:var(--surface)}
+nav.bottom[hidden]{display:none}
+.navbtn{min-height:64px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-weight:800;font-size:.9rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.navbtn:disabled{opacity:.4;cursor:default}
+.navbtn.help{border-color:var(--primary);color:var(--primary)}
+
+h1{font-size:1.6rem;line-height:1.2;margin:.3em 0 .45em}
+h1:focus{outline:none}
+h2{font-size:1.15rem;margin:1.2em 0 .5em}
+p{font-size:1rem;line-height:1.5;margin:.4em 0}
+.muted{color:var(--muted)}
+.stack>*+*{margin-top:12px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:64px;padding:14px 18px;border-radius:16px;font-size:1.05rem;font-weight:800;border:2px solid var(--primary);background:var(--surface);color:var(--primary);text-align:center}
+.btn.primary{background:var(--primary);color:var(--on-primary)}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn.left{justify-content:flex-start;text-align:left}
+.btn.small{min-height:52px;font-size:.95rem}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+body.big .tiles{grid-template-columns:1fr}
+body.big .hello{flex-direction:column-reverse;align-items:stretch}
+body.big .gear{align-self:flex-end}
+body.big .tile{min-height:96px;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px}
+.tile{min-height:150px;border-radius:20px;background:var(--surface);border:2px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:16px;font-size:1.12rem;font-weight:800;color:var(--fg);text-align:left;line-height:1.2}
+.ic{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary);flex:none}
+.ic svg{width:30px;height:30px}
+.hello{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.gear{min-height:56px;padding:0 12px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:6px}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:16px}
+.warn{background:var(--warn-bg);border:2px solid var(--warn-line);border-radius:18px;padding:16px}
+.okbox{background:var(--ok-bg);border:2px solid var(--ok);border-radius:18px;padding:16px}
+.danger{background:var(--danger-bg);border:3px solid var(--red);border-radius:18px;padding:16px}
+.row{display:flex;gap:12px;align-items:center}
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.8rem;font-weight:800;background:var(--primary-soft);color:var(--primary)}
+.hl{outline:5px solid var(--focus)!important;outline-offset:3px;animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{50%{outline-offset:8px}}
+.hint{background:var(--focus);color:#1a1000;font-weight:800;border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.helpbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--ok-bg);border:2px solid var(--ok);border-radius:14px;padding:10px 12px;margin-bottom:12px;font-weight:800;color:var(--ok)}
+.helpbar span{flex:1 1 100%}
+.helpbar button{flex:1;min-height:48px;border-radius:12px;border:2px solid var(--ok);background:var(--surface);color:var(--ok);font-weight:800;font-size:.9rem}
+
+/* dokument */
+.doc{position:relative;overflow:hidden;border-radius:20px;background:linear-gradient(160deg,#fbfcff,#e7edf8);border:2px solid var(--line);color:#0f1b33;padding:0}
+body.hc .doc{background:#000;color:#fff}
+.doc .flag{height:14px;background:linear-gradient(180deg,#fff 0 50%,#c8102e 50%)}
+.doc .in{padding:16px;display:grid;grid-template-columns:92px 1fr;gap:14px}
+.avatar{width:92px;height:116px;border-radius:12px;background:#cfd8e8;display:grid;place-items:end center;overflow:hidden}
+.avatar svg{width:86px;height:100px;stroke:none;fill:#8a9ab6}
+.f{font-size:.78rem;color:#4b5873;text-transform:uppercase;letter-spacing:.04em}
+body.hc .f{color:#ffd400}
+.v{font-size:1.1rem;font-weight:800;margin-bottom:6px}
+.holo{position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.75) 50%,transparent 65%);background-size:250% 100%;animation:sweep 2.6s linear infinite;pointer-events:none}
+@keyframes sweep{from{background-position:120% 0}to{background-position:-120% 0}}
+
+/* PIN */
+.dots{display:flex;justify-content:center;gap:18px;margin:18px 0 22px}
+.dots i{width:22px;height:22px;border-radius:50%;border:3px solid var(--primary)}
+.dots i.on{background:var(--primary)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.key{min-height:72px;border-radius:18px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-size:1.6rem;font-weight:800}
+
+/* czat */
+.bubble{max-width:88%;padding:14px 16px;border-radius:18px;margin:10px 0;line-height:1.45;font-size:1rem}
+.bubble.bot{background:var(--surface);border:2px solid var(--line);border-top-left-radius:6px}
+.bubble.me{background:var(--primary);color:var(--on-primary);margin-left:auto;border-top-right-radius:6px}
+.bact{margin-top:12px}
+.inrow{display:flex;gap:8px;margin-top:12px}
+.inrow input{flex:1;min-height:60px;border-radius:14px;border:2px solid var(--line);padding:0 14px;font-size:1rem;background:var(--surface);color:var(--fg)}
+.inrow button{min-width:96px;border-radius:14px;border:2px solid var(--primary);background:var(--primary);color:var(--on-primary);font-weight:800}
+.listening{animation:pulse 1s infinite;outline:5px solid var(--focus)}
+
+/* kroki */
+.steps{display:flex;gap:6px;margin:6px 0 4px}
+.steps i{flex:1;height:8px;border-radius:4px;background:var(--line)}
+.steps i.on{background:var(--primary)}
+.choice{display:flex;align-items:center;gap:14px;width:100%;min-height:72px;padding:14px 16px;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font-size:1rem;font-weight:700;text-align:left}
+.choice[aria-pressed="true"]{border-color:var(--primary);box-shadow:inset 0 0 0 2px var(--primary)}
+.radio{width:28px;height:28px;border-radius:50%;border:3px solid var(--primary);flex:none;display:grid;place-items:center}
+.choice[aria-pressed="true"] .radio::after{content:"";width:14px;height:14px;border-radius:50%;background:var(--primary)}
+dl.sum{margin:0}
+dl.sum div{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+dl.sum dt{color:var(--muted)}
+dl.sum dd{margin:0;font-weight:800;text-align:right}
+
+/* log */
+.log{border-left:4px solid var(--primary);padding:4px 0 4px 14px;margin:14px 0}
+.log b{display:block}
+
+/* modale */
+.modal{position:absolute;inset:0;background:rgba(10,15,30,.55);display:flex;align-items:flex-end;z-index:20}
+.modal[hidden]{display:none}
+.sheet{background:var(--bg);width:100%;max-height:96%;overflow:auto;border-radius:26px 26px 0 0;padding:20px 18px 26px}
+.sheet.full{height:100%;max-height:100%;border-radius:0}
+.tomek{background:#1d2333;color:#fff}
+.tomek .card{background:#2a3146;border-color:#3c4560;color:#fff}
+.tomek .btn{background:#2a3146;color:#fff;border-color:#8fb1ff}
+.tomek .btn.primary{background:#8fb1ff;color:#0b1530}
+#toast{position:absolute;left:14px;right:14px;bottom:110px;background:#0f1b33;color:#fff;padding:14px 16px;border-radius:14px;font-weight:700;z-index:30;opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none}
+body.hc #toast{background:#ffd400;color:#000}
+#toast.show{opacity:1;transform:none}
+.full-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.full-grid div{font-size:11px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;min-height:58px}
+
+@media (max-width:860px){
+  .stage{grid-template-columns:1fr;padding:0;gap:0}
+  .phone{width:100%;height:100dvh;border:0;border-radius:0;box-shadow:none}
+  .notes{order:2;position:static;padding:24px 18px 40px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="notes" aria-label="Opis koncepcji">
+    <div class="brand"><span class="mark" aria-hidden="true"></span>mObywatel Prosty</div>
+    <p>Koncepcja trybu dla osób starszych, który nakłada się na pełną aplikację. Przeklikaj jako <b>Halina, 74 lata</b>.</p>
+    <h2>Ten ekran</h2>
+    <div class="now"><b id="noteTitle">Start</b><span id="noteText"></span></div>
+    <h2>Spróbuj</h2>
+    <ul>
+      <li>Asystent → „Ktoś dzwoni i mówi, że jest z banku”</li>
+      <li>Pomoc → wyślij prośbę do Tomka → „Telefon Tomka”</li>
+      <li>Przypomnienie o dowodzie → wniosek w 3 krokach</li>
+      <li>Legitymacja → „Pokaż tylko to, co potrzebne”</li>
+      <li>Ustawienia → rozmiar tekstu, kontrast, czytanie na głos</li>
+    </ul>
+    <h2>Zasady</h2>
+    <ul>
+      <li>Maks. 4 sprawy na ekranie głównym</li>
+      <li>Wstecz, Start i Pomoc zawsze w tym samym miejscu</li>
+      <li>Jeden ekran = jedna decyzja</li>
+      <li>Prosty język, przyciski min. 64 px</li>
+      <li>Nic nie wysyła się bez podsumowania i PIN-u</li>
+    </ul>
+    <p class="disc">Prototyp konkursowy (mObywatel Challenge). Nie jest usługą administracji publicznej. Osoby i dane są fikcyjne. Asystent w pokazie działa na przygotowanych scenariuszach; docelowo może korzystać z polskiego modelu (Bielik/PLLuM).</p>
+  </aside>
+
+  <div class="phone" id="phone">
+    <div class="status" aria-hidden="true"><span>10:24</span><span>● ● ▮</span></div>
+    <main id="app" aria-live="polite"></main>
+    <nav class="bottom" id="nav" aria-label="Nawigacja">
+      <button class="navbtn" data-act="back" id="backBtn"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Wstecz</button>
+      <button class="navbtn" data-act="home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/></svg>Start</button>
+      <button class="navbtn help" data-go="help"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 .5c0 1.6-2.5 2-2.5 3.5M12 17h.01"/></svg>Pomoc</button>
+    </nav>
+    <div class="modal" id="modal" hidden></div>
+    <div id="toast" role="status"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const app = $('#app'), modal = $('#modal');
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const I = {
+  id:'<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8.5" cy="11" r="2.3"/><path d="M5.3 16c.6-1.5 1.8-2.3 3.2-2.3s2.6.8 3.2 2.3M14 10h5M14 13.5h4"/></svg>',
+  card:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 9h10M7 13h6M7 17h4"/></svg>',
+  pill:'<svg viewBox="0 0 24 24"><rect x="3" y="8.5" width="18" height="7" rx="3.5" transform="rotate(-40 12 12)"/><path d="M9.3 8.8l5.4 6.4"/></svg>',
+  coin:'<svg viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg>',
+  mic:'<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/></svg>',
+  people:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.8-3.2 3.1-5 6-5s5.2 1.8 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.4.2 4.2 1.8 5 4.8"/></svg>',
+  gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-2.7-1.1l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 003 15.3H3a2 2 0 110-4h.1A1.6 1.6 0 004.6 9l-.1-.1a2 2 0 112.8-2.8l.1.1A1.6 1.6 0 0010 5V5a2 2 0 114 0v.1a1.6 1.6 0 002.7 1.1l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 001.1 2.7H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1.3z"/></svg>',
+  alert:'<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></svg>',
+  shield:'<svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>',
+  check:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/></svg>',
+  speak:'<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg>',
+  phone:'<svg viewBox="0 0 24 24"><path d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"/></svg>',
+  eye:'<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  bell:'<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 20a2 2 0 004 0"/></svg>',
+  finger:'<svg viewBox="0 0 24 24"><path d="M12 11v3a8 8 0 01-2 5M8 8.5A5 5 0 0117 11v2M6 13a6 6 0 012-6.5M15.5 16a14 14 0 01-1 4M20 12a8 8 0 00-12-7"/></svg>',
+  person:'<svg viewBox="0 0 100 120"><circle cx="50" cy="42" r="24"/><path d="M6 120c4-30 22-44 44-44s40 14 44 44z"/></svg>'
+};
+
+const st = { screen:'start', hist:[], scale:1, hc:false, tts:false, help:null, highlight:null, renewed:false, idBlocked:false, renew:{place:0}, chat:[], done:null, pinCb:null };
+
+/* ---------- ekrany ---------- */
+const S = {
+start: () => ({ title:'Start pokazu', noNav:true,
+  note:'Persona, której brakuje w prototypie bazowym: osoba 70+. Najstarsza osoba w oryginale ma 57 lat, a seniorzy to grupa, która najrzadziej korzysta z mObywatela.',
+  html:`<div class="stack" style="padding-top:28px">
+    <div class="row"><span class="mark" aria-hidden="true" style="width:56px;height:56px;border-radius:16px"></span>
+      <div><h1 style="margin:0">mObywatel Prosty</h1><p class="muted say" style="margin:0">Koncepcja trybu dla osób starszych</p></div></div>
+    <div class="card">
+      <div class="row"><div class="avatar" style="width:70px;height:84px">${I.person}</div>
+      <div><p style="margin:0;font-weight:800;font-size:1.15rem">Halina Wójcik, 74 lata</p>
+      <p class="muted" style="margin:0">Rzeszów. Emerytka, mieszka sama. Syn Tomek mieszka w Krakowie i pomaga przez telefon.</p></div></div>
+    </div>
+    <p class="say">Halina ma smartfon od wnuczki. Chce pokazać legitymację w autobusie, odebrać leki i nie dać się oszukać.</p>
+    <button class="btn primary" data-go="login">Rozpocznij pokaz</button>
+    <p class="muted" style="font-size:.85rem">Prototyp konkursowy. Nie jest usługą administracji publicznej. Wszystkie dane są fikcyjne.</p>
+  </div>`}),
+
+login: () => ({ title:'Logowanie', noNav:true,
+  note:'PIN zamiast wyłącznie Face ID – wiele tańszych telefonów go nie ma, a starsze osoby często mają z nim problem. Klawisze mają 72 px, kropki pokazują postęp. W pokazie zadziała dowolny PIN.',
+  html:`<div style="padding-top:20px"><h1 style="text-align:center">Dzień dobry</h1>
+    <p class="say" style="text-align:center">Wpisz swój PIN (4 cyfry)</p>
+    <div class="pinwrap">${padHTML()}</div>
+    <div style="margin-top:14px"><button class="btn" data-act="finger">${I.finger} Użyj odcisku palca</button></div></div>`,
+  after: () => bindPad(app.querySelector('.pinwrap'), () => go('home',{reset:true})) }),
+
+home: () => ({ title:'Ekran główny',
+  note:'Maksymalnie 4 sprawy, z których senior naprawdę korzysta. Przypomnienie od razu proponuje działanie. Asystent ma gotowe podpowiedzi zamiast pustego pola. Przyciski Wstecz / Start / Pomoc są stale w tym samym miejscu.',
+  html:`${st.highlight ? '<div class="hint say">Tomek pokazuje: naciśnij podświetlony przycisk</div>' : ''}
+    <div class="hello"><div><p class="muted" style="margin:0">piątek, 13 listopada</p><h1 style="margin-top:2px">Dzień dobry, Pani Halino</h1></div>
+    <button class="gear" data-go="settings" aria-label="Ustawienia">${I.gear}Ustawienia</button></div>
+    ${st.renewed
+      ? `<div class="okbox" style="margin-bottom:14px"><p style="margin:0;font-weight:800">${I.check} Nowy dowód: wniosek w realizacji</p><p class="say" style="margin:.3em 0 0">Wyślemy SMS, gdy będzie gotowy do odbioru.</p></div>`
+      : `<div class="warn" style="margin-bottom:14px"><p style="margin:0 0 .3em;font-weight:800" class="say">Pani dowód osobisty traci ważność 23 grudnia (za 40 dni)</p>
+         <button class="btn primary small" data-go="renew1" data-hl="renew">Pomóż mi go odnowić</button></div>`}
+    <div class="tiles">
+      <button class="tile" data-go="dowod" data-hl="dowod"><span class="ic">${I.id}</span>Mój dowód</button>
+      <button class="tile" data-go="legit" data-hl="legit"><span class="ic">${I.card}</span>Legitymacja emeryta</button>
+      <button class="tile" data-go="recepty" data-hl="recepty"><span class="ic">${I.pill}</span>Moje recepty<span class="pill">2 do odbioru</span></button>
+      <button class="tile" data-go="emerytura" data-hl="emerytura"><span class="ic">${I.coin}</span>Moja emerytura</button>
+    </div>
+    <div class="stack" style="margin-top:14px">
+      <button class="btn primary" data-act="openAssistant">${I.mic} Powiedz, czego potrzebujesz</button>
+      <button class="btn left" data-go="reminders">${I.bell} Przypomnienia <span class="pill" style="margin-left:auto">3</span></button>
+      <button class="btn left" data-go="privacy">${I.eye} Kto sprawdzał moje dane</button>
+    </div>`}),
+
+dowod: () => ({ title:'Mój dowód',
+  note:'Jeden dokument = jeden ekran. Tryb kontroli pokazuje animację i godzinę sprawdzenia, żeby nie dało się go podrobić zrzutem ekranu. Przycisk czytania na głos przy każdym dokumencie.',
+  html:`<h1>Mój dowód</h1>
+    ${st.idBlocked ? '<div class="danger" style="margin-bottom:12px"><p style="margin:0;font-weight:800">Dowód jest zablokowany (zgubiony portfel)</p><button class="btn small" style="margin-top:10px" data-act="unblock">Portfel się znalazł – odblokuj</button></div>' : ''}
+    ${docHTML()}
+    <div class="stack" style="margin-top:14px">
+      <button class="btn primary" data-act="control">${I.shield} Pokaż do kontroli</button>
+      <button class="btn" data-act="readDoc">${I.speak} Przeczytaj na głos</button>
+    </div>
+    <p class="muted say" style="margin-top:12px">Ważny do 23 grudnia 2026. Odnowienie zajmie 3 kroki.</p>`}),
+
+legit: () => ({ title:'Legitymacja emeryta',
+  note:'Prywatność: zamiast pokazywać cały dokument, Halina może pokazać tylko to, czego potrzebuje kierowca lub kasjer – że ma prawo do zniżki. Bez PESEL-u i adresu.',
+  html:`<h1>Legitymacja emeryta</h1>
+    <div class="doc"><div class="flag"></div><div class="in">
+      <div class="avatar">${I.person}</div>
+      <div><div class="f">Imię i nazwisko</div><div class="v">Halina Wójcik</div>
+      <div class="f">Rodzaj świadczenia</div><div class="v">Emerytura</div>
+      <div class="f">Wydana przez</div><div class="v">ZUS</div></div></div><div class="holo"></div></div>
+    <p class="say" style="margin-top:12px">Pokaż kierowcy albo w kasie, aby dostać zniżkę.</p>
+    <div class="stack"><button class="btn primary" data-act="minimal">${I.eye} Pokaż tylko to, co potrzebne</button>
+    <button class="btn" data-act="control">${I.shield} Pokaż całą legitymację</button></div>`}),
+
+recepty: () => ({ title:'Moje recepty',
+  note:'Nazwy leków po ludzku („lek na ciśnienie”) obok nazwy z recepty. Kod dla farmaceuty jest bardzo duży, żeby dało się go pokazać przez ladę.',
+  html:`<h1>Moje recepty</h1><p class="say">Ma Pani 2 recepty do odebrania w aptece.</p>
+    <div class="stack">
+      <div class="card"><p style="margin:0;font-weight:800;font-size:1.15rem">Lek na ciśnienie</p><p class="muted" style="margin:.2em 0">Amlodypina 5 mg, 1 opakowanie</p>
+        <p style="margin:.2em 0 .6em"><b>Odbierz do 12 grudnia</b></p><button class="btn primary small" data-act="rxCode">Pokaż farmaceucie</button></div>
+      <div class="card"><p style="margin:0;font-weight:800;font-size:1.15rem">Lek na cholesterol</p><p class="muted" style="margin:.2em 0">Atorwastatyna 20 mg, 1 opakowanie</p>
+        <p style="margin:.2em 0 .6em"><b>Odbierz do 3 stycznia</b></p><button class="btn primary small" data-act="rxCode">Pokaż farmaceucie</button></div>
+    </div>`}),
+
+emerytura: () => ({ title:'Moja emerytura',
+  note:'Usługa „Twoja emerytura” w prostym języku: najpierw data i kwota najbliższej wypłaty, szczegóły niżej.',
+  html:`<h1>Moja emerytura</h1>
+    <div class="card"><p class="muted" style="margin:0">Następna wypłata</p><p class="say" style="font-size:1.6rem;font-weight:800;margin:.1em 0">10 grudnia</p>
+    <p class="say" style="font-size:1.3rem;margin:0"><b>2 840,12 zł</b> na konto w banku</p></div>
+    <h2>Ostatnie wypłaty</h2>
+    <dl class="sum"><div><dt>10 listopada</dt><dd>2 840,12 zł</dd></div><div><dt>10 października</dt><dd>2 840,12 zł</dd></div><div><dt>10 września</dt><dd>2 840,12 zł</dd></div></dl>
+    <div style="margin-top:14px"><button class="btn" data-act="readAll">${I.speak} Przeczytaj na głos</button></div>`}),
+
+reminders: () => ({ title:'Przypomnienia',
+  note:'Państwo, które samo przypomina o terminach – i od razu daje przycisk, żeby sprawę załatwić. Bez szukania.',
+  html:`<h1>Przypomnienia</h1>
+    <div class="stack">
+      ${st.renewed ? '' : `<div class="warn"><p style="margin:0;font-weight:800">Dowód osobisty – ważny do 23 grudnia</p><p style="margin:.2em 0 .6em">Za 40 dni</p><button class="btn primary small" data-go="renew1">Odnów teraz</button></div>`}
+      <div class="card"><p style="margin:0;font-weight:800">Recepta na lek na ciśnienie</p><p style="margin:.2em 0 .6em">Odbierz do 12 grudnia</p><button class="btn small" data-go="recepty">Pokaż receptę</button></div>
+      <div class="card"><p style="margin:0;font-weight:800">Emerytura wpłynie 10 grudnia</p><p style="margin:.2em 0 0">2 840,12 zł</p></div>
+    </div>
+    <p class="muted" style="margin-top:14px">Przypomnienia mogą też trafić do Tomka – za Pani zgodą.</p>`}),
+
+privacy: () => ({ title:'Kto sprawdzał moje dane',
+  note:'Prywatność i kontrola danych: historia, kto i kiedy pobrał dane, prostym językiem. Przycisk „To nie ja” od razu prowadzi do zastrzeżenia PESEL-u.',
+  html:`<h1>Kto sprawdzał moje dane</h1><p class="say">Ostatnie 30 dni. Jeśli czegoś Pani nie rozpoznaje, proszę nacisnąć „To nie ja”.</p>
+    <div class="log"><b>Apteka „Pod Lipą”, 5 listopada</b><span class="muted">Sprawdziła: receptę i PESEL</span></div>
+    <div class="log"><b>Przychodnia, 28 października</b><span class="muted">Sprawdziła: imię, nazwisko, PESEL</span></div>
+    <div class="log"><b>Kontrola biletów MPK, 21 października</b><span class="muted">Sprawdziła: prawo do zniżki (bez PESEL-u)</span></div>
+    <div class="stack" style="margin-top:16px"><button class="btn danger" data-go="scam">To nie ja – coś jest nie tak</button></div>`}),
+
+assistant: () => ({ title:'Asystent',
+  note:'Gotowe prośby zamiast pustej rozmowy. Można mówić (rozpoznawanie mowy pl-PL w przeglądarce) albo pisać. Każde działanie wymaga podsumowania i PIN-u. Docelowo asystent na polskim modelu (Bielik/PLLuM).',
+  html:`<h1>W czym mogę pomóc?</h1>
+    ${st.chat.map(m => `<div class="bubble ${m.who}">${m.html}</div>`).join('')}
+    <div class="stack" style="margin-top:12px">
+      <button class="btn left small" data-intent="wallet">Zgubiłam portfel</button>
+      <button class="btn left small" data-intent="scam">Ktoś dzwoni i mówi, że jest z banku</button>
+      <button class="btn left small" data-intent="pension">Kiedy dostanę emeryturę?</button>
+      <button class="btn left small" data-intent="meds">Chcę odebrać leki</button>
+      <button class="btn primary" id="micBtn" data-act="mic">${I.mic}<span>Naciśnij i mów</span></button>
+    </div>
+    <form class="inrow" id="askForm"><label class="sr" for="ask" style="position:absolute;left:-9999px">Napisz prośbę</label>
+      <input id="ask" placeholder="Albo napisz tutaj…" autocomplete="off"><button type="submit">Wyślij</button></form>`,
+  after: () => { const b=[...app.querySelectorAll('.bubble')]; if (b.length > 1) b[b.length-2].scrollIntoView({block:'start'}); } }),
+
+scam: () => ({ title:'Ostrzeżenie przed oszustwem',
+  note:'Scenariusz, którego brakuje w oryginale: oszustwo „na pracownika banku” lub „na policjanta”. Seniorzy są głównym celem. Aplikacja daje jedno jasne polecenie i jeden przycisk do bliskiej osoby.',
+  html:`<div class="danger"><p style="margin:0;color:var(--red);font-weight:800">${I.alert} Uwaga</p>
+    <h1 style="margin-top:6px">To prawdopodobnie oszustwo. Proszę się rozłączyć.</h1>
+    <p class="say">Bank, policja ani urząd <b>nigdy</b> nie proszą o PIN, kod z SMS-a, przelew na „bezpieczne konto” ani instalowanie aplikacji.</p></div>
+    <div class="stack" style="margin-top:14px">
+      <button class="btn primary" data-act="callTomek">${I.phone} Zadzwoń do Tomka</button>
+      <button class="btn" data-act="callBank">${I.phone} Zadzwoń do swojego banku (numer z karty)</button>
+      <button class="btn" data-act="blockPesel">${I.shield} Zastrzeż mój PESEL</button>
+    </div>
+    <p class="muted" style="margin-top:12px">Zastrzeżony PESEL blokuje wzięcie kredytu na Pani dane. Można go odblokować w każdej chwili.</p>`}),
+
+help: () => ({ title:'Pomoc bliskiej osoby',
+  note:'Tomek widzi, na którym ekranie jest mama, ale nie widzi jej dokumentów ani danych. Może podświetlić przycisk na jej telefonie. Kliknij „Telefon Tomka”, żeby zobaczyć jego stronę.',
+  html:`<h1>Pomoc</h1>
+    ${st.help === 'on'
+      ? `<div class="okbox"><p style="margin:0;font-weight:800" class="say">Tomek pomaga Pani teraz.</p><p style="margin:.3em 0 0">Widzi, na którym ekranie Pani jest. Nie widzi Pani dokumentów.</p></div>
+         <div class="stack" style="margin-top:14px"><button class="btn primary" data-act="tomek">Zobacz telefon Tomka (pokaz)</button><button class="btn" data-act="endHelp">Zakończ pomoc</button></div>`
+      : st.help === 'waiting'
+      ? `<div class="card"><p class="say" style="margin:0;font-weight:800">Wysłano prośbę do Tomka…</p><p style="margin:.3em 0 0">Gdy odpowie, zobaczy Pani to tutaj.</p></div>`
+      : `<p class="say">Kogo poprosić o pomoc?</p>
+         <div class="stack">
+          <button class="btn primary left" data-act="askHelp">${I.people}<span>Tomek (syn)<br><small style="font-weight:600">Wyślij prośbę o pomoc</small></span></button>
+          <button class="btn left" data-act="callTomek">${I.phone} Zadzwoń do Tomka</button>
+          <button class="btn left" data-act="hotline">${I.phone} Zadzwoń na infolinię</button>
+          <button class="btn left" data-act="openAssistant">${I.mic} Zapytaj asystenta</button>
+         </div>`}`}),
+
+renew1: () => ({ title:'Nowy dowód – krok 1',
+  note:'Jedna sprawa od początku do końca: wniosek o nowy dowód w 3 krokach. Jeden ekran = jedna decyzja, pasek postępu „Krok 1 z 3”. Fotograf może wysłać zdjęcie od razu do aplikacji.',
+  html:`${stepsHTML(1)}<h1>Zdjęcie do dowodu</h1>
+    <p class="say">Potrzebne jest aktualne zdjęcie (zrobione w ciągu ostatnich 6 miesięcy). Fotograf może wysłać je od razu do aplikacji.</p>
+    <div class="stack"><button class="btn primary" data-act="photo">Mam zdjęcie od fotografa</button>
+    <button class="btn" data-act="remindTomorrow">Przypomnij mi jutro</button></div>`}),
+
+renew2: () => ({ title:'Nowy dowód – krok 2',
+  note:'Duże pola wyboru zamiast list rozwijanych. Domyślnie podpowiadamy najbliższy urząd.',
+  html:`${stepsHTML(2)}<h1>Gdzie odbierze Pani dowód?</h1>
+    <div class="okbox" style="margin-bottom:12px"><p style="margin:0">${I.check} Zdjęcie przyjęte</p></div>
+    <div class="stack">
+      <button class="choice" data-act="place" data-v="0" aria-pressed="${st.renew.place===0}"><span class="radio"></span><span>Urząd Miasta Rzeszowa<br><small class="muted">najbliżej Pani adresu</small></span></button>
+      <button class="choice" data-act="place" data-v="1" aria-pressed="${st.renew.place===1}"><span class="radio"></span><span>Urząd Miasta Krakowa<br><small class="muted">blisko syna</small></span></button>
+    </div>
+    <div style="margin-top:14px"><button class="btn primary" data-go="renew3">Dalej</button></div>`}),
+
+renew3: () => ({ title:'Nowy dowód – krok 3',
+  note:'Podsumowanie przed wysłaniem – prostym językiem, z informacją o opłacie (dowód jest bezpłatny). Wysłanie wymaga PIN-u.',
+  html:`${stepsHTML(3)}<h1>Sprawdź i wyślij</h1>
+    <dl class="sum"><div><dt>Dokument</dt><dd>Nowy dowód osobisty</dd></div>
+      <div><dt>Zdjęcie</dt><dd>Od fotografa</dd></div>
+      <div><dt>Odbiór</dt><dd>${st.renew.place ? 'Urząd Miasta Krakowa' : 'Urząd Miasta Rzeszowa'}</dd></div>
+      <div><dt>Opłata</dt><dd>0 zł</dd></div></dl>
+    <p class="say" style="margin-top:12px">Stary dowód będzie ważny do odbioru nowego, ale nie dłużej niż do 23 grudnia.</p>
+    <div style="margin-top:14px"><button class="btn primary" data-act="sendRenew">Wyślij wniosek</button></div>`}),
+
+settings: () => ({ title:'Ustawienia',
+  note:'Trzy rozmiary tekstu, wysoki kontrast i czytanie ekranów na głos. Tryb Prosty to nakładka – pełną aplikację można włączyć w każdej chwili.',
+  html:`<h1>Ustawienia</h1>
+    <h2>Wielkość tekstu</h2>
+    <div class="row" role="group" aria-label="Wielkość tekstu">
+      ${[[1,'A'],[1.15,'A+'],[1.3,'A++']].map(([v,l]) => `<button class="choice" style="justify-content:center;font-size:${v*1.1}rem" data-act="scale" data-v="${v}" aria-pressed="${st.scale===v}">${l}</button>`).join('')}
+    </div>
+    <h2>Wygląd i dźwięk</h2>
+    <div class="stack">
+      <button class="choice" data-act="hc" aria-pressed="${st.hc}"><span class="radio"></span>Wysoki kontrast</button>
+      <button class="choice" data-act="tts" aria-pressed="${st.tts}"><span class="radio"></span>Czytaj każdy ekran na głos</button>
+    </div>
+    <h2>Widok aplikacji</h2>
+    <div class="stack"><button class="btn" data-go="full">Przełącz na widok pełny</button>
+    <button class="btn" data-act="logout">Wyloguj</button></div>`}),
+
+full: () => ({ title:'Widok pełny',
+  note:'Dla porównania: pełna aplikacja ma dziesiątki usług. Tryb Prosty ich nie usuwa, tylko chowa – syn czy wnuczka mogą przełączyć widok, żeby załatwić rzadszą sprawę.',
+  html:`<div class="warn" style="margin-bottom:12px"><p style="margin:0 0 .5em;font-weight:800">To jest pełny widok aplikacji</p><button class="btn primary small" data-act="home">Wróć do widoku Prosty</button></div>
+    <div class="full-grid" aria-hidden="true">${['mDowód','Prawo jazdy','Pojazdy','Punkty karne','mStłuczka','Legitymacje','eRecepta','Zastrzeż PESEL','Zastrzeż dokument','Firma','KRS','Księgi wieczyste','e-Doręczenia','Podpis','Rejestr wyborców','Wyjazd za granicę','Zgłoś urodzenie','Dyplomy','Emerytura','Karta Dużej Rodziny','Szkolenia obronne','Zgłoś problem','Wnioski','Płatności'].map(x=>`<div>${x}</div>`).join('')}</div>`}),
+
+done: () => ({ title:'Gotowe',
+  note:'Potwierdzenie wykonania prostym językiem i informacja, co dalej. Każdą sprawę można przekazać do wiadomości bliskiej osoby.',
+  html:`<div class="okbox" style="margin-top:10px"><p style="margin:0;color:var(--ok)">${I.check}</p><h1>${st.done.title}</h1><p class="say">${st.done.text}</p></div>
+    <div class="stack" style="margin-top:14px">${st.done.extra || ''}<button class="btn" data-act="notifyTomek">${I.people} Daj znać Tomkowi</button><button class="btn primary" data-act="home">Wróć na start</button></div>`})
+};
+
+/* ---------- pomocnicze widoki ---------- */
+function docHTML(){
+  return `<div class="doc"><div class="flag"></div><div class="in">
+    <div class="avatar">${I.person}</div>
+    <div><div class="f">Imię</div><div class="v">Halina</div><div class="f">Nazwisko</div><div class="v">Wójcik</div>
+    <div class="f">Data urodzenia</div><div class="v">12.03.1952</div><div class="f">Ważny do</div><div class="v">23.12.2026</div></div></div>
+    <div style="padding:0 16px 16px"><div class="f">Numer dowodu (fikcyjny)</div><div class="v">DEM 123456</div></div><div class="holo"></div></div>`;
+}
+function stepsHTML(n){ return `<p class="muted" style="margin:0">Krok ${n} z 3</p><div class="steps">${[1,2,3].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</div>`; }
+function padHTML(){
+  const k=['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  return `<div class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="pad">${k.map(x => x==='' ? '<span></span>' : `<button type="button" class="key" data-k="${x}" aria-label="${x==='⌫'?'Usuń cyfrę':x}">${x}</button>`).join('')}</div>`;
+}
+function bindPad(root, onDone){
+  let v='', finished=false; const dots=root.querySelectorAll('.dots i');
+  root.addEventListener('click', e => {
+    const b=e.target.closest('[data-k]'); if(!b || finished) return;
+    const k=b.dataset.k;
+    if(k==='⌫') v=v.slice(0,-1); else if(v.length<4) v+=k;
+    dots.forEach((d,i)=>d.classList.toggle('on', i<v.length));
+    if(v.length===4){ finished=true; setTimeout(onDone,250); }
+  });
+}
+function helpBanner(){
+  return `<div class="helpbar" role="status"><span>${I.people} Tomek pomaga Pani teraz</span><button data-act="tomek">Telefon Tomka</button><button data-act="endHelp">Zakończ</button></div>`;
+}
+
+/* ---------- nawigacja ---------- */
+function go(name, opts={}){
+  if(opts.reset) st.hist=[]; else if(st.screen!==name) st.hist.push(st.screen);
+  st.screen=name; render();
+}
+function render(){
+  const s=S[st.screen]();
+  app.innerHTML = (st.help==='on' && !s.noNav && st.screen!=='help' ? helpBanner() : '') + s.html;
+  app.scrollTop=0;
+  $('#noteTitle').textContent=s.title; $('#noteText').textContent=s.note||'';
+  $('#nav').hidden=!!s.noNav;
+  $('#backBtn').disabled=!st.hist.length;
+  if(st.highlight){ const el=app.querySelector(`[data-hl="${st.highlight}"]`); if(el){ el.classList.add('hl'); setTimeout(()=>el.scrollIntoView({block:'center',behavior:'smooth'}),60); } }
+  const h=app.querySelector('h1'); if(h){ h.tabIndex=-1; h.focus({preventScroll:true}); }
+  if(s.after) s.after();
+  if(st.tts) speakScreen();
+}
+
+/* ---------- mowa ---------- */
+function say(text){
+  try{
+    if(!('speechSynthesis' in window)){ toast('Ta przeglądarka nie potrafi czytać na głos'); return; }
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text); u.lang='pl-PL'; u.rate=.9;
+    const v=speechSynthesis.getVoices().find(v=>v.lang && v.lang.toLowerCase().startsWith('pl')); if(v) u.voice=v;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function speakScreen(){ say([...app.querySelectorAll('h1, .say')].map(x=>x.innerText).join('. ')); }
+
+/* ---------- modale ---------- */
+function openModal(html, cls=''){ modal.innerHTML=`<div class="sheet ${cls}" role="dialog" aria-modal="true">${html}</div>`; modal.hidden=false; const f=modal.querySelector('h1,h2,button'); if(f){ f.tabIndex=f.tabIndex||-1; f.focus(); } }
+function closeModal(){ modal.hidden=true; modal.innerHTML=''; }
+function askPin(title, lines, onOk){
+  st.pinCb=onOk;
+  openModal(`<h2 style="margin-top:0;font-size:1.3rem">${title}</h2>
+    <div class="card"><dl class="sum">${lines.map(([a,b])=>`<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl></div>
+    <p style="text-align:center;margin-top:14px">Potwierdź PIN-em</p><div class="pinwrap">${padHTML()}</div>
+    <div class="stack" style="margin-top:12px"><button class="btn" data-act="pinFinger">${I.finger} Odcisk palca</button><button class="btn" data-act="closeModal">Anuluj</button></div>`);
+  bindPad(modal.querySelector('.pinwrap'), () => { closeModal(); const cb=st.pinCb; st.pinCb=null; cb && cb(); });
+}
+let tt; function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>el.classList.remove('show'),3200); }
+function finish(title, text, extra){ st.done={title,text,extra}; go('done'); }
+
+/* ---------- asystent ---------- */
+const R = {
+  wallet:`Przykro mi. Mogę od razu <b>zablokować Pani dowód</b>, żeby nikt nie wziął na niego kredytu. Gdy portfel się znajdzie, odblokuje go Pani jednym przyciskiem.<div class="bact"><button class="btn primary small" data-act="blockId">Zablokuj mój dowód</button></div>`,
+  scam:`<b>Najpierw proszę się rozłączyć.</b> Bank ani policja nigdy nie dzwonią z prośbą o kody czy przelew.<div class="bact"><button class="btn danger small" data-go="scam">Co mam teraz zrobić?</button></div>`,
+  pension:`Najbliższa emerytura wpłynie na Pani konto <b>10 grudnia</b>. Kwota: <b>2 840,12 zł</b>.<div class="bact"><button class="btn small" data-go="emerytura">Zobacz szczegóły</button></div>`,
+  meds:`Ma Pani <b>2 recepty</b> do odebrania: lek na ciśnienie i lek na cholesterol.<div class="bact"><button class="btn small" data-go="recepty">Pokaż moje recepty</button></div>`,
+  id:`Pani dowód jest ważny do <b>23 grudnia</b>. Pomogę go odnowić – to 3 proste kroki.<div class="bact"><button class="btn small" data-go="renew1">Odnów dowód</button></div>`,
+  unknown:`Nie wiem jeszcze, jak w tym pomóc. Proszę wybrać jedną z próśb poniżej albo poprosić o pomoc Tomka.<div class="bact"><button class="btn small" data-go="help">Poproś o pomoc</button></div>`
+};
+const TXT = { wallet:'Zgubiłam portfel', scam:'Ktoś dzwoni i mówi, że jest z banku', pension:'Kiedy dostanę emeryturę?', meds:'Chcę odebrać leki' };
+function match(t){
+  t=t.toLowerCase();
+  if(/portfel|zgubi|ukrad|kradzie/.test(t)) return 'wallet';
+  if(/bank|dzwoni|policj|oszu|kod|blik|przelew/.test(t)) return 'scam';
+  if(/emerytur|rent|zus|wypłat|wyplat|pieni/.test(t)) return 'pension';
+  if(/lek|recept|aptek|tablet/.test(t)) return 'meds';
+  if(/dow[oó]d|odnow|ważn|wazn/.test(t)) return 'id';
+  return 'unknown';
+}
+function intent(key, text){
+  st.chat.push({who:'me', html:esc(text)});
+  st.chat.push({who:'bot', html:R[key]||R.unknown});
+  render();
+  const bots=app.querySelectorAll('.bubble.bot');
+  if(st.tts && bots.length) say(bots[bots.length-1].innerText);
+}
+
+/* ---------- akcje ---------- */
+const A = {
+  back(){ if(st.hist.length){ st.screen=st.hist.pop(); render(); } },
+  home(){ go('home',{reset:true}); },
+  finger(){ go('home',{reset:true}); },
+  closeModal(){ closeModal(); },
+  pinFinger(){ closeModal(); const cb=st.pinCb; st.pinCb=null; cb && cb(); },
+  openAssistant(){ st.chat=[{who:'bot', html:'Dzień dobry! Proszę nacisnąć jedną z próśb poniżej albo powiedzieć własnymi słowami, czego Pani potrzebuje.'}]; go('assistant'); },
+  control(){
+    openModal(`<h2 style="margin-top:0">Dokument do kontroli</h2>${docHTML()}
+      <div class="okbox" style="margin-top:12px"><p style="margin:0;font-weight:800">${I.check} Dokument sprawdzony dziś o 10:24</p><p style="margin:.2em 0 0">Ruchomy pasek oznacza, że to nie zrzut ekranu.</p></div>
+      <div style="margin-top:14px"><button class="btn primary" data-act="closeModal">Zamknij</button></div>`,'full');
+  },
+  minimal(){
+    openModal(`<h2 style="margin-top:0">Pokazuję tylko to, co potrzebne</h2>
+      <div class="okbox" style="text-align:center;padding:26px 16px"><p style="font-size:1.6rem;font-weight:800;margin:0">Emerytka</p><p style="font-size:1.2rem;margin:.3em 0">Ma prawo do zniżki</p><p class="muted" style="margin:0">Halina W. · sprawdzone 10:24</p></div>
+      <p style="margin-top:12px">Kontroler <b>nie widzi</b> PESEL-u, adresu ani daty urodzenia.</p>
+      <div style="margin-top:14px"><button class="btn primary" data-act="closeModal">Zamknij</button></div>`,'full');
+  },
+  readDoc(){ say('Dowód osobisty. Halina Wójcik. Urodzona 12 marca 1952. Ważny do 23 grudnia 2026.'); },
+  readAll(){ speakScreen(); },
+  rxCode(){
+    openModal(`<h2 style="margin-top:0">Pokaż farmaceucie</h2>
+      <div class="card" style="text-align:center"><p class="muted" style="margin:0">Kod recepty</p><p style="font-size:3.2rem;font-weight:800;letter-spacing:.15em;margin:.1em 0">4827</p>
+      <p class="muted" style="margin:0">PESEL</p><p style="font-size:1.4rem;font-weight:800;margin:.1em 0">520312•••••</p></div>
+      <p class="muted" style="margin-top:10px">W pokazie PESEL jest ukryty.</p>
+      <div class="stack" style="margin-top:12px"><button class="btn" data-act="readCode">${I.speak} Przeczytaj kod</button><button class="btn primary" data-act="closeModal">Zamknij</button></div>`,'full');
+  },
+  readCode(){ say('Kod recepty: cztery, osiem, dwa, siedem.'); },
+  mic(t){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){ toast('W tej przeglądarce proszę wybrać prośbę z listy albo napisać'); return; }
+    try{
+      const r=new SR(); r.lang='pl-PL'; r.interimResults=false; r.maxAlternatives=1;
+      t.classList.add('listening'); t.querySelector('span').textContent='Słucham…';
+      r.onresult=e=>{ const txt=e.results[0][0].transcript; intent(match(txt), txt); };
+      r.onerror=()=>toast('Nic nie słychać. Proszę spróbować jeszcze raz albo wybrać z listy.');
+      r.onend=()=>{ const b=$('#micBtn'); if(b){ b.classList.remove('listening'); b.querySelector('span').textContent='Naciśnij i mów'; } };
+      r.start();
+    }catch(e){ toast('Mikrofon jest niedostępny'); }
+  },
+  blockId(){
+    askPin('Zablokować dowód?', [['Dokument','Dowód osobisty'],['Zastrzeżenie','we wszystkich bankach'],['Odblokowanie','w każdej chwili, tutaj']], () => {
+      st.idBlocked=true;
+      finish('Dowód jest zablokowany', 'Nikt nie weźmie na niego kredytu. Karty bankowe proszę zastrzec w swoim banku albo pod numerem 828 828 828.', `<button class="btn" data-act="callTomek">${I.phone} Zadzwoń do Tomka</button>`);
+    });
+  },
+  unblock(){ askPin('Odblokować dowód?', [['Dokument','Dowód osobisty']], () => { st.idBlocked=false; toast('Dowód odblokowany'); render(); }); },
+  blockPesel(){
+    askPin('Zastrzec PESEL?', [['Co się stanie','Nikt nie weźmie kredytu na Pani dane'],['Odblokowanie','w każdej chwili']], () => finish('PESEL jest zastrzeżony', 'Banki nie udzielą kredytu na Pani dane. Gdy sama będzie Pani chciała wziąć kredyt, cofnie Pani zastrzeżenie w aplikacji.'));
+  },
+  callTomek(){ toast('W pokazie połączenie jest wyłączone. Dzwonię do: Tomek (syn)'); },
+  callBank(){ toast('Numer banku jest na odwrocie karty. Proszę nie oddzwaniać na numer, z którego ktoś dzwonił.'); },
+  hotline(){ toast('W pokazie połączenie z infolinią jest wyłączone'); },
+  askHelp(){
+    st.help='waiting'; render();
+    setTimeout(()=>{ if(st.help!=='waiting') return; st.help='on'; toast('Tomek odpowiedział: „Już patrzę, mamo”'); render(); }, 2200);
+  },
+  endHelp(){ st.help=null; st.highlight=null; toast('Pomoc zakończona. Tomek nie widzi już Pani ekranu.'); render(); },
+  tomek(){
+    const where=S[st.screen]().title;
+    openModal(`<p style="margin:0;opacity:.75">Pokaz: telefon Tomka (syn)</p>
+      <h2 style="margin:.3em 0 .6em;font-size:1.3rem">Mama prosi o pomoc</h2>
+      <div class="card"><p style="margin:0">Mama jest teraz na ekranie:</p><p style="margin:.2em 0 0;font-weight:800;font-size:1.2rem">${esc(where)}</p></div>
+      <p style="opacity:.85">Nie widzisz jej dokumentów ani danych – tylko, gdzie jest w aplikacji.</p>
+      <p style="font-weight:800;margin-bottom:6px">Pokaż mamie, gdzie nacisnąć:</p>
+      <div class="stack">
+        <button class="btn primary" data-act="show" data-v="recepty">Moje recepty</button>
+        <button class="btn" data-act="show" data-v="legit">Legitymacja emeryta</button>
+        <button class="btn" data-act="show" data-v="renew">Odnowienie dowodu</button>
+        <button class="btn" data-act="callTomek">${I.phone} Zadzwoń do mamy</button>
+        <button class="btn" data-act="closeModal">Zamknij</button>
+      </div>`, 'tomek full');
+  },
+  show(t){ st.highlight=t.dataset.v; closeModal(); go('home',{reset:true}); },
+  photo(){ toast('Zdjęcie od fotografa zostało przyjęte'); go('renew2'); },
+  remindTomorrow(){ toast('Przypomnę jutro o 10:00'); go('home',{reset:true}); },
+  place(t){ st.renew.place=+t.dataset.v; render(); },
+  sendRenew(){
+    askPin('Wysłać wniosek?', [['Dokument','Nowy dowód'],['Odbiór', st.renew.place?'UM Kraków':'UM Rzeszów'],['Opłata','0 zł']], () => {
+      st.renewed=true;
+      finish('Wniosek wysłany', 'Dostanie Pani SMS, gdy dowód będzie gotowy do odbioru (zwykle do 30 dni). Proszę zabrać ze sobą stary dowód.');
+    });
+  },
+  notifyTomek(){ toast('Tomek dostał wiadomość o załatwionej sprawie'); },
+  scale(t){ st.scale=+t.dataset.v; document.documentElement.style.setProperty('--scale', st.scale); document.body.classList.toggle('big', st.scale>=1.3); render(); },
+  hc(){ st.hc=!st.hc; document.body.classList.toggle('hc', st.hc); render(); },
+  tts(){ st.tts=!st.tts; if(!st.tts && 'speechSynthesis' in window) speechSynthesis.cancel(); render(); },
+  logout(){ st.help=null; st.highlight=null; go('login',{reset:true}); }
+};
+
+document.addEventListener('click', e => {
+  const t=e.target.closest('[data-go],[data-act],[data-intent]'); if(!t) return;
+  if(st.highlight && t.dataset.hl===st.highlight) st.highlight=null;
+  if(t.dataset.intent) intent(t.dataset.intent, TXT[t.dataset.intent]);
+  else if(t.dataset.go){ if(!modal.hidden) closeModal(); go(t.dataset.go); }
+  else if(A[t.dataset.act]) A[t.dataset.act](t, e);
+});
+document.addEventListener('submit', e => {
+  if(e.target.id!=='askForm') return; e.preventDefault();
+  const v=$('#ask').value.trim(); if(v) intent(match(v), v);
+});
+document.addEventListener('keydown', e => { if(e.key==='Escape' && !modal.hidden) closeModal(); });
+render();
+</script>
+</body>
+</html>
