@@ -420,6 +420,7 @@ const monthName = (m) => `${MONTHS_PL[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`;
 const pctTxt = (x) => `${(Math.round(x * 1000) / 10).toLocaleString('pl-PL')}%`;
 const zlFull = (g) => (g / 100).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 2 });
 const fin = { sum: null, exp: [], bills: null, loading: false, err: '', exErr: '', billErr: '' };
+let FR = null;   // fin-rules.js: limity, kasa, szacunek PIT (wspólny z Centrum)
 
 /** Zdjęcie paragonu -> JPEG maks. 1800 px (mniejszy plik, poprawny obrót); PDF bez zmian. */
 async function shrinkImage(file, max = 1800) {
@@ -455,6 +456,8 @@ async function loadFinance(force) {
   if (lvl?.currentLevel !== 'aal2') { out.replaceChildren(h('div', { class: 'banner info', text: 'Finanse widzi tylko administrator po logowaniu dwuetapowym. Wejdź w zakładkę Administracja, potwierdź kod z aplikacji i wróć tutaj.' })); return; }
   if (fin.sum && !force) { renderFinance(); return; }
   fin.loading = true; if (!out.childElementCount) out.replaceChildren(h('p', { class: 'muted', text: 'Liczę przychody i wydatki…' }));
+  if (!FR) FR = await import(BASE + 'fin-rules.js').catch(() => null);
+  if (!FR) { fin.loading = false; out.replaceChildren(h('div', { class: 'banner err', text: 'Brak pliku fin-rules.js – odśwież stronę.' })); return; }
   try {
     const [s, e, bl] = await Promise.all([
       callFn('admin', { action: 'ledger_summary' }).then((d) => { fin.err = ''; return d; }, (err) => { fin.err = err.message; return null; }),
@@ -492,7 +495,8 @@ function renderFinance() {
   const today = S?.today || todayKey();
   const curM = today.slice(0, 7), curQ = `${today.slice(0, 4)}-Q${Math.floor((+today.slice(5, 7) - 1) / 3) + 1}`, curY = today.slice(0, 4);
   const m = S?.months?.find((x) => x.month === curM), q = S?.quarters?.find((x) => x.quarter === curQ), y = S?.years?.find((x) => x.year === curY);
-  const qLimit = q?.limit || 1081350;
+  const QL = FR.quarterLimit(curY), KL = FR.kasaLimit(curY), qLimit = QL.value, qAlert = FR.limitAlert(q?.net || 0, qLimit);
+  const pit = FR.pitEstimate(curY, y?.profit || 0);
   const sheet = S?.sheet || {};
   const syncBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Synchronizuj arkusz', onclick: async (e) => {
     const b = e.currentTarget; setBusy(b, true);
@@ -501,21 +505,26 @@ function renderFinance() {
   } });
   const head = h('div', { class: 'toolbar' },
     h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Odśwież', onclick: () => loadFinance(true) }), syncBtn,
+    h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Rok do PIT-36', onclick: () => yearReport(+curY) }),
     sheet.url ? h('a', { class: 'btn btn-ghost btn-sm', href: sheet.url, target: '_blank', rel: 'noopener', text: 'Otwórz arkusz Google' }) : null,
     h('span', { class: 'muted small', text: !S ? '' : sheet.enabled === false ? 'Arkusz Google nie jest skonfigurowany.' : sheet.error ? `Arkusz: błąd – ${sheet.error}` : sheet.pending ? 'Arkusz: zmiany czekają (cron co 5 min)' : sheet.synced_at ? `Arkusz aktualny · ${fmt(sheet.synced_at)}` : '' }));
   const cards = S ? h('div', { class: 'grid g3 fin-cards' },
     finCard(`Miesiąc: ${monthName(curM)}`, m),
     finCard(`Kwartał: ${curQ.replace('-', ' ')}`, q, h('div', { style: 'margin-top:12px' },
       h('div', { class: 'small', text: `Limit działalności nierejestrowanej: ${pctTxt((q?.net || 0) / qLimit)} z ${zlFull(qLimit)}` }), limitBar((q?.net || 0) / qLimit),
-      h('div', { class: `small ${q?.flag ? 'bad' : 'muted'}`, text: q?.flag || `Zostało ${zlFull(Math.max(0, qLimit - (q?.net || 0)))} do końca kwartału.` }))),
+      h('div', { class: `small ${qAlert ? 'bad' : 'muted'}`, text: `${qAlert ? qAlert.text + ' ' : ''}Zostało ${zlFull(Math.max(0, qLimit - (q?.net || 0)))} do końca kwartału.` }),
+      QL.estimated ? h('div', { class: 'small bad', text: `Brak płacy minimalnej na ${curY} w fin-rules.js – limit liczony z ${QL.from} r.` }) : null)),
     finCard(`Rok ${curY}`, y, h('div', { style: 'margin-top:12px' },
-      h('div', { class: 'small', text: `Sprzedaż dla osób prywatnych: ${zlFull(y?.b2c || 0)} z ${zlFull(2000000)} (zwolnienie z kasy fiskalnej)` }), limitBar((y?.b2c || 0) / 2000000)))) :
+      h('div', { class: 'small', text: `Sprzedaż dla osób prywatnych: ${zlFull(y?.b2c || 0)} z ${zlFull(KL.value)} (zwolnienie z kasy fiskalnej${KL.prorated ? `, proporcjonalnie od ${FR.SETTINGS.START_DATE}` : ''})` }), limitBar((y?.b2c || 0) / KL.value),
+      h('div', { class: 'small', style: 'margin-top:12px', text: `Szacowany PIT za ${curY}: ` }, h('b', { class: 'gold', text: zlFull(pit.tax) })),
+      h('div', { class: 'muted small', text: `Odłóż: ${zlFull(pit.reserve)} · kwoty wolnej zostało ${zlFull(pit.freeLeft)}. Szacunek, nie porada podatkowa.` }),
+      pit.notes.map((n) => h('div', { class: 'small bad', text: n }))))) :
     h('div', { class: 'banner err', text: `Nie udało się policzyć zestawień: ${fin.err || 'brak danych'}. Sprawdź, czy wdrożona jest migracja v10 i nowa funkcja admin.` });
   const months = S ? h('details', { class: 'more', open: false }, h('summary', { text: 'Miesiące i kwartały' }),
     h('div', { class: 'scroll-x' }, h('table', { class: 'adm fin-table' },
       h('thead', {}, h('tr', {}, ['Okres', 'Wpłaty', 'Zwroty', 'Przychód', 'Koszty', 'Dochód', 'Limit'].map((t) => h('th', { text: t })))),
       h('tbody', {}, [...S.quarters].reverse().flatMap((qq) => [
-        h('tr', { class: 'q-row' }, h('td', {}, h('b', { text: qq.quarter.replace('-', ' ') })), h('td', { text: zlFull(qq.income) }), h('td', { text: zlFull(qq.refunds) }), h('td', {}, h('b', { text: zlFull(qq.net) })), h('td', { text: zlFull(qq.costs) }), h('td', { text: zlFull(qq.profit) }), h('td', { class: qq.pct > 1 ? 'bad' : qq.pct >= 0.8 ? 'warn' : '', text: qq.limit ? pctTxt(qq.pct) : '–' })),
+        h('tr', { class: 'q-row' }, h('td', {}, h('b', { text: qq.quarter.replace('-', ' ') })), h('td', { text: zlFull(qq.income) }), h('td', { text: zlFull(qq.refunds) }), h('td', {}, h('b', { text: zlFull(qq.net) })), h('td', { text: zlFull(qq.costs) }), h('td', { text: zlFull(qq.profit) }), (() => { const pq = qq.net / FR.quarterLimit(qq.quarter.slice(0, 4)).value; return h('td', { class: pq > 1 ? 'bad' : pq >= 0.8 ? 'warn' : '', text: pctTxt(pq) }); })()),
         ...S.months.filter((mm) => `${mm.month.slice(0, 4)}-Q${Math.floor((+mm.month.slice(5, 7) - 1) / 3) + 1}` === qq.quarter).reverse().map((mm) =>
           h('tr', {}, h('td', { class: 'muted', text: monthName(mm.month) }), h('td', { text: zlFull(mm.income) }), h('td', { text: zlFull(mm.refunds) }), h('td', { text: zlFull(mm.net) }), h('td', { text: zlFull(mm.costs) }), h('td', { text: zlFull(mm.profit) }), h('td')))]))))) : null;
   out.replaceChildren(head, cards, months, billList(), expenseForm(), expenseList(),
@@ -529,7 +538,14 @@ function expenseForm() {
   const desc = h('input', { class: 'input', maxlength: 300, placeholder: 'Co kupione, np. pasta termoprzewodząca Arctic MX-6', required: true });
   const vendor = h('input', { class: 'input', maxlength: 120, placeholder: 'Sklep / firma (opcj.)' });
   const doc = h('input', { class: 'input', maxlength: 80, placeholder: 'Nr paragonu / faktury (opcj.)' });
-  const isCost = h('input', { type: 'checkbox', checked: true });
+  const isCost = h('input', { type: 'checkbox', checked: !FR.isBeforeStart(date.value) });
+  const costHint = h('p', { class: 'muted small', style: 'margin:4px 0 0' });
+  const checkStart = () => {
+    const before = FR.isBeforeStart(date.value);
+    if (before) isCost.checked = false;
+    costHint.textContent = before ? `Wydatek z roku przed startem działalności (${FR.SETTINGS.START_DATE.slice(0, 4)}) – nie jest kosztem.` : '';
+  };
+  date.addEventListener('change', checkStart); checkStart();
   const orderSel = h('select', { class: 'select' }, h('option', { value: '', text: 'Bez powiązania ze zleceniem' }),
     (adm.orders || []).filter((o) => o.order_number).slice(0, 60).map((o) => h('option', { value: o.id, text: `${o.order_number} · ${o.service_name}` })));
   const file = h('input', { class: 'input', type: 'file', accept: 'image/*,application/pdf', style: 'padding:9px' });
@@ -539,6 +555,7 @@ function expenseForm() {
     const g = Math.round(parseFloat(amount.value.replace(/\s/g, '').replace(',', '.')) * 100);
     if (!(g > 0)) return toast('err', 'Wpisz kwotę, np. 129,99.');
     if (!desc.value.trim()) return toast('err', 'Wpisz, co zostało kupione.');
+    if (isCost.checked && FR.isBeforeStart(date.value) && !confirm('Ten wydatek jest z roku przed startem działalności. Na pewno zapisać go jako koszt?')) return;
     setBusy(btn, true, 'Zapisuję…');
     try {
       const receipt_path = file.files[0] ? await uploadReceipt(file.files[0], date.value) : null;
@@ -552,7 +569,37 @@ function expenseForm() {
     h('div', { class: 'field' }, h('label', { text: 'Opis' }), desc),
     h('div', { class: 'row2' }, h('div', { class: 'field' }, vendor), h('div', { class: 'field' }, doc)),
     h('div', { class: 'field' }, h('label', { text: 'Zdjęcie paragonu lub faktura PDF (opcj.)' }), file),
-    h('label', { class: 'check' }, isCost, h('span', { text: 'Koszt uzyskania przychodu (zakup na potrzeby usług). Odznacz dla wydatków prywatnych.' })), btn);
+    h('label', { class: 'check' }, isCost, h('span', { text: 'Koszt uzyskania przychodu (zakup na potrzeby usług). Odznacz dla wydatków prywatnych.' })), costHint, btn);
+}
+
+/** Podsumowanie roku do PIT-36 (okno): przychód, koszty, dochód, ostrzeżenia, lista kosztów w CSV. */
+async function yearReport(year) {
+  const { data, error } = await sb.from('expenses').select('id,spent_on,category,description,vendor,doc_number,amount_grosze,is_cost,receipt_path')
+    .gte('spent_on', `${year}-01-01`).lte('spent_on', `${year}-12-31`).order('spent_on');
+  if (error) return toast('err', error.message);
+  const yStats = fin.sum?.years?.find((x) => x.year === String(year));
+  const r = FR.yearSummary(yStats, data || []), pit = FR.pitEstimate(year, r.profit);
+  const years = [...new Set([...(fin.sum?.years || []).map((x) => +x.year), year, year - 1])].sort((a, b) => b - a);
+  const dlg = h('dialog', { class: 'modal', style: 'padding:22px', 'aria-label': `Rok ${year} do PIT-36` });
+  const close = () => { dlg.close(); dlg.remove(); };
+  const sel = h('select', { class: 'select', onchange: () => { close(); yearReport(+sel.value); } }, years.map((v) => h('option', { value: v, text: String(v), selected: v === year })));
+  const row = (k, v, cls) => [h('dt', { text: k }), h('dd', { class: cls || '', text: v })];
+  const warn = (list, text) => list.length ? h('div', { style: 'margin-top:12px' }, h('b', { class: 'bad', text: `${text} (${list.length})` }),
+    h('ul', { class: 'small', style: 'margin:6px 0 0;padding-left:18px' }, list.map((x) => h('li', { text: `${x.spent_on} · ${x.description} · ${zlFull(x.amount_grosze)}` })))) : null;
+  dlg.append(h('h3', { text: `Rok ${year} – do PIT-36` }), sel,
+    h('dl', { class: 'fin-dl', style: 'margin-top:14px' },
+      row('Wpłaty', zlFull(r.income)), row('Zwroty', `−${zlFull(r.refunds)}`), row('Przychód', zlFull(r.net), 'gold'),
+      row('Koszty z wydatków', zlFull(r.costExp)), row('Prowizje Stripe i inne automatyczne', zlFull(r.costAuto)), row('Koszty razem', zlFull(r.costs)),
+      row('Dochód', zlFull(r.profit), r.profit < 0 ? 'bad' : 'gold'), row('Szacowany PIT (skala)', zlFull(pit.tax))),
+    h('p', { class: 'muted small', text: 'W PIT-36 wpisujesz przychód i koszty w wierszu działalności z art. 5 ust. 1 Prawa przedsiębiorców (inne źródła). Termin: 30 kwietnia następnego roku. Dokumenty trzymaj 5 lat.' }),
+    warn(r.noDoc, 'Koszty bez skanu i numeru dokumentu'),
+    warn(r.beforeStart, `Koszty z lat przed startem (${FR.SETTINGS.START_DATE.slice(0, 4)}) – nie są kosztem`),
+    h('div', { class: 'toolbar', style: 'margin-top:16px' },
+      h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: `Pobierz listę kosztów ${year} (CSV)`, disabled: !r.costList.length,
+        onclick: () => FR.downloadText(`koszty-${year}.csv`, FR.costsCsv(r.costList, EXP_CAT)) }),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Zamknij', onclick: close })));
+  dlg.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
+  document.body.append(dlg); dlg.showModal();
 }
 
 function expenseList() {
@@ -653,7 +700,7 @@ function billEditor(o) {
   const recalc = () => { let t = 0; for (const r of rows.children) t += Math.round((parseFloat(r._q.value.replace(',', '.')) || 0) * Math.round((parseFloat(r._p.value.replace(/\s/g, '').replace(',', '.')) || 0) * 100)); sumEl.textContent = zlFull(t); };
   const addRow = (nm = '', q = 1, price = '') => {
     if (rows.children.length >= 12) return toast('err', 'Maksymalnie 12 pozycji.');
-    const n = h('input', { class: 'input', maxlength: 200, value: nm, placeholder: 'Nazwa usługi / towaru', 'aria-label': 'Nazwa pozycji' });
+    const n = h('input', { class: 'input', maxlength: 200, value: nm, placeholder: 'Nazwa usługi', 'aria-label': 'Nazwa pozycji' });
     const q2 = h('input', { class: 'input', inputmode: 'decimal', value: String(q), 'aria-label': 'Ilość', oninput: recalc });
     const p = h('input', { class: 'input', inputmode: 'decimal', value: price, placeholder: 'cena zł', 'aria-label': 'Cena jednostkowa w zł', oninput: recalc });
     const r = h('div', { class: 'bill-row' }, n, q2, p, h('button', { class: 'x-btn', type: 'button', 'aria-label': 'Usuń pozycję', text: '×', onclick: () => { if (rows.children.length > 1) { r.remove(); recalc(); } } }));

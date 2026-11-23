@@ -12,7 +12,7 @@ window.STL_CONFIG = {
   SUPABASE_KEY: 'sb_publishable_wpa-Dl46K-TqCVSQiMCkJw_Sb5jCJso',
   DEV_SUPABASE_URL: 'http://127.0.0.1:54321',
   DEV_SUPABASE_KEY: '',
-  CONTACT_EMAIL: 'striketechlab@proton.me',
+  CONTACT_EMAIL: 'kontakt@striketechlab.pl',
   /* DANE SPRZEDAWCY – obowiązkowe przed publikacją (ustawa o prawach konsumenta art. 12,
      ustawa o świadczeniu usług drogą elektroniczną art. 5). Wpisz dokładnie tak, jak w CEIDG.
      Działalność nierejestrowana: imię i nazwisko + adres; pola, których nie masz (NIP, REGON), zostaw puste. */
@@ -24,7 +24,7 @@ window.STL_CONFIG = {
     PHONE: '',           // telefon kontaktowy (jeśli udostępniasz)
     REGISTRY: 'działalność nierejestrowana – art. 5 ust. 1 ustawy Prawo przedsiębiorców',
     RETURN_ADDRESS: '',  // adres do odsyłania sprzętu i zwrotów (puste = ADDRESS)
-    HOSTING: 'Cloudflare, Inc. (hosting strony)',   // dopisz firmę od skrzynki e-mail, gdy kupisz domenę
+    HOSTING: 'Cloudflare, Inc. (hosting strony i DNS); OVH SAS, Francja (skrzynka kontakt@striketechlab.pl – OVHcloud Zimbra)',
     MAIL_PROVIDER: 'Resend, Inc. (USA)'    // usługa wysyłająca maile z systemu (np. ta sama firma hostingowa)
   },
   /* CAPTCHA przy logowaniu i rejestracji (Cloudflare Turnstile). Puste = wyłączone.

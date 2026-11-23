@@ -10,7 +10,7 @@ const CFG = Object.assign({
   SUPABASE_URL: '', SUPABASE_KEY: '', DEV_SUPABASE_URL: 'http://127.0.0.1:54321', DEV_SUPABASE_KEY: '',
   SUPABASE_JS_LOCAL: 'vendor/supabase.js',                                         // kopia lokalna (zalecana – bez zewnętrznego CDN)
   SUPABASE_JS: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm',   // zapas, gdy brak kopii lokalnej
-  CONTACT_EMAIL: 'striketechlab@proton.me', HEARTBEAT_MS: 45000,
+  CONTACT_EMAIL: 'kontakt@striketechlab.pl', HEARTBEAT_MS: 45000,
 }, window.STL_CONFIG || {});
 const CO = Object.assign({ NAME: '', ADDRESS: '', NIP: '', REGON: '', PHONE: '', REGISTRY: '', RETURN_ADDRESS: '', HOSTING: '', MAIL_PROVIDER: '' }, CFG.COMPANY || {});
 async function loadSupabaseLib() {
@@ -31,9 +31,9 @@ const TZ = 'Europe/Warsaw';
 const BASE = ('/' + String(CFG.BASE_PATH || '/').replace(/^\/+|\/+$/g, '') + '/').replace('//', '/');
 const SITE_URL = location.origin + BASE;              // np. http://localhost:3000/
 const ROUTES = {
-  '/': ['home', 'Strike Tech Lab | Optymalizacja, serwis i zestawy PC'],
+  '/': ['home', 'Strike Tech Lab | Optymalizacja, serwis i składanie PC'],
   '/uslugi': ['uslugi', 'Usługi i cennik | Strike Tech Lab'],
-  '/zestawy': ['zestawy', 'Zestawy PC | Strike Tech Lab'],
+  '/zestawy': ['zestawy', 'Dobór i składanie PC | Strike Tech Lab'],
   '/rezerwacja': ['rezerwacja', 'Rezerwacja terminu | Strike Tech Lab'],
   '/konto': ['konto', 'Strefa Klienta | Strike Tech Lab'],
   '/kontakt': ['kontakt', 'Kontakt i FAQ | Strike Tech Lab'],
@@ -398,7 +398,7 @@ const SETS = [
 const FORGE = { id: 'strike-forge', num: '06', name: 'STRIKE Forge', badge: 'Stacja robocza', kicker: 'Do pracy twórczej',
   desc: 'Stacja robocza do renderowania 3D, montażu wideo i obliczeń na GPU – konfigurowana pod Twoje programy.', priceFrom: 1350000,
   parts: [['CPU', 'AMD Ryzen 9 9950X'], ['GPU', 'NVIDIA GeForce RTX 5080 16 GB lub RTX 5090 32 GB'], ['RAM', '64–128 GB DDR5'], ['Dysk', '1 TB PCIe Gen5 + 4 TB PCIe Gen4']] };
-const SET_NOTE = `Zestawy są poglądowe – pokazują, co zwykle mieści się w danym budżecie. Ostateczny dobór części ustalamy po rozmowie z Tobą, a ceny sprawdzamy w dniu wyceny (podane: x-kom, ${PRICES_AT}). Wartość części nie obejmuje złożenia i testów (od 199 zł), systemu operacyjnego, monitora ani peryferiów. Zamówienie: płatność 100% z góry po akceptacji wyceny. Ceny końcowe (bez VAT).`;
+const SET_NOTE = `Zestawy są poglądowe – pokazują, co zwykle mieści się w danym budżecie. Ostateczny dobór części ustalamy po rozmowie z Tobą, a ceny sprawdzamy w dniu wyceny (podane: x-kom, ${PRICES_AT}). Części kupujesz sam, u wybranego sklepu i na swoje nazwisko – nie sprzedajemy części ani gotowych komputerów. Płacisz nam tylko za usługę: złożenie i testy (od 199 zł) oraz ewentualne dodatki. Wartość części nie obejmuje systemu operacyjnego, monitora ani peryferiów.`;
 const isHiddenService = (s) => s.id === 'strike-ai-local-deploy' || /\bAI\b/.test(s.name || '');
 
 const STATUS = {
@@ -608,7 +608,7 @@ function solBlocks(list) {
 function renderTiles() {
   $$('[data-from]').forEach((el) => {
     const c = el.dataset.from;
-    const prices = c === 'pc' ? SETS.map((m) => m.parts_grosze) : [...cat.services.values()].filter((s) => s.kind === 'USLUGA' && (s.category || SVC[s.id]?.cat) === c).map((s) => s.price_grosze);
+    const prices = c === 'pc' ? [cat.services.get('strike-custom-assembly')?.price_grosze || ASSEMBLY_GROSZE] : [...cat.services.values()].filter((s) => s.kind === 'USLUGA' && (s.category || SVC[s.id]?.cat) === c).map((s) => s.price_grosze);
     if (prices.length) el.textContent = `od ${zl(Math.min(...prices))}`;
   });
 }
@@ -721,11 +721,11 @@ function renderSets() {
     ...partsList(m.parts), price, btn);
   grid.replaceChildren(
     ...SETS.map((m) => card(m,
-      h('div', { class: 'set-price' }, h('small', { text: 'Wartość części' }), h('b', { text: zl(m.parts_grosze) }), h('span', { text: `+ złożenie i testy od ${zl(ASSEMBLY_GROSZE)}` })),
-      h('button', { class: `btn ${m.featured || m.ribbon ? 'btn-gold' : 'btn-ghost'} btn-block`, type: 'button', text: 'Chcę podobny – wyceń', 'aria-label': `Chcę podobny – wyceń: ${m.name}`, onclick: () => pcRequest({ budget: Math.ceil(setTotal(m) / 25000) * 250, inspiration: m.name }) }))),
+      h('div', { class: 'set-price' }, h('small', { text: 'Wartość części (kupujesz sam)' }), h('b', { text: zl(m.parts_grosze) }), h('span', { text: `+ złożenie i testy od ${zl(ASSEMBLY_GROSZE)}` })),
+      h('button', { class: `btn ${m.featured || m.ribbon ? 'btn-gold' : 'btn-ghost'} btn-block`, type: 'button', text: 'Chcę podobny – dobierz części', 'aria-label': `Chcę podobny – dobierz części: ${m.name}`, onclick: () => pcRequest({ budget: Math.ceil(setTotal(m) / 25000) * 250, inspiration: m.name }) }))),
     card(FORGE,
-      h('div', { class: 'set-price' }, h('small', { text: 'Cena' }), h('b', { class: 'custom', text: 'Wycena indywidualna' }), h('span', { text: `od ~${zl(FORGE.priceFrom)}` })),
-      h('button', { class: 'btn btn-ghost btn-block', type: 'button', text: 'Zapytaj o wycenę Forge', onclick: () => pcRequest({ budget: FORGE.priceFrom / 100, inspiration: FORGE.name, purpose: 'creative' }) })));
+      h('div', { class: 'set-price' }, h('small', { text: 'Wartość części (kupujesz sam)' }), h('b', { class: 'custom', text: 'Dobór indywidualny' }), h('span', { text: `od ~${zl(FORGE.priceFrom)}` })),
+      h('button', { class: 'btn btn-ghost btn-block', type: 'button', text: 'Zapytaj o dobór Forge', onclick: () => pcRequest({ budget: FORGE.priceFrom / 100, inspiration: FORGE.name, purpose: 'creative' }) })));
   $('#setsNote').textContent = SET_NOTE;
   renderBudget(); applyMedia(grid);
 }
@@ -1014,7 +1014,7 @@ async function submitBooking() {
   }
 }
 
-/* ------------------------------------------------------------------ komputer na zamówienie (zapytanie z budżetem, bez płatności) */
+/* ------------------------------------------------------------------ dobór części + złożenie (zapytanie z budżetem, bez płatności; części kupuje klient) */
 const PC_PURPOSE = { esport: 'Gry e-sportowe (wysoki FPS)', aaa: 'Gry AAA w 1440p', k4: 'Gry w 4K', creative: 'Praca twórcza (3D, wideo, grafika)', office: 'Praca, nauka i multimedia' };
 const PC_HAVE = { monitor: 'monitor', peripherals: 'klawiatura i mysz', windows: 'licencja Windows', parts: 'część podzespołów (np. karta graficzna)' };
 const PC_ADD = { windows: 'Instalacja i konfiguracja Windows', tune: 'Optymalizacja po złożeniu (STRIKE Precision Tune)', transfer: 'Przeniesienie danych ze starego komputera' };
@@ -1059,19 +1059,19 @@ async function submitPc() {
   const adds = $$('input[name=pcAdd]:checked').map((x) => PC_ADD[x.value]);
   const note = $('#pcNote').value.trim();
   const message = [
-    'Komputer na zamówienie', `Budżet: ${budget}`, `Przeznaczenie: ${PC_PURPOSE[purpose]}`,
+    'Dobór części i złożenie PC', `Budżet na części: ${budget}`, `Przeznaczenie: ${PC_PURPOSE[purpose]}`,
     have.length ? `Klient ma już: ${have.join(', ')}` : 'Klient ma już: nic z listy',
     adds.length ? `Dodatkowo: ${adds.join('; ')}` : null, P.inspiration ? `Inspiracja: ${P.inspiration}` : null,
     note ? `\nUwagi klienta:\n${note}` : null,
   ].filter(Boolean).join('\n');
   if (!sb) {
-    location.href = `mailto:${CFG.CONTACT_EMAIL}?subject=${encodeURIComponent(`Komputer na zamówienie – ${budget}`)}&body=${encodeURIComponent(`${message}\n\n${v.name}\n${v.email}${v.phone ? '\n' + v.phone : ''}`)}`;
+    location.href = `mailto:${CFG.CONTACT_EMAIL}?subject=${encodeURIComponent(`Dobór części i złożenie PC – ${budget}`)}&body=${encodeURIComponent(`${message}\n\n${v.name}\n${v.email}${v.phone ? '\n' + v.phone : ''}`)}`;
     return;
   }
   const btn = $('#pcSend'); setBusy(btn, true, 'Wysyłam…');
   try {
-    await callFn('inquiry', { kind: 'quote', ...v, topic: `Komputer na zamówienie – ${budget}`, item_id: 'pc-custom', message, consent: true, hp: $('#pcHp').value });
-    banner('#bookBanner', 'ok', `Dziękujemy, ${v.name}! Zapytanie o komputer za ${budget} dotarło. Odezwiemy się mailem z propozycją części i wyceną.`);
+    await callFn('inquiry', { kind: 'quote', ...v, topic: `Dobór części i złożenie PC – ${budget}`, item_id: 'pc-custom', message, consent: true, hp: $('#pcHp').value });
+    banner('#bookBanner', 'ok', `Dziękujemy, ${v.name}! Zapytanie o dobór części za ${budget} dotarło. Odezwiemy się mailem z listą części do kupienia i wyceną złożenia.`);
     toast('ok', 'Zapytanie wysłane.');
     $('#pcNote').value = ''; P.inspiration = ''; renderPcSummary(); saveDraft();
     $('#bookBanner').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1613,13 +1613,13 @@ const advName = (id) => advSvc(id)?.name || nameOf(id);
 const advPrice = (id) => { const s = advSvc(id); return s ? `od ${zl(s.price_grosze)}${SVC[id]?.fromLabel ? ' ' + SVC[id].fromLabel : ''}` : ''; };
 const advSvcLi = (id, why) => h('li', {}, h('b', { text: advName(id) }), ` – ${advPrice(id)}${why ? `. ${why}` : ''}`);
 const advLink = (text, to) => h('a', { href: to, text, onclick: (e) => { e.preventDefault(); const [path, q] = to.split('?'); navigate(path); const k = new URLSearchParams(q || '').get('kategoria'); if (k) { showCat(k); $('#svcCats')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } if (matchMedia('(max-width: 640px)').matches) advClose(); } });
-const advLegal = (text, key) => h('button', { type: 'button', class: 'link', text, onclick: () => openLegal(key) });
+const advLegal = (text, key) => h('a', { class: 'link', href: `${BASE}#${LEGAL_HASH_OF[key]}`, 'data-legal': key, text });
 const advP = (...k) => h('p', {}, ...k);
 const advUl = (...li) => h('ul', {}, ...li);
 
 const ADV_LABELS = {
   prices: 'Cennik', optim: 'Więcej FPS / mniejszy lag', heat: 'Głośny lub gorący PC', repair: 'Komputer nie działa',
-  build: 'Złożenie komputera', sets: 'Zestawy PC', web: 'Strony WWW i automatyzacja', remote: 'Jak wygląda sesja zdalna',
+  build: 'Złożenie komputera', sets: 'Przykładowe konfiguracje PC', web: 'Strony WWW i automatyzacja', remote: 'Jak wygląda sesja zdalna',
   pay: 'Płatność', when: 'Terminy i Express', returns: 'Reklamacje i zwroty', refs: 'Rabaty i polecenia',
   status: 'Moje zlecenie', contact: 'Kontakt z człowiekiem', menu: '↩ Menu',
 };
@@ -1644,18 +1644,18 @@ const ADV_INTENTS = [
       advP('Jeśli na dysku są ważne dane, napisz o tym przy zgłoszeniu – zabezpieczamy je w pierwszej kolejności.'), advP(advLink('Zgłoś sprzęt →', '/rezerwacja'))] },
   { id: 'build', k: ['zlozyc', 'zlozenie', 'skladanie', 'montaz', 'zmontowac', 'czesci', 'podzespoly', 'mam czesci'], o: ['sets', 'prices', 'when'],
     a: () => [advP('Masz już części? ', h('b', { text: advName('strike-custom-assembly') }), ` – ${advPrice('strike-custom-assembly')}: sprawdzenie kompatybilności, montaż, BIOS, cable management i testy stabilności, plus 3 miesiące gwarancji na montaż.`),
-      advP('Nie masz części? Dobierzemy je do Twojego budżetu – zobacz przykładowe ', advLink('zestawy PC →', '/zestawy'), ' albo napisz, ile chcesz wydać, np. „komputer za 6000”.')] },
+      advP('Nie masz części? Dobierzemy je do Twojego budżetu – zobacz przykładowe ', advLink('konfiguracje →', '/zestawy'), ' albo napisz, ile chcesz wydać, np. „komputer za 6000”. Części kupujesz sam, my je składamy.')] },
   { id: 'sets', k: ['zestaw', 'zestawy', 'komputer do gier', 'pc do gier', 'jaki komputer', 'nowy komputer', 'kupic komputer', 'gaming', 'gamingowy', 'konfiguracja', 'polecasz komputer'], o: ['build', 'pay', 'contact'],
-    a: () => [advP('Nasze zestawy są poglądowe – komputer składamy po rozmowie, w Twoim budżecie. Przykłady (wartość części, złożenie od ' + zl(ASSEMBLY_GROSZE) + '):'),
+    a: () => [advP('Nie sprzedajemy gotowych komputerów – dobieramy części w Twoim budżecie, Ty je kupujesz, a my składamy i testujemy (złożenie od ' + zl(ASSEMBLY_GROSZE) + '). Przykładowe konfiguracje (wartość części):'),
       advUl(...SETS.map((m) => h('li', {}, h('b', { text: m.name }), ` – ${m.kicker}, ok. ${zl(m.parts_grosze)}`))),
-      advP('Napisz swój budżet, np. „komputer za 7000”, albo ', advLink('zobacz zestawy →', '/zestawy'))] },
+      advP('Napisz swój budżet, np. „komputer za 7000”, albo ', advLink('zobacz konfiguracje →', '/zestawy'))] },
   { id: 'web', k: ['strona', 'strony', 'www', 'witryna', 'sklep internetowy', 'automatyzacja', 'automatyzacje', 'firma', 'firmy', 'crm', 'arkusz', 'n8n', 'make'], o: ['prices', 'contact'],
     a: () => [advP('Dla firm:'), advUl(advSvcLi('strike-web-start', 'Wizytówka na jednej stronie'), advSvcLi('strike-web-business', 'Strona firmowa do 6 podstron'), advSvcLi('strike-web-shop', 'Sklep internetowy'), advSvcLi('strike-auto-start', 'Jedna automatyzacja'), advSvcLi('strike-auto-flow', 'Pakiet do 3 procesów')), advP('Najpierw bezpłatna wycena na piśmie, potem płatność z góry. ', advLink('Zobacz wszystkie pakiety →', '/uslugi?kategoria=solutions'))] },
   { id: 'remote', k: ['zdalnie', 'zdalna', 'zdalnej', 'anydesk', 'sesja', 'jak to wyglada', 'przygotowac', 'przygotowanie', 'programy', 'na odleglosc'], o: ['optim', 'when', 'pay'],
     a: () => [advP('Optymalizacje robimy zdalnie przez RustDesk (darmowy, szyfrowany) – widzisz wszystko na swoim ekranie i możesz przerwać w każdej chwili. Przed zmianami tworzymy punkt przywracania, a każdą zmianę zapisujemy, więc da się ją cofnąć.'),
       advP('Co zainstalować i jak się przygotować do konkretnej usługi, znajdziesz po zalogowaniu: ', advLink('Strefa Klienta → Programy →', '/konto')), advP('Nigdy nie podawaj nam haseł do banku ani kont prywatnych.')] },
   { id: 'pay', k: ['platnosc', 'platnosci', 'zaplacic', 'placic', 'blik', 'karta', 'karte', 'przelew', 'przelewy24', 'stripe', 'zaliczka', 'zaliczke', 'z gory', 'raty'], o: ['when', 'returns', 'refs'],
-    a: () => [advP('Płacisz online 100% z góry przy rezerwacji – kartą, BLIK-iem albo Przelewy24 (zależnie od dostępności), przez operatora Stripe. Nie pobieramy zaliczek. Gotówki nie przyjmujemy.'), advP('Strony i automatyzacje opłacasz przelewem po akceptacji wyceny – dostajesz rachunek z numerem konta i gotowym tytułem przelewu (widać go też w Strefie Klienta).'), advP('Przy komputerze na zamówienie najpierw dostajesz bezpłatną wycenę mailem, a płacisz dopiero po jej akceptacji.')] },
+    a: () => [advP('Płacisz online 100% z góry przy rezerwacji – kartą, BLIK-iem albo Przelewy24 (zależnie od dostępności), przez operatora Stripe. Nie pobieramy zaliczek. Gotówki nie przyjmujemy.'), advP('Strony i automatyzacje opłacasz przelewem po akceptacji wyceny – dostajesz rachunek z numerem konta i gotowym tytułem przelewu (widać go też w Strefie Klienta).'), advP('Przy składaniu nowego komputera najpierw dostajesz bezpłatnie listę części – kupujesz je sam, a nam płacisz tylko za złożenie.')] },
   { id: 'when', k: ['termin', 'terminy', 'kiedy', 'godziny', 'otwarte', 'czynne', 'kalendarz', 'dzisiaj', 'jutro', 'weekend', 'sobota', 'express', 'ekspres', 'pilne', 'szybko'], o: ['pay', 'remote', 'prices'],
     a: () => [advP('Pracujemy od poniedziałku do piątku, 9:00–18:00. Wolne godziny widzisz w kalendarzu przy rezerwacji, a termin trzymamy dla Ciebie 35 minut na płatność.'),
       advP('Express (+50 zł) przy usługach zdalnych skraca minimalny czas do terminu do 2 godzin – o ile są wolne godziny.'), advP(advLink('Wybierz termin →', '/rezerwacja'))] },
@@ -1667,7 +1667,7 @@ const ADV_INTENTS = [
   { id: 'status', k: ['status', 'moje zlecenie', 'moje zamowienie', 'zamowienie', 'stl', 'raport', 'wynik', 'wyniki', 'konto', 'zalogowac', 'logowanie', 'haslo'], o: ['contact', 'menu'],
     a: () => [advP('Status zlecenia, raport STRIKE PROOF z pomiarami i zdjęcia sprzętu znajdziesz w Strefie Klienta – zmieniają się na żywo.'), advP(advLink('Przejdź do Strefy Klienta →', '/konto'))] },
   { id: 'privacy', k: ['rodo', 'dane osobowe', 'prywatnosc', 'cookies', 'ciasteczka', 'czy zapisujesz', 'czy jestes ai', 'jestes botem', 'bot', 'czlowiek', 'sztuczna inteligencja', 'ai'], o: ['contact', 'menu'],
-    a: () => [advP('Jestem automatycznym asystentem z gotowymi odpowiedziami przygotowanymi przez nasz zespół – nie jestem człowiekiem. To, co piszesz w zakładce Asystent, nie jest nigdzie wysyłane ani zapisywane. Zakładka Wiadomości to prywatny czat z naszym zespołem – po zalogowaniu.'), advP('W sprawach indywidualnych odpowiada człowiek: ', advLink('formularz kontaktowy →', '/kontakt'), ' · ', advLegal('Polityka Prywatności', 'privacy'))] },
+    a: () => [advP('Jestem automatycznym asystentem z gotowymi odpowiedziami przygotowanymi przez Strike Tech Lab – nie jestem człowiekiem. To, co piszesz w zakładce Asystent, nie jest nigdzie wysyłane ani zapisywane. Zakładka Wiadomości to prywatny czat z naszym zespołem – po zalogowaniu.'), advP('W sprawach indywidualnych odpowiada człowiek: ', advLink('formularz kontaktowy →', '/kontakt'), ' · ', advLegal('Polityka Prywatności', 'privacy'))] },
   { id: 'contact', k: ['kontakt', 'napisac', 'napisz', 'mail', 'email', 'e mail', 'telefon', 'zadzwonic', 'numer', 'czlowiekiem', 'konsultant', 'pracownik', 'adres'], o: ['menu'],
     a: () => [advP('Napisz do nas przez formularz – opisz sprzęt i problem, a odpowie człowiek: ', advLink('Kontakt →', '/kontakt')), advP('E-mail: ', h('a', { href: `mailto:${CFG.CONTACT_EMAIL}`, text: CFG.CONTACT_EMAIL }), CO.PHONE ? ` · tel. ${CO.PHONE}` : '')] },
   { id: 'thanks', k: ['dzieki', 'dziekuje', 'dziekowac', 'thx', 'thanks', 'super', 'spoko', 'git'], o: ADV_MAIN, a: () => [advP('Proszę bardzo! Jeśli masz kolejne pytanie, pisz śmiało.')] },
@@ -1868,22 +1868,24 @@ const chatShort = (iso) => { const d = new Date(iso); return (Date.now() - d) < 
 const chatErr = (e) => { const m = e?.message || String(e); return /function .*does not exist|Could not find the function|schema cache/i.test(m) ? 'Czat nie jest jeszcze włączony w bazie (migracja v17).' : /JWT|token/i.test(m) ? 'Sesja wygasła – odśwież stronę.' : m; };
 const discordUrl = (id) => (/^\d{5,25}$/.test(String(id || '')) ? `https://discord.com/users/${id}` : '');
 
-/* ------------------------------------------------------------------ zespół na czacie: Mikołaj i Dawid
-   Okienka są widoczne dla każdego klienta (także przed zalogowaniem). Dane z tabeli team_members (migracja v22),
-   a gdy jej jeszcze nie ma – z listy poniżej. Przy odpowiedzi na czacie widać, kto z zespołu odpisał. */
+/* ------------------------------------------------------------------ czat: kto odpowiada (działalność jednoosobowa – tylko Mikołaj)
+   Okienko jest widoczne dla każdego klienta (także przed zalogowaniem). Dane z tabeli team_members (migracja v22),
+   a gdy jej jeszcze nie ma – z listy poniżej. Bez zdjęć: na czacie pokazujemy tylko inicjał.
+   TEAM_HIDDEN ukrywa osoby, które nie obsługują już klientów, nawet jeśli w bazie są nadal aktywne. */
 const TEAM_DEFAULT = [
-  { slug: 'mikolaj', display_name: 'Mikołaj', role_label: 'Administrator', photo: 'media/zespol/mikolaj-avatar.webp', user_id: null },
-  { slug: 'dawid', display_name: 'Dawid', role_label: 'Administrator', photo: null, user_id: null },
+  { slug: 'mikolaj', display_name: 'Mikołaj', role_label: 'Administrator', photo: null, user_id: null },
 ];
+const TEAM_HIDDEN = new Set(['dawid']);
 const TEAM = { list: TEAM_DEFAULT.map((x) => ({ ...x })), loaded: false, tried: 0 };
 async function teamLoad() {
   if (!sb || TEAM.loaded || Date.now() - TEAM.tried < 60000) return;
   TEAM.tried = Date.now();
   const { data, error } = await sb.from('team_members').select('user_id,slug,display_name,role_label,photo,sort').eq('active', true).order('sort');
-  if (error || !data?.length) return;                    // brak migracji v22 albo pusta tabela – zostają dane domyślne
+  const rows = (data || []).filter((r) => !TEAM_HIDDEN.has(r.slug));
+  if (error || !rows.length) return;                     // brak migracji v22 albo pusta tabela – zostają dane domyślne
   TEAM.loaded = true;
   const bySlug = new Map(TEAM_DEFAULT.map((x) => [x.slug, x]));
-  TEAM.list = data.map((r) => ({ ...(bySlug.get(r.slug) || {}), ...r, photo: r.photo || bySlug.get(r.slug)?.photo || null }));
+  TEAM.list = rows.map((r) => ({ ...(bySlug.get(r.slug) || {}), ...r, photo: null }));   // zdjęć na czacie nie pokazujemy
   $$('.chat-team').forEach((el) => el.replaceWith(chatTeamBar()));
   if (CHAT.list?.isConnected && CHAT.msgs.length) chatPaint();
 }
@@ -1904,7 +1906,7 @@ function teamAvatar(t, cls = 'team-av') {
 }
 function chatTeamBar() {
   const on = teamOnline();
-  return h('div', { class: 'chat-team', role: 'list', 'aria-label': 'Nasz zespół na czacie' },
+  return h('div', { class: 'chat-team', role: 'list', 'aria-label': 'Kto odpowiada na czacie' },
     TEAM.list.slice(0, 2).map((t) => h('div', { class: 'team-card', role: 'listitem' },
       h('span', { class: 'team-ph' }, teamAvatar(t), h('i', { class: `team-dot${on ? ' on' : ''}`, 'aria-hidden': 'true' })),
       h('span', { class: 'team-txt' },
@@ -1938,7 +1940,7 @@ function chatSetTab(t, focus = true) {
   CHAT.tab = t;
   for (const k of ['bot', 'msgs']) { CHAT.tabs[k].setAttribute('aria-selected', String(k === t)); CHAT.tabs[k].tabIndex = k === t ? 0 : -1; }
   CHAT.botView.classList.toggle('hidden', t !== 'bot'); CHAT.view.classList.toggle('hidden', t !== 'msgs');
-  CHAT.sub.textContent = t === 'bot' ? 'Automatyczny asystent · odpowiada od razu' : isAdmin ? 'Wiadomości od klientów' : 'Rozmowa z naszym zespołem';
+  CHAT.sub.textContent = t === 'bot' ? 'Automatyczny asystent · odpowiada od razu' : isAdmin ? 'Wiadomości od klientów' : 'Rozmowa z administratorem';
   if (t === 'bot') { if (!ADV.started && ADV.panel.classList.contains('open')) { ADV.started = true; advReply(ADV_INTENTS[0]); } if (focus) setTimeout(() => ADV.input.focus(), 30); }
   else chatRender(focus);
 }
@@ -1973,7 +1975,7 @@ function chatRender(focus = false) {
     teamLoad();
     CHAT.view.replaceChildren(chatTeamBar(), chatEmpty(
       h('b', { text: 'Napisz do nas na czacie' }),
-      h('span', { text: 'Wiadomości są prywatne – widzisz je tylko Ty i nasz zespół. Żeby pisać, zaloguj się albo załóż konto (wystarczy Google lub Discord).' }),
+      h('span', { text: 'Wiadomości są prywatne – widzisz je tylko Ty i administrator. Żeby pisać, zaloguj się albo załóż konto (wystarczy Google lub Discord).' }),
       h('button', { type: 'button', class: 'btn btn-gold btn-sm', text: 'Zaloguj się, żeby napisać', onclick: () => askLogin('chat', { title: 'Zaloguj się, żeby napisać', text: 'Rozmowa jest prywatna i zostaje na Twoim koncie – odpowiemy, nawet gdy zamkniesz stronę.' }) }),
       h('button', { type: 'button', class: 'link', text: 'Mam szybkie pytanie – zapytam asystenta', onclick: () => chatSetTab('bot') })));
     return;
@@ -2014,7 +2016,7 @@ function chatThreadView(focus) {
   }
   if (!admin) { parts.push(chatTeamBar()); teamLoad(); }
   parts.push(CHAT.list, comp.form);
-  if (!admin) parts.push(h('p', { class: 'chat-note', text: 'Odpowiadamy zwykle tego samego dnia. Wiadomości widzisz tylko Ty i nasz zespół.' }));
+  if (!admin) parts.push(h('p', { class: 'chat-note', text: 'Odpowiadamy zwykle tego samego dnia. Wiadomości widzisz tylko Ty i administrator.' }));
   CHAT.view.replaceChildren(...parts);
   CHAT.ta = comp.ta;
   if (!admin && CHAT.prefill) { comp.ta.value = CHAT.prefill; CHAT.prefill = ''; comp.ta.dispatchEvent(new Event('input')); focus = true; }
@@ -2231,7 +2233,7 @@ function downloadBlob(blob, name) { const u = URL.createObjectURL(blob); const a
 /* ------------------------------------------------------------------ kontakt */
 function renderContactTopics() {
   const sel = $('#cTopic'), cur = sel.value;
-  sel.replaceChildren(h('option', { text: 'Pytanie ogólne' }), ...[...cat.services.values()].map((s) => h('option', { text: s.name })), h('option', { text: 'Komputer na zamówienie' }), h('option', { text: 'Inne' }));
+  sel.replaceChildren(h('option', { text: 'Pytanie ogólne' }), ...[...cat.services.values()].map((s) => h('option', { text: s.name })), h('option', { text: 'Dobór części i złożenie PC' }), h('option', { text: 'Inne' }));
   if (cur) sel.value = cur;
 }
 async function submitContact(e) {
@@ -2281,7 +2283,7 @@ setInterval(() => { if (document.visibilityState === 'visible') findNextFree(); 
 /* ------------------------------------------------------------------ teksty prawne
    Dane sprzedawcy pochodzą z window.STL_CONFIG.COMPANY (góra pliku). Dopóki NAME lub ADDRESS są puste,
    w dokumentach widać żółte pola [UZUPEŁNIJ]. Teksty przygotowano starannie, ale nie zastępują porady prawnika. */
-const LEGAL_VERSION = '1 listopada 2026';
+const LEGAL_VERSION = '23 listopada 2026';
 const escH = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fill = (v, what) => v ? escH(v) : `<mark>[UZUPEŁNIJ: ${what}]</mark>`;
 const COMPANY_OK = !!(CO.NAME && CO.ADDRESS);
@@ -2294,7 +2296,7 @@ function renderCompany() {
   const box = $('#companyInfo'); if (!box) return;
   box.innerHTML = `Sprzedawca: ${SELLER}`;
 }
-const SETS_TERMS = '<h4>§6 Komputery na zamówienie</h4><p>Zestawy pokazane na stronie są przykładowe, a ich ceny orientacyjne – zależą od aktualnych cen i dostępności części. Zapytanie o wycenę jest bezpłatne i do niczego nie zobowiązuje. Wiążącą ofertę z pełną listą części i ceną przesyłamy mailowo; umowa zostaje zawarta po jej akceptacji i wpłacie całej ceny z góry. Zmiana podzespołu po zawarciu umowy jest możliwa wyłącznie za Twoją zgodą; jeśli jej nie wyrazisz, możesz zrezygnować z zamówienia i otrzymasz zwrot całej wpłaty. Komputer odbierasz osobiście albo wysyłamy go kurierem – koszt wysyłki podajemy w ofercie.</p>';
+const SETS_TERMS = '<h4>§6 Dobór części i złożenie komputera</h4><p>Nie sprzedajemy części komputerowych ani gotowych komputerów. Konfiguracje pokazane na stronie są przykładowe, a podane przy nich ceny części – orientacyjne, pochodzą ze sklepów internetowych. Na Twoje zapytanie bezpłatnie przygotowujemy listę części dopasowaną do budżetu; nie zobowiązuje Cię ona do niczego. Części kupujesz sam, we własnym imieniu i na własny rachunek, u wybranego sprzedawcy – z dostawą do siebie albo na nasz adres warsztatu. Umowa z nami dotyczy wyłącznie usługi złożenia i testów komputera (oraz wybranych usług dodatkowych) i zawierana jest na zasadach z §3–§5. Za wady części odpowiada wobec Ciebie ich sprzedawca lub producent – pomożemy w zgłoszeniu.</p>';
 const LEGAL = {
   privacy: { t: 'Polityka Prywatności', h: DRAFT_NOTE +
     `<p class="note">Wersja z ${LEGAL_VERSION}.</p>` +
@@ -2302,7 +2304,7 @@ const LEGAL = {
     '<h4>2. Jakie dane, w jakim celu i na jakiej podstawie</h4><ul>' +
     '<li><b>Konto w Strefie Klienta</b> – e-mail, hasło (przechowywane wyłącznie jako skrót kryptograficzny), imię i nazwisko, telefon (jeśli go podasz). Podstawa: umowa o prowadzenie konta (art. 6 ust. 1 lit. b RODO).</li>' +
     '<li><b>Logowanie przez Google lub Discord</b> (jeśli je wybierzesz) – od dostawcy otrzymujemy adres e-mail, imię lub nazwę i zdjęcie profilowe, a z Discorda także nazwę użytkownika i identyfikator konta. Dzięki nim możemy się z Tobą skontaktować również przez Discord. Hasła do tych serwisów nie poznajemy. Konto odłączysz w Strefie Klienta. Podstawa: umowa o prowadzenie konta (art. 6 ust. 1 lit. b RODO).</li>' +
-    '<li><b>Czat w Strefie Klienta</b> – treść wiadomości i ich daty. Rozmowę widzisz tylko Ty i osoby z naszego zespołu. Podstawa: umowa i działania przed jej zawarciem (art. 6 ust. 1 lit. b RODO) oraz nasz prawnie uzasadniony interes – obsługa zapytań (art. 6 ust. 1 lit. f RODO).</li>' +
+    '<li><b>Czat w Strefie Klienta</b> – treść wiadomości i ich daty. Rozmowę widzisz tylko Ty i Sprzedawca (administrator serwisu). Podstawa: umowa i działania przed jej zawarciem (art. 6 ust. 1 lit. b RODO) oraz nasz prawnie uzasadniony interes – obsługa zapytań (art. 6 ust. 1 lit. f RODO).</li>' +
     '<li><b>Opinie</b> (jeśli je wystawisz) – ocena, treść, imię i pierwsza litera nazwiska oraz nazwa usługi; publikujemy je na stronie po sprawdzeniu, że pochodzą od klienta z zakończonym zleceniem. Podstawa: Twoja zgoda wyrażona przez wysłanie opinii (art. 6 ust. 1 lit. a RODO) – opinię możesz w każdej chwili usunąć, pisząc do nas albo usuwając konto.</li>' +
     '<li><b>Rezerwacja i realizacja zamówienia</b> – imię i nazwisko, e-mail, telefon (opcjonalnie), dla firm: nazwa i NIP, sposób przekazania sprzętu i miasto (opcjonalnie), uwagi do zlecenia, wybrany termin, konfiguracja, specyfikacja i wyniki pomiarów Twojego komputera oraz raporty. Podstawa: zawarcie i wykonanie umowy (art. 6 ust. 1 lit. b RODO).</li>' +
     '<li><b>Płatności</b> – kwota, status i identyfikator płatności. Danych karty ani kodu BLIK nie otrzymujemy – przetwarza je Stripe. Podstawa: art. 6 ust. 1 lit. b i c RODO.</li>' +
@@ -2320,13 +2322,13 @@ const LEGAL = {
     '<h4>7. Twoje prawa</h4><p>Masz prawo dostępu do danych, ich sprostowania, usunięcia, ograniczenia przetwarzania i przeniesienia (w Strefie Klienta pobierzesz je jako plik JSON), a także prawo wniesienia sprzeciwu wobec przetwarzania opartego na prawnie uzasadnionym interesie i prawo wycofania zgody. Napisz na ' + MAIL + '. Masz też prawo wnieść skargę do Prezesa Urzędu Ochrony Danych Osobowych (ul. Stawki 2, 00-193 Warszawa, uodo.gov.pl).</p>' +
     '<h4>8. Czy musisz podać dane</h4><p>Podanie danych jest dobrowolne, ale bez danych oznaczonych jako wymagane nie zawrzemy umowy ani nie odpowiemy na wiadomość. Pola opcjonalne są tak oznaczone.</p>' +
     '<h4>9. Zautomatyzowane decyzje</h4><p>Nie podejmujemy decyzji wywołujących wobec Ciebie skutki prawne wyłącznie automatycznie i nie profilujemy Cię w celach marketingowych. System automatycznie sprawdza jedynie poprawność kodów rabatowych.</p>' +
-    '<h4>10. Pliki cookies</h4><p>Zasady opisuje <button type="button" class="link" data-legal="cookies">Polityka cookies</button>.</p>' },
+    '<h4>10. Pliki cookies</h4><p>Zasady opisuje <a class="link" href="/#cookies" data-legal="cookies">Polityka cookies</a>.</p>' },
   cookies: { t: 'Polityka cookies', h: DRAFT_NOTE +
     `<p class="note">Wersja z ${LEGAL_VERSION}.</p>` +
     '<h4>Czy potrzebna jest Twoja zgoda?</h4><p>Nie. Strona nie używa cookies ani innych narzędzi analitycznych, reklamowych czy śledzących (np. Google Analytics, Meta Pixel, wtyczek mediów społecznościowych). Zapisuje w przeglądarce tylko informacje niezbędne do działania usług, o które prosisz – a na to przepisy (art. 399 Prawa komunikacji elektronicznej) nie wymagają zgody. Dlatego nie wyświetlamy banera zgody.</p>' +
     '<h4>Co zapisujemy w Twojej przeglądarce</h4><ul>' +
     '<li><code>sb-…-auth-token</code> (pamięć lokalna) – utrzymuje zalogowanie w Strefie Klienta; usuwany po wylogowaniu.</li>' +
-    '<li><code>stl_remember</code> (pamięć lokalna) – zapisuje się tylko, gdy przy logowaniu odznaczysz „Nie wylogowuj mnie”; wtedy dane logowania trzymamy w pamięci sesji i znikają po zamknięciu karty.</li><li><code>stl-guide-…</code> (pamięć lokalna) – tylko dla administratora: zaznaczone kroki w instrukcjach serwisowych.</li><li><code>stl_booking_draft</code> (pamięć sesji) – wersja robocza formularza rezerwacji, żeby wpisane dane nie zniknęły po odświeżeniu; znika po zamknięciu karty i po opłaceniu zamówienia.</li>' +
+    '<li><code>stl_remember</code> (pamięć lokalna) – Twój wybór przy opcji „Nie wylogowuj mnie”. Zapisuje się tylko wtedy, gdy ją odznaczysz (wartość „0”): sesja logowania trafia wtedy do pamięci sesji i znika po zamknięciu karty. Usuwa się, gdy przy następnym logowaniu znów zaznaczysz tę opcję.</li><li><code>stl-guide-…</code> (pamięć lokalna) – tylko dla administratora: zaznaczone kroki w instrukcjach serwisowych.</li><li><code>stl_booking_draft</code> (pamięć sesji) – wersja robocza formularza rezerwacji, żeby wpisane dane nie zniknęły po odświeżeniu; znika po zamknięciu karty i po opłaceniu zamówienia.</li>' +
     '<li><code>stl_last_order</code> (pamięć sesji) – numer ostatniego zamówienia na czas powrotu ze strony płatności; znika po zamknięciu karty.</li><li><code>stl_auth_return_v1</code> (pamięć sesji) – dokąd wrócić po zalogowaniu (np. do rezerwacji albo czatu); usuwany zaraz po powrocie.</li><li><code>stl_intro</code> (pamięć sesji) – czy animacja startowa była już pokazana, żeby przy kolejnych odsłonach trwała krócej; znika po zamknięciu karty.</li></ul><p>Zdjęcia i filmy na stronie są serwowane z naszego serwera.</p>' +
     '<p>Strona nie zapisuje plików cookies w przeglądarce.</p>' +
     '<h4>Połączenia z innymi serwerami</h4><ul><li>Supabase – serwer bazy danych i logowania (nasz dostawca, przetwarza dane na nasze zlecenie).</li><li>Stripe (checkout.stripe.com) – strona płatności, na którą przechodzisz po złożeniu zamówienia. Stripe stosuje na swojej stronie własne cookies.</li><li>cdn.jsdelivr.net – tylko gdy nie działa lokalna kopia biblioteki połączenia z serwerem; wtedy serwer CDN widzi Twój adres IP.</li>' + (CFG.TURNSTILE_SITE_KEY ? '<li>challenges.cloudflare.com – zabezpieczenie „nie jestem robotem” (Cloudflare Turnstile) w formularzu logowania i rejestracji. Służy wyłącznie ochronie przed botami, więc zgodnie z art. 399 Prawa komunikacji elektronicznej nie wymaga zgody.</li>' : '') + '</ul><p>Czcionka i pozostałe pliki strony są serwowane z naszego serwera.</p>' +
@@ -2336,41 +2338,41 @@ const LEGAL = {
     `<h4>§1 Sprzedawca i definicje</h4><p>Serwis internetowy Strike Tech Lab prowadzi ${SELLER} („Sprzedawca”). <b>Klient</b> – osoba lub firma korzystająca z serwisu. <b>Konsument</b> – osoba fizyczna zawierająca umowę niezwiązaną bezpośrednio z jej działalnością gospodarczą lub zawodową. <b>Przedsiębiorca na prawach konsumenta</b> – osoba fizyczna prowadząca jednoosobową działalność, dla której umowa nie ma charakteru zawodowego (art. 38a ustawy o prawach konsumenta); ma ona prawa konsumenta opisane w §7 i §8.</p>` +
     '<h4>§2 Usługi elektroniczne i wymagania techniczne</h4><p>Bezpłatnie udostępniamy: konto w Strefie Klienta, formularz rezerwacji, formularz kontaktowy i program poleceń. Potrzebujesz urządzenia z internetem, aktualnej przeglądarki z włączonym JavaScriptem i aktywnego adresu e-mail. Zakazane jest przesyłanie treści bezprawnych. Umowę o konto zawieramy na czas nieokreślony – możesz ją rozwiązać w każdej chwili, usuwając konto w Strefie Klienta. Możemy ją wypowiedzieć z 14-dniowym wyprzedzeniem z ważnych powodów (np. naruszenie regulaminu), informując o tym mailem. Umowa dotycząca formularza kontaktowego kończy się z chwilą wysłania wiadomości.</p>' +
     '<h4>§3 Zamówienie i zawarcie umowy</h4><p>Zamówienie może złożyć osoba pełnoletnia lub – w imieniu firmy – osoba do tego upoważniona. Do zamówienia potrzebne jest konto. Wybierasz usługę (kilka usług możesz połączyć w jednym terminie i jednej płatności), termin, podajesz dane i klikasz „Zamawiam z obowiązkiem zapłaty”. Termin jest zarezerwowany przez 35 minut na płatność; potem rezerwacja wygasa. Umowa zostaje zawarta z chwilą zaksięgowania płatności całej ceny. Potwierdzenie zamówienia z najważniejszymi informacjami wysyłamy e-mailem.</p>' +
-    '<h4>§4 Ceny i płatności</h4><p>Ceny są cenami końcowymi w złotych polskich. Płacisz online przez operatora Stripe (karta, BLIK lub Przelewy24 – zależnie od dostępności). Za projekty (strony, automatyzacje) i zlecenia przyjęte poza stroną płacisz przelewem na rachunek bankowy wskazany na rachunku – w tytule przelewu podajesz numer rachunku i nazwę usługi; BLIK na telefon przyjmujemy wyłącznie przy osobistym oddaniu sprzętu. Nie przyjmujemy płatności gotówką. Za wszystkie usługi i komputery na zamówienie płacisz 100% ceny z góry, przed rozpoczęciem prac (przy komputerze na zamówienie – po akceptacji wyceny). Nie pobieramy zaliczek. Sprzedawca korzysta ze zwolnienia podmiotowego z VAT (art. 113 ust. 1 ustawy o VAT), więc ceny nie zawierają VAT. Na Twoje żądanie wystawiamy rachunek, a jeśli o to poprosisz – fakturę bez VAT. Składając zamówienie, zgadzasz się na otrzymywanie rachunków i faktur w formie elektronicznej (PDF) na adres e-mail konta; zawsze możesz poprosić o wersję papierową. Cena „od” to cena zakresu podstawowego opisanego przy usłudze. Dodatkowe prace lub części wykonujemy wyłącznie po Twojej akceptacji wyceny – bez akceptacji płacisz tylko za zakres podstawowy.</p>' +
+    '<h4>§4 Ceny i płatności</h4><p>Ceny są cenami końcowymi w złotych polskich. Płacisz online przez operatora Stripe (karta, BLIK lub Przelewy24 – zależnie od dostępności). Za projekty (strony, automatyzacje) i zlecenia przyjęte poza stroną płacisz przelewem na rachunek bankowy wskazany na rachunku – w tytule przelewu podajesz numer rachunku i nazwę usługi; BLIK na telefon przyjmujemy wyłącznie przy osobistym oddaniu sprzętu. Nie przyjmujemy płatności gotówką. Za wszystkie usługi płacisz 100% ceny z góry, przed rozpoczęciem prac. Nie pobieramy zaliczek. Sprzedawca korzysta ze zwolnienia podmiotowego z VAT (art. 113 ust. 1 ustawy o VAT), więc ceny nie zawierają VAT. Na Twoje żądanie wystawiamy rachunek, a jeśli o to poprosisz – fakturę bez VAT. Składając zamówienie, zgadzasz się na otrzymywanie rachunków i faktur w formie elektronicznej (PDF) na adres e-mail konta; zawsze możesz poprosić o wersję papierową. Cena „od” to cena zakresu podstawowego opisanego przy usłudze. Dodatkowe prace lub materiały eksploatacyjne zużyte przy usłudze (np. pasta, pady termiczne) wykonujemy i doliczamy wyłącznie po Twojej akceptacji wyceny – bez akceptacji płacisz tylko za zakres podstawowy.</p>' +
     '<h4>§5 Realizacja usług</h4><p>Usługi zdalne wykonujemy w zarezerwowanym terminie przez program RustDesk. Zapewniasz dostęp do komputera z uprawnieniami administratora i możesz przerwać sesję w każdej chwili. Usługi warsztatowe wymagają dostarczenia sprzętu osobiście lub kurierem; koszt wysyłki do nas ponosisz Ty, chyba że ustalimy inaczej. Opcja Express (+50 zł) dotyczy wybranych usług zdalnych i skraca minimalny czas do terminu do 2 godzin, o ile są wolne godziny. Prace nieodwracalne – aktualizację BIOS-u, delid, nałożenie ciekłego metalu – wykonujemy wyłącznie po Twojej wyraźnej zgodzie wyrażonej mailowo, po informacji o ryzyku i możliwej utracie gwarancji producenta. Jeśli nie możemy wykonać usługi w terminie, zaproponujemy nowy termin, a jeśli go nie przyjmiesz – zwrócimy całą wpłatę. Zmianę terminu z Twojej strony ustalamy mailowo.</p>' +
     SETS_TERMS +
-    '<h4>§7 Prawo odstąpienia od umowy</h4><p>Konsument i przedsiębiorca na prawach konsumenta mogą odstąpić od umowy zawartej na odległość w terminie 14 dni bez podania przyczyny – zasady opisuje <button type="button" class="link" data-legal="withdrawal">pouczenie o odstąpieniu od umowy</button>. Prawo to nie przysługuje w przypadkach z art. 38 ustawy o prawach konsumenta, w szczególności gdy usługa została w pełni wykonana za Twoją wyraźną zgodą, a przed jej rozpoczęciem wiedziałeś, że po wykonaniu usługi utracisz prawo odstąpienia. O ewentualnym wyłączeniu prawa odstąpienia dla zestawu składanego według Twojej indywidualnej specyfikacji informujemy w ofercie, przed zawarciem umowy.</p>' +
-    '<h4>§8 Reklamacje i odpowiedzialność</h4><p>Odpowiadamy za zgodność zestawu z umową na zasadach ustawy o prawach konsumenta (dla konsumentów – przez 2 lata od wydania) oraz za należyte wykonanie usług na zasadach Kodeksu cywilnego. Reklamację złożysz mailowo lub pisemnie – opis zasad: <button type="button" class="link" data-legal="returns">Zwroty i reklamacje</button>. Odpowiadamy w ciągu 14 dni. Gwarancja producenta części nie ogranicza tych uprawnień. Przed pracami zrób kopię ważnych danych – dbamy o nie, ale awaria sprzętu może zdarzyć się niezależnie od nas. Regulamin nie wyłącza ani nie ogranicza praw konsumentów wynikających z przepisów.</p>' +
+    '<h4>§7 Prawo odstąpienia od umowy</h4><p>Konsument i przedsiębiorca na prawach konsumenta mogą odstąpić od umowy zawartej na odległość w terminie 14 dni bez podania przyczyny – zasady opisuje <a class="link" href="/#odstapienie" data-legal="withdrawal">pouczenie o odstąpieniu od umowy</a>. Prawo to nie przysługuje w przypadkach z art. 38 ustawy o prawach konsumenta, w szczególności gdy usługa została w pełni wykonana za Twoją wyraźną zgodą, a przed jej rozpoczęciem wiedziałeś, że po wykonaniu usługi utracisz prawo odstąpienia.</p>' +
+    '<h4>§8 Reklamacje i odpowiedzialność</h4><p>Odpowiadamy za należyte wykonanie usług na zasadach Kodeksu cywilnego. Reklamację złożysz mailowo lub pisemnie – opis zasad: <a class="link" href="/#zwroty" data-legal="returns">Zwroty i reklamacje</a>. Odpowiadamy w ciągu 14 dni. Za wady części kupionych przez Ciebie odpowiada ich sprzedawca lub producent. Przed pracami zrób kopię ważnych danych – dbamy o nie, ale awaria sprzętu może zdarzyć się niezależnie od nas. Regulamin nie wyłącza ani nie ogranicza praw konsumentów wynikających z przepisów.</p>' +
     '<p><b>Gwarancja na montaż.</b> Na usługę montażu komputera (STRIKE Custom Assembly) udzielamy gwarancji na 3 miesiące od wydania komputera, na terenie Polski. Gwarantem jest sprzedawca wskazany w §1. W tym czasie bezpłatnie usuwamy usterki wynikające z montażu – np. źle podłączone lub poluzowane przewody i podzespoły, mocowania, ułożenie kabli albo ustawienia BIOS wprowadzone przy montażu. Gwarancja nie obejmuje wad samych części (odpowiada za nie ich sprzedawca lub producent – pomożemy w zgłoszeniu), uszkodzeń mechanicznych, zalania ani zmian wprowadzonych przez Ciebie lub osoby trzecie. Usterkę zgłosisz na czacie w Strefie Klienta albo mailowo, podając numer zlecenia; odpowiadamy w ciągu 3 dni roboczych, a uznaną usterkę usuwamy w ciągu 14 dni od dostarczenia komputera. Gdy usterka wynika z montażu, koszt odesłania komputera do Ciebie pokrywamy my. Gwarancja nie wyłącza, nie ogranicza ani nie zawiesza Twoich uprawnień z tytułu niezgodności usługi z umową.</p>' +
-    '<h4>§9 Program poleceń i kody rabatowe</h4><p>Zasady: <button type="button" class="link" data-legal="referral">Program poleceń</button>. Jedno zamówienie – jeden kod.</p>' +
+    '<h4>§9 Program poleceń i kody rabatowe</h4><p>Zasady: <a class="link" href="/#program-polecen" data-legal="referral">Program poleceń</a>. Jedno zamówienie – jeden kod.</p>' +
     '<h4>§10 Pozasądowe rozwiązywanie sporów</h4><p>Konsument może skorzystać z bezpłatnej pomocy miejskiego lub powiatowego rzecznika konsumentów albo zwrócić się do Wojewódzkiego Inspektoratu Inspekcji Handlowej o mediację lub rozpoznanie sprawy przez stały polubowny sąd konsumencki. Informacje: prawakonsumenta.uokik.gov.pl. Udział w takim postępowaniu jest dobrowolny dla obu stron.</p>' +
-    '<h4>§11 Dane osobowe</h4><p>Zasady opisuje <button type="button" class="link" data-legal="privacy">Polityka Prywatności</button>.</p>' +
+    '<h4>§11 Dane osobowe</h4><p>Zasady opisuje <a class="link" href="/#polityka-prywatnosci" data-legal="privacy">Polityka Prywatności</a>.</p>' +
     '<h4>§12 Postanowienia końcowe</h4><p>Umowy zawieramy w języku polskim i stosujemy do nich prawo polskie; nie pozbawia to konsumenta ochrony, jaką dają mu bezwzględnie obowiązujące przepisy państwa jego zwykłego pobytu. Regulamin możemy zmienić z ważnych przyczyn (zmiana przepisów, zakresu usług lub sposobu płatności). Posiadaczy kont informujemy o zmianach mailowo co najmniej 14 dni wcześniej; zamówienia złożone wcześniej realizujemy według dotychczasowej wersji.</p>' },
   withdrawal: { t: 'Odstąpienie od umowy', h: DRAFT_NOTE +
-    '<h4>Pouczenie o prawie odstąpienia od umowy</h4><p>Masz prawo odstąpić od umowy w terminie 14 dni bez podania jakiejkolwiek przyczyny. Termin do odstąpienia wygasa po upływie 14 dni od dnia zawarcia umowy – w przypadku usług, albo od dnia, w którym Ty lub wskazana przez Ciebie osoba trzecia inna niż przewoźnik weszła w posiadanie rzeczy – w przypadku zestawu komputerowego.</p>' +
+    '<h4>Pouczenie o prawie odstąpienia od umowy</h4><p>Masz prawo odstąpić od umowy w terminie 14 dni bez podania jakiejkolwiek przyczyny. Termin do odstąpienia wygasa po upływie 14 dni od dnia zawarcia umowy.</p>' +
     `<p>Aby skorzystać z prawa odstąpienia, poinformuj nas (${SELLER}) o swojej decyzji w drodze jednoznacznego oświadczenia, np. pisma wysłanego pocztą lub e-mailem na ${MAIL}. Możesz skorzystać ze wzoru formularza poniżej, ale nie jest to obowiązkowe. Aby zachować termin, wystarczy wysłać oświadczenie przed jego upływem.</p>` +
-    '<h4>Skutki odstąpienia</h4><p>Zwracamy wszystkie otrzymane od Ciebie płatności, w tym koszty dostarczenia rzeczy (z wyjątkiem dodatkowych kosztów wynikających z wybranego przez Ciebie sposobu dostarczenia innego niż najtańszy oferowany przez nas), niezwłocznie, a w każdym razie nie później niż 14 dni od dnia otrzymania Twojego oświadczenia. Zwrot wykonujemy tym samym sposobem płatności, którego użyłeś, chyba że wyraźnie zgodzisz się na inny. Nie ponosisz z tego tytułu żadnych opłat.</p>' +
-    `<p>Przy zestawie komputerowym możemy wstrzymać się ze zwrotem płatności do chwili otrzymania rzeczy lub dowodu jej odesłania – w zależności od tego, co nastąpi wcześniej. Odeślij rzecz na adres ${RETURN_ADDR} niezwłocznie, nie później niż 14 dni od dnia odstąpienia. Ponosisz bezpośrednie koszty zwrotu rzeczy. Odpowiadasz za zmniejszenie wartości rzeczy wynikające z korzystania z niej w sposób wykraczający poza konieczny do stwierdzenia jej charakteru, cech i funkcjonowania.</p>` +
-    '<h4>Usługa rozpoczęta na Twoje żądanie</h4><p>Jeżeli zażądałeś rozpoczęcia usługi przed upływem terminu do odstąpienia, a potem odstąpisz od umowy, zapłacisz kwotę proporcjonalną do zakresu świadczeń spełnionych do chwili, w której poinformowałeś nas o odstąpieniu. Jeżeli usługa zostanie w pełni wykonana za Twoją wyraźną zgodą, a przed jej rozpoczęciem wiedziałeś o utracie prawa odstąpienia, prawo to wygasa.</p>' +
+    '<h4>Skutki odstąpienia</h4><p>Zwracamy wszystkie otrzymane od Ciebie płatności niezwłocznie, a w każdym razie nie później niż 14 dni od dnia otrzymania Twojego oświadczenia. Zwrot wykonujemy tym samym sposobem płatności, którego użyłeś, chyba że wyraźnie zgodzisz się na inny. Nie ponosisz z tego tytułu żadnych opłat.</p>' +
+        '<h4>Usługa rozpoczęta na Twoje żądanie</h4><p>Jeżeli zażądałeś rozpoczęcia usługi przed upływem terminu do odstąpienia, a potem odstąpisz od umowy, zapłacisz kwotę proporcjonalną do zakresu świadczeń spełnionych do chwili, w której poinformowałeś nas o odstąpieniu. Jeżeli usługa zostanie w pełni wykonana za Twoją wyraźną zgodą, a przed jej rozpoczęciem wiedziałeś o utracie prawa odstąpienia, prawo to wygasa.</p>' +
     `<h4>Wzór formularza odstąpienia od umowy</h4><p><em>(formularz ten należy wypełnić i odesłać tylko w przypadku chęci odstąpienia od umowy)</em></p><p><em>Adresat: ${SELLER}</em></p><p><em>Ja/My(*) niniejszym informuję/informujemy(*) o moim/naszym odstąpieniu od umowy sprzedaży następujących rzeczy(*) / umowy o świadczenie następującej usługi(*): …………<br>Numer zamówienia (STL-…): …………<br>Data zawarcia umowy(*) / odbioru(*): …………<br>Imię i nazwisko konsumenta(-ów): …………<br>Adres konsumenta(-ów): …………<br>Podpis konsumenta(-ów) (tylko jeżeli formularz jest przesyłany w wersji papierowej): …………<br>Data: …………</em></p><p><em>(*) Niepotrzebne skreślić.</em></p>` },
   returns: { t: 'Zwroty i reklamacje', h: DRAFT_NOTE +
     `<p class="note">Wersja z ${LEGAL_VERSION}.</p>` +
     '<h4>Kiedy oddajemy pieniądze</h4><ul>' +
     '<li><b>Płatność przerwana</b> – nic nie płacisz, a termin wraca do kalendarza.</li>' +
-    '<li><b>Odstąpienie od umowy w ciągu 14 dni</b> (konsument i przedsiębiorca na prawach konsumenta) – zwracamy całą wpłatę; jeśli na Twoje żądanie zaczęliśmy usługę wcześniej, potrącamy tylko część odpowiadającą wykonanemu zakresowi. Szczegóły: <button type="button" class="link" data-legal="withdrawal">pouczenie o odstąpieniu</button>.</li>' +
+    '<li><b>Odstąpienie od umowy w ciągu 14 dni</b> (konsument i przedsiębiorca na prawach konsumenta) – zwracamy całą wpłatę; jeśli na Twoje żądanie zaczęliśmy usługę wcześniej, potrącamy tylko część odpowiadającą wykonanemu zakresowi. Szczegóły: <a class="link" href="/#odstapienie" data-legal="withdrawal">pouczenie o odstąpieniu</a>.</li>' +
     '<li><b>Nie wykonamy usługi w terminie</b> – proponujemy nowy termin, a jeśli go nie przyjmiesz, zwracamy całą wpłatę.</li>' +
-    '<li><b>Nie zaakceptujesz zmiany podzespołu w zestawie</b> – możesz zrezygnować i otrzymasz zwrot całej wpłaty.</li>' +
     '<li><b>Uznana reklamacja</b> – jeśli prowadzi do obniżenia ceny lub odstąpienia od umowy, zwracamy należną kwotę.</li></ul>' +
     '<p>Zwrot wysyłamy w ciągu 14 dni, tą samą metodą, którą zapłaciłeś (przez Stripe). Czas zaksięgowania zależy od Twojego banku lub operatora karty.</p>' +
-    `<h4>Jak oddać zestaw lub odesłać sprzęt</h4><p>Napisz najpierw na ${MAIL} z numerem zamówienia STL-…, a potem odeślij rzecz na adres ${RETURN_ADDR} albo przekaż ją osobiście w uzgodnionym terminie. Przy odstąpieniu od umowy koszt odesłania ponosisz Ty; przy uzasadnionej reklamacji – my.</p>` +
+    `<h4>Jak dostarczyć sprzęt przy reklamacji</h4><p>Napisz najpierw na ${MAIL} z numerem zamówienia STL-…, a potem wyślij sprzęt na adres ${RETURN_ADDR} albo przekaż go osobiście w uzgodnionym terminie. Przy uzasadnionej reklamacji koszt przesyłki ponosimy my.</p>` +
     `<h4>Jak złożyć reklamację</h4><p>Napisz na ${MAIL} albo wyślij pismo na adres ${fill(CO.ADDRESS, 'adres')}. Podaj numer zamówienia, opis problemu, datę jego zauważenia i czego oczekujesz. Odpowiemy w ciągu 14 dni od otrzymania reklamacji.</p>` +
-    '<h4>Twoje uprawnienia</h4><ul><li><b>Zestaw komputerowy niezgodny z umową</b> (konsument i przedsiębiorca na prawach konsumenta, przez 2 lata od wydania) – możesz żądać naprawy lub wymiany, a gdy to niemożliwe, nie nastąpiło w rozsądnym czasie albo niezgodność jest istotna – obniżenia ceny lub odstąpienia od umowy.</li><li><b>Usługa wykonana wadliwie</b> – możesz żądać ponownego, prawidłowego wykonania lub usunięcia wady, a na zasadach Kodeksu cywilnego – obniżenia ceny lub odstąpienia od umowy.</li><li>Gwarancja producenta części działa niezależnie od tych uprawnień.</li></ul>' },
+    '<h4>Twoje uprawnienia</h4><ul><li><b>Usługa wykonana wadliwie</b> – możesz żądać ponownego, prawidłowego wykonania lub usunięcia wady, a na zasadach Kodeksu cywilnego – obniżenia ceny lub odstąpienia od umowy.</li><li>Wady części kupionych przez Ciebie zgłaszasz ich sprzedawcy (rękojmia) lub producentowi (gwarancja) – pomożemy w zgłoszeniu.</li></ul>' },
   referral: { t: 'Program poleceń', h:
-    '<ul><li>Każde konto ma swój kod polecający (Strefa Klienta → Polecenia i kody).</li><li>Nowy klient (bez wcześniejszego opłaconego zamówienia) dostaje <b>10% rabatu</b> (maks. 300 zł) po wpisaniu kodu polecającego.</li><li>Polecający dostaje jednorazowy kod <b>5% rabatu</b> (maks. 300 zł, ważny 12 miesięcy) po zakończeniu zlecenia poleconego klienta i upływie 14 dni na ewentualne odstąpienie. Kod przychodzi mailem i jest widoczny w Strefie Klienta.</li><li>Nie można polecać samego siebie (to samo konto, ten sam adres e-mail lub jego aliasy, ten sam numer telefonu).</li><li>Kody się nie łączą: jedno zamówienie – jeden kod. Rabat obejmuje cenę usługi lub zestawu, nie opcję Express.</li><li>Kod nie podlega wymianie na gotówkę. Gdy zamówienie zostanie anulowane lub zwrócone, nagroda polecającego przepada.</li><li>Link polecający udostępniaj tylko osobom, które się na to zgadzają – nie wysyłaj go masowo ani jako spamu.</li></ul>' },
+    '<ul><li>Każde konto ma swój kod polecający (Strefa Klienta → Polecenia i kody).</li><li>Nowy klient (bez wcześniejszego opłaconego zamówienia) dostaje <b>10% rabatu</b> (maks. 300 zł) po wpisaniu kodu polecającego.</li><li>Polecający dostaje jednorazowy kod <b>5% rabatu</b> (maks. 300 zł, ważny 12 miesięcy) po zakończeniu zlecenia poleconego klienta i upływie 14 dni na ewentualne odstąpienie. Kod przychodzi mailem i jest widoczny w Strefie Klienta.</li><li>Nie można polecać samego siebie (to samo konto, ten sam adres e-mail lub jego aliasy, ten sam numer telefonu).</li><li>Kody się nie łączą: jedno zamówienie – jeden kod. Rabat obejmuje cenę usługi, nie opcję Express.</li><li>Kod nie podlega wymianie na gotówkę. Gdy zamówienie zostanie anulowane lub zwrócone, nagroda polecającego przepada.</li><li>Link polecający udostępniaj tylko osobom, które się na to zgadzają – nie wysyłaj go masowo ani jako spamu.</li></ul>' },
   prices: { t: 'Ceny i Omnibus', h:
-    '<p>Ceny są cenami końcowymi w złotych polskich. Cena „od” oznacza cenę minimalną dla zakresu podstawowego opisanego przy usłudze; dodatkowe prace lub części (np. pady termiczne, pasta premium, naprawa po diagnostyce) wyceniamy i wykonujemy dopiero po Twojej akceptacji. Ceny zestawów komputerowych są orientacyjne – wiążącą cenę podajemy w ofercie. Ostateczną kwotę zamówienia wylicza system na podstawie aktualnego cennika i widzisz ją przed płatnością.</p>' +
+    '<p>Ceny są cenami końcowymi w złotych polskich. Cena „od” oznacza cenę minimalną dla zakresu podstawowego opisanego przy usłudze; dodatkowe prace lub materiały (np. pady termiczne, pasta premium, naprawa po diagnostyce) wyceniamy i wykonujemy dopiero po Twojej akceptacji. Ceny części w przykładowych konfiguracjach są orientacyjne i pochodzą ze sklepów – części kupujesz bezpośrednio u sprzedawcy, nie u nas. Ostateczną kwotę zamówienia wylicza system na podstawie aktualnego cennika i widzisz ją przed płatnością.</p>' +
     '<p>Gdy obniżamy cenę, obok podajemy najniższą cenę obowiązującą w ciągu 30 dni przed obniżką.</p>' },
 };
+/** Adres każdego dokumentu: /#regulamin itd. – działa też bez JavaScriptu w linkach i w mailach. */
+const LEGAL_HASH_OF = { terms: 'regulamin', privacy: 'polityka-prywatnosci', cookies: 'cookies', withdrawal: 'odstapienie', returns: 'zwroty', referral: 'program-polecen', prices: 'ceny' };
 function openLegal(key) {
   const d = LEGAL[key]; if (!d) return;
   $('#legalTitle').textContent = d.t; $('#legalBody').innerHTML = d.h;
@@ -2584,9 +2586,8 @@ function initChrome() {
   $$('#panelTabs .tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
   $('#contactForm').addEventListener('submit', submitContact);
   // stare adresy z # (linki w mailach, zakładki) -> nowe podstrony
-  // linki do dokumentów prawnych (np. z maili): /#regulamin, /#polityka-prywatnosci, /#cookies, /#odstapienie, /#zwroty
-  const LEGAL_HASH = { '#regulamin': 'terms', '#polityka-prywatnosci': 'privacy', '#cookies': 'cookies', '#odstapienie': 'withdrawal', '#zwroty': 'returns' };
-  const legalDoc = LEGAL_HASH[location.hash];
+  // linki do dokumentów prawnych (z maili i stopki): /#regulamin, /#polityka-prywatnosci, /#cookies, /#odstapienie, /#zwroty, /#program-polecen, /#ceny
+  const legalDoc = Object.keys(LEGAL_HASH_OF).find((k) => `#${LEGAL_HASH_OF[k]}` === location.hash);
   if (legalDoc) { history.replaceState(null, '', location.pathname + location.search); setTimeout(() => openLegal(legalDoc), 50); }
   const legacy = LEGACY_HASH[location.hash];
   if (legacy) { const terms = location.hash === '#prawne'; history.replaceState(null, '', BASE + legacy.slice(1) + location.search); if (terms) setTimeout(() => openLegal('terms'), 50); }

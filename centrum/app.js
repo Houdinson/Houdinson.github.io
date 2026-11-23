@@ -4,6 +4,7 @@
    funkcji: admin-finance, ai-social-agent, publish-post (migracja v4).
    Wszystkie teksty z bazy wstawiane są przez textContent (bez innerHTML).
    ===================================================================== */
+import * as FR from './fin-rules.js';   // limity, kasa, szacunek PIT (wspólny ze stroną)
 const CFG = window.STL_CENTRUM || {};
 const TZ = 'Europe/Warsaw';
 
@@ -88,21 +89,31 @@ async function callFn(name, body) {
   return data;
 }
 
-const conn = { timer: null };
+/* Status połączenia: ok = serwer odpowiada; wait = trwa łączenie/ponawianie; net = brak internetu; bad = serwer nie odpowiada.
+   Przy net i bad pasek pod nagłówkiem mówi, że dane mogą być nieaktualne – ponawiamy co 8–10 s i po powrocie internetu. */
+const conn = { timer: null, state: 'wait' };
 function setConn(state) {
-  const map = { ok: ['ok', 'Online'], wait: ['wait', 'Łączenie'], bad: ['bad', 'Offline'] }[state];
+  conn.state = state;
+  const map = {
+    ok: ['ok', 'Online', ''],
+    wait: ['wait', 'Łączenie…', ''],
+    net: ['bad', 'Offline', 'Brak internetu – dane mogą być nieaktualne. Ponawiam automatycznie, gdy wróci połączenie.'],
+    bad: ['bad', 'Brak serwera', 'Brak połączenia z serwerem – dane mogą być nieaktualne. Ponawiam automatycznie.'],
+  }[state];
   $('#conn .dot').className = `dot ${map[0]}`; $('#connTxt').textContent = map[1];
-  $('#offline').classList.toggle('hidden', state !== 'bad');
+  $('#conn').title = map[2] || (state === 'ok' ? 'Połączono z serwerem' : 'Łączenie z serwerem…');
+  const bar = $('#offline'); bar.textContent = map[2]; bar.classList.toggle('hidden', !map[2]);
 }
 async function heartbeat() {
   clearTimeout(conn.timer);
-  if (!navigator.onLine) { setConn('bad'); conn.timer = setTimeout(heartbeat, 10000); return; }
+  if (!navigator.onLine) { setConn('net'); conn.timer = setTimeout(heartbeat, 10000); return; }
+  if (conn.state !== 'ok') setConn('wait');
   const { error } = await sb.from('profiles').select('id', { head: true, count: 'exact' }).limit(1).then((r) => r, (e) => ({ error: e }));
   setConn(error ? 'bad' : 'ok');
   conn.timer = setTimeout(heartbeat, error ? 8000 : 45000);
 }
 addEventListener('online', () => { heartbeat(); reloadActive(); });
-addEventListener('offline', () => setConn('bad'));
+addEventListener('offline', () => setConn('net'));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && session) { heartbeat(); reloadActive(); refreshBadges(); } });
 
 /* ------------------------------------------------------------------ logowanie */
@@ -688,7 +699,9 @@ function renderLedgerBox() {
   const s = S.ledger || {}, today = s.today || todayKey();
   const curM = today.slice(0, 7), curQ = `${today.slice(0, 4)}-Q${Math.floor((+today.slice(5, 7) - 1) / 3) + 1}`;
   const m = s.months?.find((x) => x.month === curM), q = s.quarters?.find((x) => x.quarter === curQ), y = s.years?.find((x) => x.year === today.slice(0, 4));
-  const qLimit = q?.limit || 1081350, qPct = (q?.net || 0) / qLimit;
+  const year = today.slice(0, 4), QL = FR.quarterLimit(year), KL = FR.kasaLimit(year);
+  const qLimit = QL.value, qPct = (q?.net || 0) / qLimit, qAlert = FR.limitAlert(q?.net || 0, qLimit);
+  const pit = FR.pitEstimate(year, y?.profit || 0);
   const sh = s.sheet || {};
   const kpi = (label, val, extra) => h('div', { class: 'kpi hud' }, h('span', { text: label }), h('b', { text: val }), extra || null);
   box.replaceChildren(...[
@@ -699,13 +712,19 @@ function renderLedgerBox() {
       h('div', { class: 'card' },
         h('div', { class: 'lim-h' }, h('span', { text: `Limit kwartału ${curQ.slice(5)} (nierejestrowana)` }), h('b', { text: pctTxt(qPct) })),
         limitBar(qPct),
-        h('p', { class: `small ${q?.flag ? 'down' : 'muted'}`, style: 'margin:6px 0 0', text: q?.flag || `${zl2(q?.net || 0)} z ${zl2(qLimit)} · zostało ${zl2(Math.max(0, qLimit - (q?.net || 0)))}` }),
-        h('div', { class: 'lim-h', style: 'margin-top:12px' }, h('span', { text: `Rok ${today.slice(0, 4)}: osoby prywatne (kasa fiskalna)` }), h('b', { text: pctTxt((y?.b2c || 0) / 2000000) })),
-        limitBar((y?.b2c || 0) / 2000000),
-        h('p', { class: 'small muted', style: 'margin:6px 0 0', text: `Rok: przychód ${zl2(y?.net || 0)}, koszty ${zl2(y?.costs || 0)}, dochód ${zl2(y?.profit || 0)}` }))],
+        h('p', { class: `small ${qAlert ? 'down' : 'muted'}`, style: 'margin:6px 0 0', text: `${qAlert ? qAlert.text + ' ' : ''}${zl2(q?.net || 0)} z ${zl2(qLimit)} · zostało ${zl2(Math.max(0, qLimit - (q?.net || 0)))}` }),
+        QL.estimated ? h('p', { class: 'small down', style: 'margin:4px 0 0', text: `Brak płacy minimalnej na ${year} w fin-rules.js – limit liczony z ${QL.from} r.` }) : null,
+        h('div', { class: 'lim-h', style: 'margin-top:12px' }, h('span', { text: `Rok ${year}: osoby prywatne (kasa fiskalna)` }), h('b', { text: pctTxt((y?.b2c || 0) / KL.value) })),
+        limitBar((y?.b2c || 0) / KL.value),
+        h('p', { class: 'small muted', style: 'margin:6px 0 0', text: `${zl2(y?.b2c || 0)} z ${zl2(KL.value)}${KL.prorated ? ` (limit proporcjonalny od startu ${FR.SETTINGS.START_DATE})` : ''}` }),
+        h('p', { class: 'small muted', style: 'margin:6px 0 0', text: `Rok: przychód ${zl2(y?.net || 0)}, koszty ${zl2(y?.costs || 0)}, dochód ${zl2(y?.profit || 0)}` }),
+        h('div', { class: 'lim-h', style: 'margin-top:12px' }, h('span', { text: `Szacowany PIT za ${year}` }), h('b', { class: 'gold', text: zl2(pit.tax) })),
+        h('p', { class: 'small muted', style: 'margin:6px 0 0', text: `Odłóż na subkonto: ${zl2(pit.reserve)} · kwoty wolnej zostało ${zl2(pit.freeLeft)}. Szacunek, nie porada podatkowa.` }),
+        pit.notes.map((n) => h('p', { class: 'small down', style: 'margin:4px 0 0', text: n })))],
     h('div', { class: 'post-actions' },
       h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: '＋ Wydatek', onclick: () => expenseSheet() }),
       S.bills ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '🧾 Rachunek', onclick: () => billSheet(null) }) : null,
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '📑 Rok do PIT-36', onclick: () => yearSheet(+today.slice(0, 4)) }),
       sh.url ? h('a', { class: 'btn btn-ghost btn-sm', href: sh.url, target: '_blank', rel: 'noopener', text: '📄 Arkusz' }) : null,
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '⟳ Synchronizuj', onclick: async (e) => {
         busy(e.currentTarget, true);
@@ -732,6 +751,31 @@ function renderLedgerBox() {
       } }))))
       : h('div', { class: 'empty', text: S.expenses ? 'Brak wydatków. Prowizje Stripe liczą się automatycznie.' : 'Nie udało się wczytać wydatków.' })].flat(Infinity).filter(Boolean));
 }
+/** Podsumowanie roku do PIT-36: przychód, koszty, dochód, lista kosztów do CSV i ostrzeżenia. */
+async function yearSheet(year) {
+  const yStats = S.ledger?.years?.find((x) => x.year === String(year));
+  const { data, error } = await sb.from('expenses').select('id,spent_on,category,description,vendor,doc_number,amount_grosze,is_cost,receipt_path')
+    .gte('spent_on', `${year}-01-01`).lte('spent_on', `${year}-12-31`).order('spent_on');
+  if (error) return toast('err', error.message);
+  const r = FR.yearSummary(yStats, data || []), pit = FR.pitEstimate(year, r.profit);
+  const row = (k, v, cls) => h('div', {}, h('span', { text: k }), h('b', { class: cls || '', text: v }));
+  const years = [...new Set([...(S.ledger?.years || []).map((x) => +x.year), year, year - 1])].sort((a, b) => b - a);
+  const sel = h('select', { class: 'input', onchange: () => yearSheet(+sel.value) }, years.map((v) => h('option', { value: v, text: String(v), selected: v === year })));
+  const warn = (list, text) => list.length ? h('div', { class: 'card', style: 'margin-top:10px' }, h('b', { class: 'down', text: `${text} (${list.length})` }),
+    h('ul', { class: 'small', style: 'margin:6px 0 0;padding-left:18px' }, list.map((x) => h('li', { text: `${x.spent_on} · ${x.description} · ${zl2(x.amount_grosze)}` })))) : null;
+  openSheet(`Rok ${year} – do PIT-36`,
+    h('label', { class: 'field' }, h('span', { text: 'Rok' }), sel),
+    h('div', { class: 'card kv' },
+      row('Wpłaty', zl2(r.income)), row('Zwroty', `−${zl2(r.refunds)}`), row('Przychód', zl2(r.net), 'gold'),
+      row('Koszty z wydatków', zl2(r.costExp)), row('Prowizje Stripe i inne automatyczne', zl2(r.costAuto)), row('Koszty razem', zl2(r.costs)),
+      row('Dochód', zl2(r.profit), r.profit < 0 ? 'down' : 'gold'), row('Szacowany PIT (skala)', zl2(pit.tax))),
+    h('p', { class: 'hint', text: 'W PIT-36 wpisujesz przychód i koszty w wierszu działalności z art. 5 ust. 1 Prawa przedsiębiorców (inne źródła). Termin: 30 kwietnia następnego roku. Dokumenty trzymaj 5 lat.' }),
+    warn(r.noDoc, 'Koszty bez skanu i numeru dokumentu'),
+    warn(r.beforeStart, `Koszty z lat przed startem (${FR.SETTINGS.START_DATE.slice(0, 4)}) – nie są kosztem`),
+    h('button', { class: 'btn btn-gold btn-block', style: 'margin-top:12px', type: 'button', text: `⬇ Lista kosztów ${year} (CSV)`, disabled: !r.costList.length,
+      onclick: () => FR.downloadText(`koszty-${year}.csv`, FR.costsCsv(r.costList, EXP_CAT)) }),
+    r.costList.length ? null : h('p', { class: 'hint', text: 'Brak wydatków oznaczonych jako koszt w tym roku.' }));
+}
 async function openReceipt(path) {
   const { data, error } = await sb.storage.from('receipts').createSignedUrl(path, 300);
   if (error) return toast('err', error.message);
@@ -746,7 +790,14 @@ function expenseSheet() {
   const catSel = h('select', { class: 'input' }, Object.entries(EXP_CAT).map(([k, v]) => h('option', { value: k, text: v })));
   const orderSel = h('select', { class: 'input' }, h('option', { value: '', text: '— bez zlecenia —' }),
     S.orders.filter((o) => o.order_number).slice(0, 40).map((o) => h('option', { value: o.id, text: `${o.order_number} · ${o.service_name}` })));
-  const isCost = h('input', { type: 'checkbox', checked: true });
+  const isCost = h('input', { type: 'checkbox', checked: !FR.isBeforeStart(date.value) });
+  const costHint = h('p', { class: 'hint', style: 'margin:4px 2px 0' });
+  const checkStart = () => {
+    const before = FR.isBeforeStart(date.value);
+    if (before) isCost.checked = false;
+    costHint.textContent = before ? `Wydatek z roku przed startem działalności (${FR.SETTINGS.START_DATE.slice(0, 4)}) – nie jest kosztem.` : '';
+  };
+  date.addEventListener('change', checkStart); checkStart();
   let file = null;
   const prev = h('div', { class: 'rcpt-prev' });
   const pick = (inp) => () => {
@@ -761,6 +812,7 @@ function expenseSheet() {
     const g = parseZl(amount.value);
     if (!(g > 0)) { amount.focus(); return toast('err', 'Wpisz kwotę, np. 129,99.'); }
     if (!desc.value.trim()) { desc.focus(); return toast('err', 'Wpisz, co zostało kupione.'); }
+    if (isCost.checked && FR.isBeforeStart(date.value) && !confirm('Ten wydatek jest z roku przed startem działalności. Na pewno zapisać go jako koszt?')) return;
     busy(save, true, 'Zapisuję…');
     let path = null;
     try {
@@ -792,7 +844,7 @@ function expenseSheet() {
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '🖼 Plik / PDF', onclick: () => gal.click() })),
     prev,
     h('label', { class: 'chk-row' }, isCost, h('span', { text: 'Koszt uzyskania przychodu (zakup na potrzeby usług)' })),
-    save);
+    costHint, save);
   setTimeout(() => amount.focus(), 80);
 }
 /** Arkusz zlecenia: sposób płatności, prowizja, zwrot. */
@@ -891,7 +943,7 @@ function billSheet(o) {
     h('h4', { text: 'Nabywca' }), F('Imię i nazwisko / firma', name),
     h('div', { class: 'row2' }, F('Ulica i numer', addr), F('Kod i miasto', pc)),
     h('div', { class: 'row2' }, F('NIP', nip), F('E-mail', email)),
-    h('h4', { text: 'Pozycja' }), F('Nazwa usługi / towaru', iname),
+    h('h4', { text: 'Pozycja' }), F('Nazwa usługi', iname),
     h('div', { class: 'row2' }, F('Ilość', iqty), F('Cena (zł)', iprice)),
     F('Data zapłaty (puste = niezapłacone)', paidOn),
     h('p', { class: 'hint', text: 'Po płatności przez Stripe rachunek wystawia się i wysyła sam – ręcznie tylko przy przelewie, BLIK-u na telefon albo poprawce. Gotówki nie przyjmujemy. Więcej pozycji: panel na stronie (Finanse).' }),

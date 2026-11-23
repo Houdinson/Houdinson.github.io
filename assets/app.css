@@ -420,6 +420,9 @@ table.adm tbody tr{cursor:pointer}
 .legal-links button{all:unset;cursor:pointer;color:#d4d4d9;font-size:.94rem}
 .legal-links button:hover{color:var(--gold)}
 .legal-links button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.legal-links a[data-legal]{color:#d4d4d9;font-size:.94rem;text-decoration:none}
+.legal-links a[data-legal]:hover{color:var(--gold)}
+.legal-links a[data-legal]:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .foot-bottom{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between;color:var(--muted);font-size:.83rem}
 
 /* ---------- Okna dialogowe, komunikaty ---------- */
@@ -827,8 +830,8 @@ html.intro-on,html.intro-on body{overflow:hidden}
 .tr-row b{font-variant-numeric:tabular-nums;word-break:break-word}
 @media (max-width:520px){.tr-row{grid-template-columns:1fr auto}.tr-row small{grid-column:1/-1}}
 
-/* ---------- Zespół na czacie (v22): Mikołaj i Dawid ---------- */
-.chat-team{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,187,0,.05),transparent)}
+/* ---------- Kto odpowiada na czacie (v22): jedna osoba ---------- */
+.chat-team{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,187,0,.05),transparent)}
 .team-card{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03);min-width:0}
 .team-ph{position:relative;flex:none}
 .team-av{width:42px;height:42px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--gold-soft);border:1.5px solid rgba(255,187,0,.55);color:var(--gold);font-weight:800;font-size:1rem}

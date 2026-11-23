@@ -3,4 +3,4 @@ Allow: /
 Disallow: /centrum/
 Disallow: /konto
 
-Sitemap: https://strike-tech-lab.pages.dev/sitemap.xml
+Sitemap: https://striketechlab.pl/sitemap.xml
