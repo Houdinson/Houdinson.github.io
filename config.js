@@ -25,7 +25,7 @@ window.STL_CONFIG = {
     REGISTRY: 'działalność nierejestrowana – art. 5 ust. 1 ustawy Prawo przedsiębiorców',
     RETURN_ADDRESS: '',  // adres do odsyłania sprzętu i zwrotów (puste = ADDRESS)
     HOSTING: 'Cloudflare, Inc. (hosting strony i DNS); OVH SAS, Francja (skrzynka kontakt@striketechlab.pl – OVHcloud Zimbra)',
-    MAIL_PROVIDER: 'Resend, Inc. (USA)'    // usługa wysyłająca maile z systemu (np. ta sama firma hostingowa)
+    MAIL_PROVIDER: 'OVH SAS, Francja (serwer pocztowy OVHcloud Zimbra, nadawca kontakt@striketechlab.pl)'    // usługa wysyłająca maile z systemu
   },
   /* CAPTCHA przy logowaniu i rejestracji (Cloudflare Turnstile). Puste = wyłączone.
      Najpierw włącz CAPTCHA w Supabase (Authentication → Attack Protection), potem wpisz tu Site Key.
