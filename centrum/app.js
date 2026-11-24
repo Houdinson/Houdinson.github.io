@@ -225,6 +225,7 @@ async function loadOrders() {
   const { data, error } = await sb.from('orders').select(ORD_COLS).order('created_at', { ascending: false }).limit(500);
   if (error) { box.replaceChildren(h('div', { class: 'empty', text: `Błąd: ${error.message}` })); return; }
   S.orders = data; renderOrders();
+  loadComplaintsBadge();   // v30: reklamacje z terminem 14 dni
 }
 function renderOrders() {
   const today = todayKey();
@@ -234,6 +235,7 @@ function renderOrders() {
     h('div', { class: 'kpi' }, h('b', { text: String(active.length) }), h('span', { text: 'aktywne' })),
     h('div', { class: 'kpi' }, h('b', { text: String(todaySlots.length) }), h('span', { text: 'terminy dziś' })),
     h('div', { class: 'kpi' }, h('b', { text: String(S.orders.filter((o) => o.status === 'OPLACONE').length) }), h('span', { text: 'nowe do przyjęcia' })));
+  renderComplaintsKpi();
   $('#ordChips').replaceChildren(...Object.entries(ORD_FILTERS).map(([k, [label, st]]) => h('button', {
     class: 'chip', role: 'tab', type: 'button', 'aria-selected': String(k === S.ordFilter), onclick: () => { S.ordFilter = k; renderOrders(); },
   }, label, h('span', { class: 'n', text: String(st ? S.orders.filter((o) => st.includes(o.status)).length : S.orders.length) }))));
@@ -290,6 +292,9 @@ function orderSheet(id) {
       h('div', { class: 'row2' }, [['przelew', '🏦 Przelew zaksięgowany'], ['blik_tel', '📱 BLIK na telefon']].map(([m, t]) => h('button', { class: 'btn btn-ghost', type: 'button', text: t, onclick: (e) => { if (confirm(`Potwierdzasz wpłatę ${zl(o.amount_due_grosze)} ${m === 'blik_tel' ? 'BLIK-iem na telefon' : 'przelewem'}? Sprawdź tytuł: numer rachunku + usługa.`)) act(e.currentTarget, t, { action: 'mark_paid', order_id: o.id, method: m }, (d) => `Opłacone: ${d.order_number || ''}`); } })))] : null,
     paymentTools(o),
     o.status !== 'ANULOWANE' ? orderBillsC(o) : null,
+    o.paid_at ? [h('h4', { text: 'Ochrona zlecenia' }), h('div', { class: 'row2' },
+      h('button', { class: 'btn btn-ghost', type: 'button', text: '🛡 Protokół, zgody, zwrot', onclick: () => protectionSheet(o) }),
+      h('button', { class: 'btn btn-ghost', type: 'button', text: '📦 Dowody (spór)', onclick: () => evidenceSheet(o) }))] : null,
     o.user_id && o.order_number ? [h('h4', { text: 'Raport STRIKE PROOF' }),
       h('button', { class: 'btn btn-gold btn-block', type: 'button', text: '📊 Wpisz pomiary i utwórz raport PDF', onclick: () => reportSheet(o) })] : null,
     o.user_id ? [h('h4', { text: 'Zdjęcia przy przyjęciu' }), photoTools(o, thumbs)] : null,
@@ -1521,4 +1526,228 @@ async function boot() {
   await showLoginOrApp();
   iosHint();
 }
+/* ================================================================== OCHRONA ZLECENIA (migracja v30)
+   Protokół (kopie, S.M.A.R.T., numery seryjne, test obciążeniowy, przekazanie), zgody na prace nieodwracalne,
+   odstąpienie od umowy, reklamacje z terminem 14 dni i pakiet dowodowy na spór / chargeback. */
+const IRR_KINDS = { bios_update: 'Aktualizacja BIOS-u', delid: 'Delid procesora', liquid_metal: 'Ciekły metal', oc_napiecia: 'OC z podniesieniem napięć', lutowanie: 'Prace lutownicze', inne: 'Inne nieodwracalne' };
+const IRR_RISK = {
+  bios_update: 'Aktualizacja BIOS-u płyty głównej. Ryzyko: przerwanie aktualizacji (np. zanik zasilania) może trwale uszkodzić płytę; po aktualizacji powrót do starszej wersji bywa niemożliwy. Wykonujemy ją wyłącznie oficjalnym plikiem producenta. Zgodnie z §5 Regulaminu nie odpowiadamy za skutki wynikające z ryzyka opisanego powyżej, jeśli prace wykonano prawidłowo.',
+  delid: 'Delid (zdjęcie osłony IHS procesora). Ryzyko: uszkodzenie procesora; operacja oznacza utratę gwarancji producenta procesora i jest nieodwracalna. Zgodnie z §5 Regulaminu wykonujemy ją tylko na Twoje wyraźne życzenie.',
+  liquid_metal: 'Nałożenie ciekłego metalu. Ryzyko: zwarcie przy wycieku, reakcja z aluminium, utrata gwarancji producenta podzespołu. Nieodwracalne ślady na powierzchni styku. Zgodnie z §5 Regulaminu wykonujemy tylko za Twoją wyraźną zgodą.',
+  oc_napiecia: 'Podkręcanie z podniesieniem napięć powyżej ustawień producenta. Ryzyko: szybsze zużycie lub uszkodzenie podzespołu, możliwa utrata gwarancji producenta. Zgodnie z §5 Regulaminu tylko za Twoją wyraźną zgodą.',
+  lutowanie: 'Prace lutownicze na podzespole. Ryzyko: uszkodzenie elementu, utrata gwarancji producenta. Zgodnie z §5 Regulaminu tylko za Twoją wyraźną zgodą.',
+  inne: '',
+};
+const ERR_PL = { NOT_ADMIN: 'Brak uprawnień – potwierdź 2FA.', NO_CONSENT: 'Brak zgody klienta – nie można odnotować wykonania.', NOTE_REQUIRED: 'Opisz dowód zgody (min. 10 znaków).', ALREADY_DECIDED: 'Ta prośba ma już decyzję.', ORDER_NOT_PAID: 'Zamówienie nie jest opłacone.', DECLARED_AT_REQUIRED: 'Podaj datę oświadczenia o odstąpieniu.', DEDUCTION_TOO_HIGH: 'Potrącenie większe niż wpłata.' };
+const v30err = (e) => { const m = String(e?.message || e); return /schema cache|does not exist|Could not find the function/i.test(m) ? 'Wymaga migracji v30 (20261124140000_v30_ochrona_zamowien.sql).' : ERR_PL[m] || m; };
+const dtLocal = (iso) => iso ? new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+const fromLocal = (v) => v ? new Date(v).toISOString() : null;
+
+async function protectionSheet(o) {
+  openSheet(`Ochrona · ${o.order_number || 'zlecenie'}`, h('p', { class: 'muted', text: 'Ładuję…' }));
+  const [p, irr, w] = await Promise.all([
+    sb.from('order_protection').select('*').eq('order_id', o.id).maybeSingle(),
+    sb.from('irreversible_consents').select('*').eq('order_id', o.id).order('requested_at'),
+    sb.from('order_withdrawals').select('*').eq('order_id', o.id).maybeSingle()]);
+  if (p.error) { openSheet('Ochrona zlecenia', h('div', { class: 'banner bad', text: v30err(p.error) })); return; }
+  const d = p.data || {};
+  const chk = (k, label) => { const i = h('input', { type: 'checkbox', checked: !!d[k] }); i.dataset.k = k; return h('label', { class: 'check' }, i, h('span', { text: label })); };
+  const inp = (k, ph, type = 'text', val) => { const i = h('input', { class: 'input', type, placeholder: ph, value: val ?? (d[k] ?? '') }); i.dataset.k = k; return h('label', { class: 'field' }, h('span', { class: 'small muted', text: ph }), i); };
+  const sel = (k, opts, ph) => { const s = h('select', { class: 'select' }, h('option', { value: '', text: ph }), Object.entries(opts).map(([v, t]) => h('option', { value: v, text: t, selected: d[k] === v }))); s.dataset.k = k; return h('label', { class: 'field' }, s); };
+  const serials = h('textarea', { class: 'input', rows: 4, placeholder: 'Jedna linia = część: numer seryjny\nnp. GPU: 2341AB0099\nZasilacz: PSU-55-001', value: (d.serials || []).map((x) => `${x.part}: ${x.serial}`).join('\n') });
+  const st = d.stress_test || {};
+  const stTool = h('input', { class: 'input', placeholder: 'Narzędzie (OCCT, Prime95, FurMark…)', value: st.tool || '' });
+  const stMin = h('input', { class: 'input', inputmode: 'numeric', placeholder: 'Minuty', value: st.minutes ?? '' });
+  const stCpu = h('input', { class: 'input', inputmode: 'numeric', placeholder: 'CPU max °C', value: st.cpu_max_c ?? '' });
+  const stGpu = h('input', { class: 'input', inputmode: 'numeric', placeholder: 'GPU max °C', value: st.gpu_max_c ?? '' });
+  const stOk = h('input', { type: 'checkbox', checked: !!st.passed });
+  const form = h('div', {},
+    h('h4', { text: 'Przed pracami' }),
+    chk('restore_point', 'Utworzono punkt przywracania systemu'), chk('bios_backup', 'Zapisano profil / zdjęcia ustawień BIOS'),
+    chk('client_backup_confirmed', 'Klient potwierdził kopię swoich danych'),
+    sel('smart_status', { ok: 'S.M.A.R.T.: OK', ostrzezenie: 'S.M.A.R.T.: ostrzeżenie', blad: 'S.M.A.R.T.: błąd', nie_dotyczy: 'S.M.A.R.T.: nie dotyczy' }, 'S.M.A.R.T. dysków – wybierz'),
+    inp('smart_note', 'Ostrzeżenia S.M.A.R.T. przekazane klientowi (co i kiedy)'),
+    h('h4', { text: 'Montaż / zestaw PC' }), h('label', { class: 'field' }, serials),
+    h('div', { class: 'row2' }, stTool, stMin), h('div', { class: 'row2' }, stCpu, stGpu),
+    h('label', { class: 'check' }, stOk, h('span', { text: 'Test obciążeniowy zaliczony (stabilnie, bez błędów)' })),
+    h('h4', { text: 'Wycena i przekazanie' }),
+    inp('quote_accepted_at', 'Akceptacja wyceny / prac dodatkowych (data i godzina)', 'datetime-local', dtLocal(d.quote_accepted_at)), inp('quote_note', 'Jak zaakceptowano (np. mail 12.11, czat)'),
+    sel('delivery_method', { zdalnie: 'Zdalnie (RustDesk / AnyDesk)', osobiscie: 'Odbiór osobisty', kurier: 'Kurier' }, 'Sposób realizacji / przekazania'),
+    h('div', { class: 'row2' }, inp('remote_tool', 'Program zdalny'), inp('remote_session_id', 'ID sesji zdalnej')),
+    inp('remote_session_at', 'Sesja zdalna – data i godzina', 'datetime-local', dtLocal(d.remote_session_at)),
+    h('div', { class: 'row2' }, inp('carrier', 'Przewoźnik'), inp('tracking_number', 'Numer listu przewozowego')),
+    inp('delivered_at', 'Odbiór / doręczenie / koniec sesji', 'datetime-local', dtLocal(d.delivered_at)),
+    inp('handover_note', 'Protokół przekazania (kto odebrał, uwagi, podpis)'));
+  const saveP = h('button', { class: 'btn btn-gold btn-block', type: 'button', text: 'Zapisz protokół', onclick: async (e) => {
+    const b = e.currentTarget, data = {};
+    form.querySelectorAll('[data-k]').forEach((el) => {
+      const k = el.dataset.k;
+      data[k] = el.type === 'checkbox' ? el.checked : el.type === 'datetime-local' ? fromLocal(el.value) : (el.value.trim() || null);
+    });
+    data.serials = serials.value.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 30).map((l) => { const i = l.indexOf(':'); return i > 0 ? { part: l.slice(0, i).trim(), serial: l.slice(i + 1).trim() } : { part: 'Część', serial: l }; });
+    data.stress_test = stTool.value.trim() || stMin.value ? { tool: stTool.value.trim(), minutes: +stMin.value || null, cpu_max_c: +stCpu.value || null, gpu_max_c: +stGpu.value || null, passed: stOk.checked } : {};
+    busy(b, true);
+    const { error } = await sb.rpc('admin_save_protection', { p_order_id: o.id, p_data: data });
+    busy(b, false, 'Zapisz protokół');
+    if (error) return toast('err', v30err(error));
+    toast('ok', 'Protokół zapisany.'); vibrate(20);
+  } });
+
+  // prace nieodwracalne
+  const irrList = h('div');
+  const paintIrr = (rows) => irrList.replaceChildren(...(rows.length ? rows.map((x) => h('div', { class: 'card', style: 'margin:8px 0;padding:12px' },
+    h('b', { text: `${IRR_KINDS[x.kind] || x.kind} · ${x.status === 'oczekuje' ? '⏳ czeka na zgodę' : x.status === 'zgoda' ? '✓ zgoda' : '✕ odmowa'}` }),
+    h('div', { class: 'muted small', text: `Prośba ${fmt(x.requested_at)}${x.decided_at ? ` · decyzja ${fmt(x.decided_at)} (${x.channel}${x.ip ? `, IP ${x.ip}` : ''})` : ''}${x.performed_at ? ` · wykonano ${fmt(x.performed_at)}` : ''}${x.note ? ` · ${x.note}` : ''}` }),
+    x.status === 'oczekuje' ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Odnotuj zgodę spoza strony (mail / osobiście)', onclick: async (e) => {
+      const ch = prompt('Kanał: email, osobiscie albo telefon', 'email'); if (!ch) return;
+      const note = prompt('Opis dowodu (np. „mail od klienta 12.11 10:42 zapisany w plikach zlecenia”, „podpis na protokole”)'); if (!note) return;
+      const { error } = await sb.rpc('admin_record_irreversible', { p_id: x.id, p_accept: true, p_channel: ch.trim(), p_note: note });
+      if (error) return toast('err', v30err(error)); toast('ok', 'Zgoda odnotowana.'); protectionSheet(o);
+    } }) : null,
+    x.status === 'zgoda' && !x.performed_at ? h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Odnotuj wykonanie', onclick: async () => {
+      const { error } = await sb.rpc('admin_mark_irreversible_done', { p_id: x.id });
+      if (error) return toast('err', v30err(error)); toast('ok', 'Wykonanie odnotowane.'); protectionSheet(o);
+    } }) : null)) : [h('p', { class: 'muted small', text: 'Brak. Przed BIOS-em, delidem czy ciekłym metalem wyślij prośbę – bez zgody baza nie pozwoli odnotować wykonania.' })]));
+  paintIrr(irr.data || []);
+  const kind = h('select', { class: 'select' }, Object.entries(IRR_KINDS).map(([k, t]) => h('option', { value: k, text: t })));
+  const risk = h('textarea', { class: 'input', rows: 4, value: IRR_RISK.bios_update });
+  kind.addEventListener('change', () => { risk.value = IRR_RISK[kind.value] || ''; });
+  const askIrr = h('button', { class: 'btn btn-ghost btn-block', type: 'button', text: 'Wyślij prośbę o zgodę do Strefy Klienta', onclick: async (e) => {
+    if (risk.value.trim().length < 20) return toast('err', 'Opisz ryzyko (min. 20 znaków).');
+    busy(e.currentTarget, true);
+    const { error } = await sb.rpc('admin_request_irreversible', { p_order_id: o.id, p_kind: kind.value, p_risk_text: risk.value });
+    busy(e.currentTarget, false, 'Wyślij prośbę o zgodę do Strefy Klienta');
+    if (error) return toast('err', v30err(error));
+    toast('ok', 'Prośba widoczna w Strefie Klienta. Daj klientowi znać wiadomością.'); protectionSheet(o);
+  } });
+
+  // odstąpienie
+  const wd = w.data || {};
+  const wIn = (k, ph, type = 'text') => { const i = h('input', { class: 'input', type, placeholder: ph, value: wd[k] ?? '' }); i.dataset.w = k; return h('label', { class: 'field' }, h('span', { class: 'small muted', text: ph }), i); };
+  const wBox = h('div', {},
+    h('div', { class: 'row2' }, wIn('declared_at', 'Oświadczenie otrzymane (data)', 'date'), wIn('goods_received_at', 'Sprzęt odebrany z powrotem (data)', 'date')),
+    wIn('package_condition', 'Stan paczki / sprzętu przy odbiorze (zdjęcia wgraj w Pliki klienta)'),
+    h('div', { class: 'row2' }, wIn('return_shipping_grosze', 'Koszt odesłania (gr)', 'number'), wIn('performed_part_pct', 'Wykonana część usługi (%)', 'number')),
+    wIn('deduction_grosze', 'Potrącenie za wykonaną część (gr)', 'number'), wIn('deduction_note', 'Uzasadnienie potrącenia (art. 35 UPK)'),
+    wIn('refunded_at', 'Zwrot płatności wykonany (data)', 'date'));
+  const wOut = h('p', { class: 'small' });
+  const saveW = h('button', { class: 'btn btn-ghost btn-block', type: 'button', text: 'Zapisz odstąpienie', onclick: async (e) => {
+    const data = {}; wBox.querySelectorAll('[data-w]').forEach((el) => { data[el.dataset.w] = el.value === '' ? null : el.type === 'number' ? +el.value : el.value; });
+    busy(e.currentTarget, true);
+    const { data: r, error } = await sb.rpc('admin_save_withdrawal', { p_order_id: o.id, p_data: data });
+    busy(e.currentTarget, false, 'Zapisz odstąpienie');
+    if (error) return toast('err', v30err(error));
+    wOut.textContent = `Do zwrotu: ${zl2(r.refund_due_grosze)} (wpłata ${zl2(r.paid_grosze)} − potrącenie). Termin zwrotu płatności: ${r.refund_deadline} (14 dni od oświadczenia). Zwrot wykonaj w Stripe.`;
+    toast('ok', 'Zapisano.');
+  } });
+
+  openSheet(`Ochrona · ${o.order_number || 'zlecenie'}`,
+    h('p', { class: 'muted small', text: 'Dowody na wypadek reklamacji, odstąpienia lub sporu w banku. Uzupełniaj w trakcie zlecenia.' }),
+    form, saveP,
+    h('h4', { text: 'Prace nieodwracalne (§5 Regulaminu)' }), irrList,
+    h('details', { class: 'more' }, h('summary', { text: '+ Nowa prośba o zgodę' }), h('label', { class: 'field' }, kind), h('label', { class: 'field' }, risk), askIrr),
+    h('h4', { text: 'Odstąpienie od umowy (14 dni)' }), wBox, saveW, wOut,
+    h('button', { class: 'btn btn-gold btn-block', style: 'margin-top:14px', type: 'button', text: '📦 Pakiet dowodowy', onclick: () => evidenceSheet(o) }));
+}
+
+/* Pakiet dowodowy: wszystko o zamówieniu w jednym widoku + druk do PDF / JSON do załączenia w Stripe → Disputes. */
+async function evidenceSheet(o) {
+  openSheet(`Dowody · ${o.order_number || 'zlecenie'}`, h('p', { class: 'muted', text: 'Zbieram dowody…' }));
+  const { data: e, error } = await sb.rpc('admin_evidence_pack', { p_order_id: o.id });
+  if (error) { openSheet('Pakiet dowodowy', h('div', { class: 'banner bad', text: v30err(error) })); return; }
+  const O = e.order || {}, C = e.consents || {}, P = e.protection || {}, cu = e.customer || {};
+  const rows = (pairs) => h('div', { class: 'kv' }, pairs.filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => h('div', {}, h('span', { text: k }), h('b', { text: String(v) }))));
+  const yes = (v) => v === true ? 'tak' : v === false ? 'nie' : '–';
+  const sections = [
+    ['Zamówienie', rows([['Numer', O.order_number], ['Usługa', O.service_name + (O.express ? ' + Express' : '')], ['Złożone', fmt(O.created_at)], ['Opłacone', fmt(O.paid_at)], ['Kwota', zl2(O.amount_due_grosze || 0)], ['Status', O.status], ['PaymentIntent', O.stripe_payment_intent],
+      ['Klient', cu.full_name || O.customer?.name], ['E-mail', cu.email], ['Telefon', cu.phone || O.customer?.phone], ['Termin', e.slot ? `${fmt(e.slot.starts_at)} – ${fmt(e.slot.ends_at, { timeStyle: 'short' })}` : null]])],
+    ['Zgody przy zamówieniu', rows([['Regulamin', yes(C.terms)], ['Polityka Prywatności', yes(C.privacy)], ['Pouczenie o odstąpieniu', yes(C.withdrawal)], ['Żądanie startu przed 14 dniem', yes(C.earlyStart)],
+      ['Treść zgody', C.earlyStartText], ['Czas akceptacji', fmt(C.accepted_at || C.at)], ['IP', C.ip], ['Przeglądarka', C.ua], ['Wersja dokumentów', C.legal_version || C.version]])],
+    ['Realizacja i przekazanie', rows([['Sposób', P.delivery_method], ['Program / ID sesji', [P.remote_tool, P.remote_session_id].filter(Boolean).join(' · ')], ['Sesja zdalna', fmt(P.remote_session_at)],
+      ['Przewoźnik / list', [P.carrier, P.tracking_number].filter(Boolean).join(' · ')], ['Odbiór / doręczenie', fmt(P.delivered_at)], ['Protokół', P.handover_note],
+      ['Akceptacja wyceny', P.quote_accepted_at ? `${fmt(P.quote_accepted_at)}${P.quote_note ? ' – ' + P.quote_note : ''}` : null]])],
+    ['Zabezpieczenia', rows([['Punkt przywracania', yes(P.restore_point)], ['Kopia BIOS', yes(P.bios_backup)], ['Kopia danych klienta', yes(P.client_backup_confirmed)], ['S.M.A.R.T.', [P.smart_status, P.smart_note].filter(Boolean).join(' – ')],
+      ['Numery seryjne', (P.serials || []).map((x) => `${x.part}: ${x.serial}`).join('; ')], ['Test obciążeniowy', P.stress_test?.tool ? `${P.stress_test.tool}, ${P.stress_test.minutes || '?'} min, CPU ${P.stress_test.cpu_max_c ?? '?'}°C, GPU ${P.stress_test.gpu_max_c ?? '?'}°C – ${P.stress_test.passed ? 'zaliczony' : 'NIE zaliczony'}` : null]])],
+    ['STRIKE PROOF (przed / po)', rows(['before', 'after'].flatMap((ph) => Object.entries(e.results?.[ph]?.metrics || {}).map(([k, v]) => [`${ph === 'before' ? 'Przed' : 'Po'}: ${k}`, v])))],
+    ['Prace nieodwracalne', rows((e.irreversible || []).map((x) => [IRR_KINDS[x.kind] || x.kind, `${x.status}${x.decided_at ? ` ${fmt(x.decided_at)} (${x.channel}${x.ip ? ', IP ' + x.ip : ''})` : ''}${x.performed_at ? `, wykonano ${fmt(x.performed_at)}` : ''}`]))],
+    ['Dokumenty', rows((e.bills || []).map((b) => [b.number, `${b.kind}, ${b.issued_on}, ${zl2(b.total_grosze)}${b.sent_at ? `, wysłany ${fmt(b.sent_at)} do ${b.sent_to}` : ''}${b.cancelled_at ? ' – ANULOWANY' : ''}`]))],
+    ['Historia', rows((e.events || []).map((x) => [fmt(x.at), `${x.status}${x.note ? ' – ' + x.note : ''}`]))],
+    e.withdrawal ? ['Odstąpienie', rows(Object.entries(e.withdrawal).filter(([k]) => k !== 'order_id'))] : null,
+    (e.complaints || []).length ? ['Reklamacje', rows(e.complaints.map((c) => [c.number, `${c.status}, wpływ ${c.received_at}, termin ${c.response_due}${c.responded_at ? `, odpowiedź ${c.responded_at}` : ''}`]))] : null,
+    O.dispute ? ['Spór w Stripe', rows(Object.entries(O.dispute))] : null,
+  ].filter(Boolean);
+  const printBtn = h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: '🖨 Drukuj / PDF', onclick: () => {
+    const w = window.open('', '_blank'); if (!w) return toast('err', 'Zezwól na wyskakujące okna.');
+    const esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    w.document.write(`<!doctype html><meta charset="utf-8"><title>Dowody ${esc(O.order_number)}</title><style>body{font:13px/1.45 system-ui,sans-serif;margin:28px;color:#111}h1{font-size:18px}h2{font-size:14px;margin:18px 0 6px;border-bottom:1px solid #ccc}dl{display:grid;grid-template-columns:220px 1fr;gap:3px 12px;margin:0}dt{color:#555}dd{margin:0}</style>
+      <h1>Strike Tech Lab – pakiet dowodowy ${esc(O.order_number)}</h1><p>Wygenerowano ${esc(fmt(e.generated_at))}. Sprzedawca: Mikołaj Szmuc Strike Tech Lab, Wysoka 74, 37-100 Łańcut (działalność nierejestrowana).</p>
+      ${sections.map(([t, el]) => `<h2>${esc(t)}</h2><dl>${[...el.children].map((r) => `<dt>${esc(r.children[0].textContent)}</dt><dd>${esc(r.children[1].textContent)}</dd>`).join('') || '<dd>–</dd>'}</dl>`).join('')}`);
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+  } });
+  const jsonBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '⬇ JSON', onclick: () => {
+    const a = h('a', { href: URL.createObjectURL(new Blob([JSON.stringify(e, null, 2)], { type: 'application/json' })), download: `dowody-${O.order_number || o.id}.json` }); document.body.append(a); a.click(); a.remove();
+  } });
+  openSheet(`Dowody · ${O.order_number || 'zlecenie'}`,
+    O.dispute ? h('div', { class: 'banner bad', text: `Spór w banku: ${O.dispute.reason} · ${O.dispute.status} · dowody do ${O.dispute.evidence_due_by ? fmt(O.dispute.evidence_due_by) : '?'}` }) : null,
+    h('div', { class: 'post-actions' }, printBtn, jsonBtn),
+    h('p', { class: 'muted small', text: 'Do Stripe → Disputes dołącz PDF z tego widoku, rachunek, raport STRIKE PROOF i korespondencję. Brakujące pola uzupełnisz w „Ochrona zlecenia”.' }),
+    sections.map(([t, el]) => [h('h4', { text: t }), el.children.length ? el : h('p', { class: 'muted small', text: '– brak danych –' })]));
+}
+
+/* Reklamacje: rejestr z licznikiem dni do odpowiedzi (14 dni – brak odpowiedzi = reklamacja uznana). */
+let COMPLAINTS = null;
+async function loadComplaintsBadge() {
+  const { data, error } = await sb.from('complaints').select('*').order('received_at', { ascending: false }).limit(200);
+  COMPLAINTS = error ? null : data; renderComplaintsKpi();
+}
+const daysLeft = (due) => Math.round((new Date(`${due}T12:00:00Z`) - new Date(`${todayKey()}T12:00:00Z`)) / 864e5);
+function renderComplaintsKpi() {
+  const kpi = $('#ordKpi'); if (!kpi || !COMPLAINTS) return;
+  const open = COMPLAINTS.filter((c) => ['nowa', 'w_trakcie'].includes(c.status));
+  const min = open.length ? Math.min(...open.map((c) => daysLeft(c.response_due))) : null;
+  kpi.querySelector('[data-rek]')?.remove();
+  kpi.append(h('button', { class: `kpi${min !== null && min <= 3 ? ' bad' : ''}`, type: 'button', dataset: { rek: '1' }, onclick: complaintsSheet },
+    h('b', { text: String(open.length) }), h('span', { text: min === null ? 'reklamacje' : `reklamacje · ${min < 0 ? 'PO TERMINIE' : `${min} dni`}` })));
+}
+function complaintsSheet() {
+  const list = COMPLAINTS || [];
+  const kind = h('select', { class: 'select' }, Object.entries({ usluga: 'Usługa (optymalizacja / serwis)', montaz_3m: 'Montaż – gwarancja 3 mies.', zgodnosc_2l: 'Niezgodność z umową (2 lata)', inne: 'Inne' }).map(([k, t]) => h('option', { value: k, text: t })));
+  const ord = h('select', { class: 'select' }, h('option', { value: '', text: 'Bez zamówienia' }), S.orders.filter((o) => o.order_number).slice(0, 100).map((o) => h('option', { value: o.id, text: `${o.order_number} · ${o.service_name}` })));
+  const recv = h('input', { class: 'input', type: 'date', value: todayKey(), max: todayKey() });
+  const chan = h('select', { class: 'select' }, ['email', 'formularz', 'czat', 'telefon', 'pisemnie', 'osobiscie'].map((x) => h('option', { value: x, text: x })));
+  const demand = h('select', { class: 'select' }, Object.entries({ naprawa: 'Naprawa / poprawa', ponowne_wykonanie: 'Ponowne wykonanie', obnizenie_ceny: 'Obniżenie ceny', odstapienie: 'Odstąpienie', inne: 'Inne' }).map(([k, t]) => h('option', { value: k, text: t })));
+  const desc = h('textarea', { class: 'input', rows: 3, placeholder: 'Opis zgłoszenia (co klient reklamuje)' });
+  const add = h('button', { class: 'btn btn-gold btn-block', type: 'button', text: 'Zarejestruj reklamację', onclick: async (e) => {
+    if (desc.value.trim().length < 5) return toast('err', 'Opisz zgłoszenie.');
+    busy(e.currentTarget, true);
+    const { data, error } = await sb.rpc('admin_save_complaint', { p_id: null, p_data: { order_id: ord.value || null, received_at: recv.value, channel: chan.value, kind: kind.value, description: desc.value.trim(), demand: demand.value } });
+    busy(e.currentTarget, false, 'Zarejestruj reklamację');
+    if (error) return toast('err', v30err(error));
+    toast('ok', `${data.number} – odpowiedz do ${data.response_due}.`); await loadComplaintsBadge(); complaintsSheet();
+  } });
+  const row = (c) => {
+    const left = daysLeft(c.response_due), open = ['nowa', 'w_trakcie'].includes(c.status);
+    const st = h('select', { class: 'select' }, ['nowa', 'w_trakcie', 'uznana', 'odrzucona', 'zamknieta'].map((x) => h('option', { value: x, text: x, selected: x === c.status })));
+    const resp = h('textarea', { class: 'input', rows: 2, placeholder: 'Odpowiedź wysłana klientowi (treść / skrót)', value: c.response || '' });
+    const o = S.orders.find((x) => x.id === c.order_id);
+    return h('div', { class: 'card', style: 'margin:8px 0;padding:12px' },
+      h('div', { class: 'ord-h' }, h('b', { text: `${c.number}${o ? ' · ' + o.order_number : ''}` }),
+        h('span', { class: `pill ${!open ? 'ok' : left < 0 ? 'bad' : left <= 3 ? 'wait' : ''}`, text: !open ? c.status : left < 0 ? `po terminie ${-left} dni!` : `zostało ${left} dni` })),
+      h('div', { class: 'muted small', text: `Wpływ ${c.received_at} (${c.channel || '–'}) · termin odpowiedzi ${c.response_due} · ${c.kind}${c.demand ? ' · żądanie: ' + c.demand : ''}` }),
+      h('p', { class: 'small', style: 'white-space:pre-wrap', text: c.description }),
+      h('label', { class: 'field' }, st), h('label', { class: 'field' }, resp),
+      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Zapisz', onclick: async (e) => {
+        busy(e.currentTarget, true);
+        const { error } = await sb.rpc('admin_save_complaint', { p_id: c.id, p_data: { status: st.value, response: resp.value.trim() || null } });
+        busy(e.currentTarget, false, 'Zapisz');
+        if (error) return toast('err', v30err(error)); toast('ok', 'Zapisano.'); await loadComplaintsBadge(); complaintsSheet();
+      } }));
+  };
+  openSheet('Reklamacje',
+    h('p', { class: 'muted small', text: 'Na reklamację konsumenta odpowiadamy w 14 dni od wpływu – brak odpowiedzi w terminie oznacza jej uznanie. Odpowiedź wyślij mailem (trwały nośnik) i zapisz tu jej treść.' }),
+    h('details', { class: 'more', open: !list.length }, h('summary', { text: '+ Nowa reklamacja' }),
+      h('label', { class: 'field' }, ord), h('div', { class: 'row2' }, recv, chan), h('label', { class: 'field' }, kind), h('label', { class: 'field' }, demand), h('label', { class: 'field' }, desc), add),
+    list.length ? list.map(row) : h('p', { class: 'muted', text: 'Brak reklamacji.' }));
+}
+
 boot().catch((e) => { console.error(e); toast('err', 'Błąd aplikacji. Odśwież stronę.'); });
