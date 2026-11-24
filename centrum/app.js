@@ -91,12 +91,14 @@ async function callFn(name, body) {
 
 /* Status połączenia: ok = serwer odpowiada; wait = trwa łączenie/ponawianie; net = brak internetu; bad = serwer nie odpowiada.
    Przy net i bad pasek pod nagłówkiem mówi, że dane mogą być nieaktualne – ponawiamy co 8–10 s i po powrocie internetu. */
-const conn = { timer: null, state: 'wait' };
+const conn = { timer: null, state: 'wait', fails: 0 };
 function setConn(state) {
   conn.state = state;
   const map = {
     ok: ['ok', 'Online', ''],
     wait: ['wait', 'Łączenie…', ''],
+    retry: ['wait', 'Ponawiam…', ''],
+    auth: ['bad', 'Sesja wygasła', 'Sesja wygasła – zaloguj się ponownie, żeby zobaczyć aktualne dane.'],
     net: ['bad', 'Offline', 'Brak internetu – dane mogą być nieaktualne. Ponawiam automatycznie, gdy wróci połączenie.'],
     bad: ['bad', 'Brak serwera', 'Brak połączenia z serwerem – dane mogą być nieaktualne. Ponawiam automatycznie.'],
   }[state];
@@ -107,10 +109,13 @@ function setConn(state) {
 async function heartbeat() {
   clearTimeout(conn.timer);
   if (!navigator.onLine) { setConn('net'); conn.timer = setTimeout(heartbeat, 10000); return; }
-  if (conn.state !== 'ok') setConn('wait');
-  const { error } = await sb.from('profiles').select('id', { head: true, count: 'exact' }).limit(1).then((r) => r, (e) => ({ error: e }));
-  setConn(error ? 'bad' : 'ok');
-  conn.timer = setTimeout(heartbeat, error ? 8000 : 45000);
+  if (conn.state !== 'ok' && conn.state !== 'retry') setConn('wait');
+  const { error, status } = await sb.from('profiles').select('id', { head: true, count: 'exact' }).limit(1).then((r) => r, (e) => ({ error: e }));
+  if (!error) { conn.fails = 0; setConn('ok'); }
+  // 401 / wygasły JWT to nie awaria serwera – nie pokazuj „Brak serwera”
+  else if (status === 401 || /jwt|token|PGRST30[0-3]/i.test(`${error.message || ''} ${error.code || ''}`)) { conn.fails = 0; setConn('auth'); sb.auth.refreshSession().catch(() => {}); }
+  else { conn.fails++; setConn(conn.fails < 2 ? 'retry' : 'bad'); }   // jeden nieudany ping = „Ponawiam…”, dopiero drugi = komunikat o braku serwera
+  conn.timer = setTimeout(heartbeat, error ? (conn.fails < 2 ? 3000 : 8000) : 45000);
 }
 addEventListener('online', () => { heartbeat(); reloadActive(); });
 addEventListener('offline', () => setConn('net'));
@@ -688,7 +693,7 @@ async function loadLedgerBox() {
   const [s, e] = await Promise.all([
     callFn('admin', { action: 'ledger_summary' }).catch((err) => ({ error: err.message })),
     sb.from('expenses').select('id,spent_on,category,description,vendor,amount_grosze,is_cost,receipt_path').order('spent_on', { ascending: false }).order('created_at', { ascending: false }).limit(8),
-    sb.from('bills').select('*').order('issued_on', { ascending: false }).order('created_at', { ascending: false }).limit(6),
+    sb.from('bills').select('*, orders(order_number)').order('issued_on', { ascending: false }).order('created_at', { ascending: false }).limit(6),
   ]).then(([a, b2, c]) => { S.bills = c.error ? null : c.data; return [a, b2]; });
   S.ledger = s; S.expenses = e.error ? null : e.data;
   if (e.error && /does not exist|schema cache|relation/i.test(e.error.message)) { box.replaceChildren(h('div', { class: 'card muted small', text: 'Rozliczenia wymagają migracji v10 i nowej funkcji admin.' })); return; }
@@ -733,7 +738,7 @@ function renderLedgerBox() {
       } })),
     h('p', { class: 'free-note', style: 'margin-top:4px', text: sh.enabled === false ? 'Arkusz Google nie jest skonfigurowany.' : sh.error ? `Arkusz: błąd – ${sh.error}` : sh.pending ? 'Arkusz: zmiany czekają na synchronizację (co 5 min).' : sh.synced_at ? `Arkusz aktualny · ${ago(sh.synced_at)}` : '' }),
     S.bills?.length ? [h('p', { class: 'sec-title', text: 'Ostatnie rachunki' }), h('div', { class: 'card exp-list' }, S.bills.map((b) => h('div', { class: 'exp-row' },
-      h('div', { class: 'grow' }, h('b', { text: `${b.number} · ${b.buyer?.name || ''}` }), h('span', { class: 'muted small', text: `${fmt(`${b.issued_on}T12:00:00Z`, { day: 'numeric', month: 'short' })} · ${b.cancelled_at ? 'anulowany' : b.sent_at ? 'wysłany' : 'nie wysłany'}` })),
+      h('div', { class: 'grow' }, h('b', { text: `${b.number} · ${b.buyer?.name || ''}` }), h('span', { class: 'muted small', text: `${fmt(`${b.issued_on}T12:00:00Z`, { day: 'numeric', month: 'short' })}${b.orders?.order_number ? ` · dotyczy ${b.orders.order_number}` : ''} · ${b.cancelled_at ? 'anulowany' : b.sent_at ? 'wysłany' : 'nie wysłany'}` })),
       h('b', { class: 'nowrap', text: zl2(b.total_grosze) }),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': `PDF ${b.number}`, text: '📄', onclick: () => openBillPdf(b) }),
       b.cancelled_at ? null : h('button', { class: 'icon-btn', type: 'button', 'aria-label': `Wyślij ${b.number}`, text: '✉', onclick: (e) => { const to = prompt('Wyślij na e-mail:', b.sent_to || b.buyer?.email || ''); if (to) sendBill(b, to.trim(), e.currentTarget); } }))))] : null,

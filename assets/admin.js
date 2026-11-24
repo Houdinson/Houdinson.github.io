@@ -245,8 +245,8 @@ function reportEditor(o) {
 /* ------------------------------------------------------------------ administracja */
 let adm = { orders: [], sel: null, filter: '', q: '', loading: false };
 /* Panel administracji wymaga logowania dwuetapowego (TOTP). Baza też to sprawdza (is_admin() wymaga aal2). */
-async function adminMfaOk(silent) {
-  const box = $('#adminOut');
+async function adminMfaOk(silent, sel = '#adminOut') {
+  const box = $(sel); if (!box) return false;
   const { data: lvl } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
   if (lvl?.currentLevel === 'aal2') return true;
   if (silent && box.querySelector('[data-mfa]')) return false;          // nie kasuj wpisywanego kodu przy odświeżaniu
@@ -266,7 +266,7 @@ function mfaCard(factor) {
     const { error } = await sb.auth.mfa.challengeAndVerify({ factorId, code: v });
     setBusy(btn, false, btn.dataset.label);
     if (error) return fail('Kod jest nieprawidłowy albo wygasł. Wpisz nowy kod z aplikacji.');
-    toast('ok', 'Logowanie dwuetapowe potwierdzone.'); adm.loading = false; loadAdmin();
+    toast('ok', 'Logowanie dwuetapowe potwierdzone.'); afterMfa();
   };
   if (factor) {
     const btn = h('button', { class: 'btn btn-gold btn-sm', type: 'submit', text: 'Potwierdź kod' });
@@ -295,6 +295,15 @@ function mfaCard(factor) {
   return h('div', { class: 'card hud', style: 'max-width:520px', dataset: { mfa: '1' } }, h('h3', { text: 'Włącz logowanie dwuetapowe (2FA)' }),
     h('p', { class: 'muted', text: 'Panel administracji daje dostęp do danych wszystkich klientów, dlatego oprócz hasła wymaga kodu z aplikacji na telefonie. Bez tego nawet przejęte hasło nie wystarczy do wejścia.' }), step, msg);
 }
+/* Po kodzie 2FA odśwież zakładkę, w której go wpisano (wcześniej zawsze tylko „Administracja”). */
+function afterMfa() {
+  adm.loading = false; br.loading = false; pr.loading = false;
+  if (activeTab === 'brief') loadBrief(true);
+  else if (activeTab === 'prices') loadPrices(true);
+  else loadAdmin();
+}
+/* Błąd uprawnień z bazy (is_admin() = false, RLS, brak EXECUTE) → bramka 2FA zamiast surowego komunikatu. */
+const isPermErr = (e) => /NOT_ADMIN|permission denied|row-level security|42501|not authori[sz]ed|brak uprawnie/i.test(`${e?.message || ''} ${e?.code || ''}`);
 async function loadAdmin(silent = false) {
   if (!isAdmin || adm.loading) return;
   if (!(await adminMfaOk(silent))) return;
@@ -462,7 +471,7 @@ async function loadFinance(force) {
     const [s, e, bl] = await Promise.all([
       callFn('admin', { action: 'ledger_summary' }).then((d) => { fin.err = ''; return d; }, (err) => { fin.err = err.message; return null; }),
       sb.from('expenses').select('id,spent_on,category,description,vendor,doc_number,amount_grosze,is_cost,receipt_path,order_id').order('spent_on', { ascending: false }).order('created_at', { ascending: false }).limit(200),
-      sb.from('bills').select('*').order('issued_on', { ascending: false }).order('created_at', { ascending: false }).limit(200),
+      sb.from('bills').select('*, orders(order_number)').order('issued_on', { ascending: false }).order('created_at', { ascending: false }).limit(200),
     ]);
     fin.billErr = bl.error ? (/does not exist|schema cache|relation/i.test(bl.error.message) ? 'missing' : bl.error.message) : '';
     fin.bills = bl.data || [];
@@ -527,10 +536,52 @@ function renderFinance() {
         h('tr', { class: 'q-row' }, h('td', {}, h('b', { text: qq.quarter.replace('-', ' ') })), h('td', { text: zlFull(qq.income) }), h('td', { text: zlFull(qq.refunds) }), h('td', {}, h('b', { text: zlFull(qq.net) })), h('td', { text: zlFull(qq.costs) }), h('td', { text: zlFull(qq.profit) }), (() => { const pq = qq.net / FR.quarterLimit(qq.quarter.slice(0, 4)).value; return h('td', { class: pq > 1 ? 'bad' : pq >= 0.8 ? 'warn' : '', text: pctTxt(pq) }); })()),
         ...S.months.filter((mm) => `${mm.month.slice(0, 4)}-Q${Math.floor((+mm.month.slice(5, 7) - 1) / 3) + 1}` === qq.quarter).reverse().map((mm) =>
           h('tr', {}, h('td', { class: 'muted', text: monthName(mm.month) }), h('td', { text: zlFull(mm.income) }), h('td', { text: zlFull(mm.refunds) }), h('td', { text: zlFull(mm.net) }), h('td', { text: zlFull(mm.costs) }), h('td', { text: zlFull(mm.profit) }), h('td')))]))))) : null;
-  out.replaceChildren(head, cards, months, billList(), expenseForm(), expenseList(),
+  out.replaceChildren(head, cards, salesRegisterCard(), months, billList(), expenseForm(), expenseList(),
     h('p', { class: 'note', style: 'margin-top:18px', text: 'Przychód liczony jest w dniu wpłaty (opłacone zlecenie), zwrot w dniu zwrotu. Prowizje Stripe dopisują się same jako koszt. Arkusz Google zawiera ewidencję sprzedaży (dzień po dniu, narastająco w miesiącu), zestawienia miesięczne, kwartalne i roczne – bez danych osobowych klientów. To pomoc w rozliczeniu, nie porada podatkowa.' }));
 }
 
+/* v29: dzienna ewidencja sprzedaży – dokument (R/… / FV/…), zamówienie (STL-…), data, przychód należny; eksport CSV. */
+const reg = { month: null, data: null, err: '' };
+function salesRegisterCard() {
+  const box = h('div', { class: 'card', style: 'margin-top:18px' });
+  const month = h('input', { class: 'input', type: 'month', value: reg.month || todayKey().slice(0, 7), max: todayKey().slice(0, 7), 'aria-label': 'Miesiąc ewidencji', style: 'max-width:180px' });
+  const body = h('div');
+  const range = () => { const [y, m] = month.value.split('-').map(Number); const last = new Date(Date.UTC(y, m, 0)).getUTCDate(); return [`${month.value}-01`, `${month.value}-${String(last).padStart(2, '0')}`]; };
+  const csv = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Eksport CSV', disabled: true, onclick: () => {
+    const rows = reg.data?.rows || [], q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    let run = 0;
+    const lines = [['Lp.', 'Data', 'Dokument', 'Zamówienie', 'Opis', 'Przychód należny (zł)', 'Narastająco w miesiącu (zł)', 'Sposób zapłaty'].map(q).join(';'),
+      ...rows.map((r, i) => { run += r.revenue_grosze; return [i + 1, r.day, r.documents || '', r.order_number || '', r.description, (r.revenue_grosze / 100).toFixed(2).replace('.', ','), (run / 100).toFixed(2).replace('.', ','), r.pay_method || ''].map(q).join(';'); })];
+    download(`ewidencja-sprzedazy-${month.value}.csv`, '\ufeff' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+  } });
+  const load = async () => {
+    reg.month = month.value; body.replaceChildren(h('p', { class: 'muted', text: 'Ładuję ewidencję…' })); csv.disabled = true;
+    const [from, to] = range();
+    const { data, error } = await sb.rpc('admin_sales_register', { p_from: from, p_to: to });
+    if (error) { body.replaceChildren(h('div', { class: 'banner err', text: /admin_sales_register|schema cache|does not exist/i.test(error.message) ? 'Ewidencja wymaga migracji v29 (20261124130000_v29_numeracja_ewidencja.sql).' : isPermErr(error) ? 'Potwierdź kod 2FA w zakładce Administracja.' : error.message })); return; }
+    reg.data = data; csv.disabled = !data.rows.length;
+    const Q = data.quarter, Y = data.year, qp = Q.limit_grosze ? Q.revenue_grosze / Q.limit_grosze : 0, kp = Y.revenue_grosze / Y.cash_register_limit_grosze;
+    const sum = data.rows.reduce((a, r) => a + r.revenue_grosze, 0);
+    body.replaceChildren(
+      h('div', { class: 'grid g2', style: 'margin:12px 0' },
+        h('div', {}, h('div', { class: 'small', text: `Kwartał ${fmt(`${Q.from}T12:00:00Z`, { day: 'numeric', month: 'short' })} – ${fmt(`${Q.to}T12:00:00Z`, { day: 'numeric', month: 'short' })}: ${zlFull(Q.revenue_grosze)} z ${zlFull(Q.limit_grosze || 0)} (${pctTxt(qp)})` }), limitBar(qp),
+          h('div', { class: `small ${qp >= 0.8 ? 'bad' : 'muted'}`, text: qp > 1 ? 'Limit przekroczony – w ciągu 7 dni złóż wniosek do CEIDG.' : `Zostało ${zlFull(Q.left_grosze)}. Limit 2026: 10 813,50 zł / kwartał (225% płacy minimalnej).` })),
+        h('div', {}, h('div', { class: 'small', text: `Obrót w roku: ${zlFull(Y.revenue_grosze)} z ${zlFull(Y.cash_register_limit_grosze)} (zwolnienie z kasy fiskalnej)` }), limitBar(kp),
+          h('div', { class: 'muted small', text: 'Usługi opłacone w całości bezgotówkowo (karta, BLIK, przelew na rachunek) są zwolnione z kasy, jeśli z ewidencji i dowodu zapłaty wynika, kto zapłacił i za co. Do 20 000 zł obrotu rocznie zwolnienie przysługuje niezależnie od formy zapłaty. Gotówka po przekroczeniu limitu = kasa fiskalna.' }))),
+      data.rows.length ? h('div', { class: 'scroll-x' }, h('table', { class: 'adm fin-table' },
+        h('thead', {}, h('tr', {}, ['Data', 'Dokument', 'Zamówienie', 'Opis', 'Przychód należny'].map((t) => h('th', { text: t })))),
+        h('tbody', {}, data.rows.map((r) => h('tr', {},
+          h('td', { text: r.day }), h('td', { text: r.documents || '– (brak rachunku)' }), h('td', { text: r.order_number || '–' }),
+          h('td', { text: r.description }), h('td', { class: r.revenue_grosze < 0 ? 'bad' : '', text: zlFull(r.revenue_grosze) }))),
+          h('tr', { class: 'q-row' }, h('td', { colspan: 4 }, h('b', { text: 'Razem w miesiącu' })), h('td', {}, h('b', { text: zlFull(sum) }))))))
+        : h('p', { class: 'muted', text: 'Brak sprzedaży w tym miesiącu.' }));
+  };
+  month.addEventListener('change', load);
+  box.append(h('div', { class: 'toolbar', style: 'justify-content:space-between' }, h('h3', { style: 'margin:0', text: 'Ewidencja sprzedaży' }), h('div', { class: 'toolbar' }, month, csv)),
+    h('p', { class: 'muted small', style: 'margin:6px 0 0', text: 'Uproszczona ewidencja sprzedaży (działalność nierejestrowana): wpis za każdy dzień sprzedaży. Przychód w dniu wpłaty, zwrot jako kwota ujemna w dniu zwrotu.' }), body);
+  setTimeout(load, 0);
+  return box;
+}
 function expenseForm() {
   const date = h('input', { class: 'input', type: 'date', value: todayKey(), max: todayKey(), required: true });
   const catSel = h('select', { class: 'select' }, Object.entries(EXP_CAT).map(([k, v]) => h('option', { value: k, text: v })));
@@ -690,7 +741,8 @@ function billEditor(o) {
   const name = h('input', { class: 'input', maxlength: 160, value: biz ? (c.company || '') : (c.name || o?.profiles?.full_name || ''), placeholder: 'Imię i nazwisko / nazwa firmy' });
   const addr = h('input', { class: 'input', maxlength: 160, placeholder: 'Ulica i numer' });
   const pc = h('input', { class: 'input', maxlength: 100, value: o?.city ? `${o.city}` : '', placeholder: 'Kod pocztowy i miejscowość, np. 37-100 Łańcut' });
-  const nip = h('input', { class: 'input', maxlength: 20, value: biz ? (c.nip || '') : '', placeholder: 'NIP (tylko firmy)' });
+  const nip = h('input', { class: 'input', maxlength: 20, value: biz ? (c.nip || '') : '', placeholder: 'NIP (tylko firmy)', 'aria-label': 'NIP nabywcy' });
+  const pesel = h('input', { class: 'input', maxlength: 11, inputmode: 'numeric', placeholder: 'PESEL (osoba prywatna, opcj.)', 'aria-label': 'PESEL nabywcy' });
   const email = h('input', { class: 'input', type: 'email', maxlength: 200, value: o?.profiles?.email || c.email || '', placeholder: 'E-mail do wysyłki' });
   const pay = h('select', { class: 'select' }, Object.entries(BILL_PAY).map(([k, v]) => h('option', { value: k, text: v, selected: k === (o?.pay_method && BILL_PAY[o.pay_method] ? o.pay_method : o?.paid_at ? 'stripe' : 'przelew') })));
   const paidOn = h('input', { class: 'input', type: 'date', value: paidDay || '', max: today });
@@ -711,7 +763,7 @@ function billEditor(o) {
   const out = h('div');
   const btn = h('button', { class: 'btn btn-gold btn-sm', type: 'submit', text: 'Wystaw i utwórz PDF' });
   const collect = () => ({ kind: kind.value, order_id: o?.id, issued_on: issued.value, sale_date: sale.value, pay_method: pay.value, paid_on: paidOn.value || undefined, notes: notes.value,
-    buyer: { name: name.value, address: addr.value, postal_city: pc.value, nip: nip.value, email: email.value },
+    buyer: { name: name.value, address: addr.value, postal_city: pc.value, nip: nip.value, pesel: nip.value.trim() ? '' : pesel.value.replace(/\D/g, ''), email: email.value },
     items: [...rows.children].map((r) => ({ name: r._n.value.trim(), qty: parseFloat(r._q.value.replace(',', '.')), unit: 'szt.', price_grosze: Math.round(parseFloat(r._p.value.replace(/\s/g, '').replace(',', '.')) * 100) })) });
   const prevBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Podgląd PDF', onclick: async (e) => {
     const b2 = e.currentTarget, w = window.open('', '_blank'); setBusy(b2, true);
@@ -741,11 +793,12 @@ function billEditor(o) {
     h('div', { class: 'row2' }, h('div', { class: 'field' }, h('label', { text: 'Data wystawienia' }), issued), h('div', { class: 'field' }, h('label', { text: 'Data sprzedaży / wykonania usługi' }), sale)),
     h('h4', { text: 'Nabywca' }),
     h('div', { class: 'field' }, name), h('div', { class: 'row2' }, h('div', { class: 'field' }, addr), h('div', { class: 'field' }, pc)),
-    h('div', { class: 'row2' }, h('div', { class: 'field' }, nip), h('div', { class: 'field' }, email)),
+    h('div', { class: 'row2' }, h('div', { class: 'field' }, nip), h('div', { class: 'field' }, pesel)),
+    h('div', { class: 'field' }, email),
     h('h4', { text: 'Pozycje' }), h('div', { class: 'bill-row bill-head', 'aria-hidden': 'true' }, h('span', { text: 'Nazwa' }), h('span', { text: 'Ilość' }), h('span', { text: 'Cena jedn. (zł)' }), h('span')), rows,
     h('div', { class: 'toolbar', style: 'justify-content:space-between;margin-top:8px' }, h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '+ Pozycja', onclick: () => addRow().focus() }), h('span', {}, 'Razem: ', sumEl)),
     h('div', { class: 'row2' }, h('div', { class: 'field' }, h('label', { text: 'Data zapłaty (puste = nie zapłacono)' }), paidOn), h('div', { class: 'field' }, h('label', { text: 'Uwagi' }), notes)),
-    h('p', { class: 'muted small', text: 'Na dokumencie automatycznie: dane sprzedawcy, zwolnienie z VAT (art. 113 ust. 1), kwota słownie. Fakturę wystawiaj tylko, gdy klient o nią poprosi; od 2027 r. faktury trzeba wystawiać w KSeF.' }),
+    h('p', { class: 'muted small', text: 'Numer (R/001/2026 albo FV/001/2026) nadaje baza dopiero przy wystawieniu – osobno od numeru zamówienia STL-…. Na dokumencie automatycznie: „Dotyczy zamówienia”, dane sprzedawcy (działalność nierejestrowana, art. 5 ust. 1 Prawa przedsiębiorców), zwolnienie z VAT (art. 113 ust. 1), kwota słownie. Fakturę wystawiaj tylko, gdy klient o nią poprosi; od 2027 r. faktury trzeba wystawiać w KSeF.' }),
     h('div', { class: 'cta-row', style: 'margin:0;gap:8px' }, prevBtn, btn), out);
 }
 
@@ -758,7 +811,7 @@ function billList() {
   box.append(h('div', { class: 'scroll-x' }, h('table', { class: 'adm fin-table' },
     h('thead', {}, h('tr', {}, ['Numer', 'Data', 'Nabywca', 'Kwota', 'Status', ''].map((t) => h('th', { text: t })))),
     h('tbody', {}, fin.bills.map((b) => h('tr', { class: b.cancelled_at ? 'muted' : '' },
-      h('td', {}, h('b', { text: b.number }), h('div', { class: 'muted small', text: b.kind === 'faktura' ? 'faktura' : 'rachunek' })),
+      h('td', {}, h('b', { text: b.number }), h('div', { class: 'muted small', text: `${b.kind === 'faktura' ? 'faktura bez VAT' : 'rachunek'}${b.orders?.order_number ? ` · dotyczy ${b.orders.order_number}` : ''}` })),
       h('td', { text: fmt(`${b.issued_on}T12:00:00Z`, { dateStyle: 'medium' }) }),
       h('td', { text: b.buyer?.name || '–' }),
       h('td', { style: 'white-space:nowrap', text: zlFull(b.total_grosze) }),
@@ -874,15 +927,21 @@ function manualOrderCard() {
 /* ------------------------------------------------------------------ CENNIK: edycja cen bez zmian w kodzie (migracja v23)
    Ceny usług są w bazie (services.price_grosze) – strona i płatności biorą je stamtąd, więc zmiana działa od razu.
    Historia cen (price_history) służy do informacji Omnibus: po obniżce strona sama pokazuje najniższą cenę z 30 dni. */
-const pr = { list: null, addons: null, draft: new Map(), loading: false, err: '' };
+const pr = { list: null, addons: null, parts: null, partsErr: '', draft: new Map(), loading: false, err: '' };
 const parseZl = (v) => { const n = Number(String(v).replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) : NaN; };
 const zlInput = (g) => (g / 100).toFixed(g % 100 ? 2 : 0).replace('.', ',');
 async function loadPrices(force) {
   const box = $('#pricesOut'); if (!box || pr.loading) return;
   if (pr.list && !force) { renderPrices(); return; }
-  pr.loading = true; if (!pr.list) box.replaceChildren(h('p', { class: 'muted', text: 'Ładuję cennik…' }));
-  const [l, a] = await Promise.all([sb.rpc('admin_price_list'), sb.from('price_addons').select('label,price_text').order('sort')]);
-  pr.loading = false;
+  pr.loading = true;
+  if (!(await adminMfaOk(false, '#pricesOut'))) { pr.loading = false; return; }
+  if (!pr.list) box.replaceChildren(h('p', { class: 'muted', text: 'Ładuję cennik…' }));
+  let l, a = { error: true }, pc;
+  try { [l, a, pc] = await Promise.all([sb.rpc('admin_price_list'), sb.from('price_addons').select('label,price_text').order('sort'), sb.rpc('admin_pc_parts')]); }
+  catch (e) { l = { error: { message: String(e?.message || e) } }; }
+  finally { pr.loading = false; }
+  pr.parts = pc && !pc.error ? (pc.data || []) : null;
+  pr.partsErr = pc?.error ? (/admin_pc_parts|schema cache|does not exist/i.test(pc.error.message) ? 'Ceny części wymagają migracji v28 (20261124120000_v28_cennik_zestawow_brief.sql).' : pc.error.message) : '';
   if (l.error) { pr.err = /admin_price_list|schema cache|does not exist/i.test(l.error.message) ? 'Edycja cennika wymaga migracji v23 – uruchom: npx supabase db push --linked' : l.error.message; renderPrices(); return; }
   pr.err = ''; pr.list = l.data || []; pr.addons = a.error ? SOL_ADDONS.map(([label, price_text]) => ({ label, price_text })) : (a.data || []);
   pr.draft.clear(); renderPrices();
@@ -929,8 +988,8 @@ function renderPrices() {
       h('div', { class: 'scroll-x' }, h('table', { class: 'adm pr-table' },
         h('thead', {}, h('tr', {}, ['Usługa', 'Cena', 'Na stronie', 'Ostatnia zmiana'].map((t) => h('th', { text: t })))),
         h('tbody', {}, g.items.map(row)))))),
-    bar, addonsCard(),
-    h('p', { class: 'note', style: 'margin-top:14px', text: 'Poza tym ekranem: dopłata Express (+50 zł) jest liczona w bazie, a ceny części w zestawach PC pochodzą z list x-kom – napisz, jeśli też mają być edytowalne.' }));
+    bar, addonsCard(), partsCard(),
+    h('p', { class: 'note', style: 'margin-top:14px', text: 'Dopłata Express (+50 zł) jest liczona w bazie. Ceny zestawów PC na stronie liczą się same z cen części powyżej.' }));
   refreshBar();
 }
 async function savePrices(btn) {
@@ -949,6 +1008,67 @@ async function savePrices(btn) {
   if (errs.length) toast('err', errs.join(' · '), 12000);
   await loadPrices(true);
   if (typeof loadCatalog === 'function') loadCatalog();     // odśwież ceny na stronie w tej karcie
+}
+/* v28: ceny części zestawów PC. Zapis → baza dopisuje historię i przelicza wszystkie zestawy z tą częścią. */
+function partsCard() {
+  if (pr.partsErr) return h('div', { class: 'card', style: 'margin-top:18px' }, h('h3', { text: 'Części zestawów PC' }), h('div', { class: 'banner err', text: pr.partsErr }));
+  if (!pr.parts) return null;
+  const draft = new Map(), msg = h('p', { class: 'form-msg', role: 'status', 'aria-live': 'polite' });
+  const save = h('button', { class: 'btn btn-gold btn-sm', type: 'button', disabled: true, text: 'Zapisz ceny części' });
+  const feed = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Pobierz ceny z feedu teraz' });
+  const missing = pr.parts.filter((p) => p.active && !p.price_grosze).length;
+  const sync = () => { const bad = [...draft.values()].some((d) => d.bad); save.disabled = !draft.size || bad; save.textContent = bad ? 'Popraw błędną cenę' : draft.size ? `Zapisz ceny części (${draft.size})` : 'Zapisz ceny części'; };
+  const row = (p) => {
+    const inp = h('input', { class: 'input pr-in', inputmode: 'decimal', value: p.price_grosze ? zlInput(p.price_grosze) : '', placeholder: 'brak', 'aria-label': `Cena części: ${p.name}` });
+    const err = h('span', { class: 'err' });
+    inp.addEventListener('input', () => {
+      const v = inp.value.trim(), g = parseZl(v), ok = g >= 100 && g <= 10000000;
+      err.textContent = !v || ok ? '' : 'Od 1 do 100 000 zł'; inp.setAttribute('aria-invalid', String(!!v && !ok));
+      if (!v || g === p.price_grosze) draft.delete(p.id); else draft.set(p.id, { id: p.id, price_grosze: ok ? g : null, bad: !ok });
+      sync();
+    });
+    return h('tr', { class: p.active ? '' : 'pr-off' },
+      h('td', {}, h('b', { text: p.name }), h('br'), h('span', { class: 'muted small', text: `${p.category} · ${(p.sets || []).join(', ') || 'w żadnym zestawie'}` })),
+      h('td', {}, h('div', { class: 'pr-cell' }, inp, h('span', { class: 'muted', text: 'zł' })), err),
+      h('td', { class: 'muted small', text: p.lowest30_grosze ? zl(p.lowest30_grosze) : '–' }),
+      h('td', { class: 'muted small', text: p.price_checked_at ? fmt(p.price_checked_at, { dateStyle: 'medium' }) : '–' }));
+  };
+  const report = (r) => {
+    const sk = r?.skipped || [], un = r?.unknown || [];
+    msg.className = `form-msg ${sk.length || un.length ? 'err' : 'ok'}`;
+    msg.textContent = `Zmienione: ${r?.updated ?? 0}, bez zmian: ${r?.unchanged ?? 0}` + (sk.length ? ` · pominięte: ${sk.map((x) => `${x.id} (${x.reason})`).join(', ')}` : '') + (un.length ? ` · nieznane id: ${un.join(', ')}` : '');
+  };
+  save.onclick = async () => {
+    const items = [...draft.values()].map(({ id, price_grosze }) => ({ id, price_grosze }));
+    setBusy(save, true, 'Zapisuję…');
+    let { data, error } = await sb.rpc('admin_apply_part_prices', { p_items: items, p_force: false });
+    if (!error && data?.skipped?.length && confirm(`Duża zmiana ceny (ponad 40%):\n${data.skipped.map((x) => `• ${x.id}: ${x.reason}`).join('\n')}\n\nZapisać mimo to?`)) {
+      const again = items.filter((it) => data.skipped.some((x) => x.id === it.id));
+      const r2 = await sb.rpc('admin_apply_part_prices', { p_items: again, p_force: true });
+      if (r2.error) error = r2.error; else data = { ...data, updated: data.updated + r2.data.updated, skipped: r2.data.skipped };
+    }
+    setBusy(save, false, 'Zapisz ceny części');
+    if (error) { if (isPermErr(error)) return adminMfaOk(false, '#pricesOut'); msg.className = 'form-msg err'; msg.textContent = error.message; return; }
+    toast('ok', 'Ceny części zapisane – zestawy przeliczone.');
+    await loadPrices(true);
+    if (typeof loadCatalog === 'function') loadCatalog();
+    if (data?.skipped?.length || data?.unknown?.length) toast('err', `Pominięte: ${data.skipped.map((x) => x.id).join(', ')}`, 10000);
+  };
+  feed.onclick = async () => {
+    setBusy(feed, true, 'Pobieram…');
+    try {
+      const r = await callFn('pc-prices', {});
+      toast(r?.skipped?.length || r?.unknown?.length ? 'err' : 'ok', `Feed: zmienione ${r?.updated ?? 0}, bez zmian ${r?.unchanged ?? 0}, pominięte ${r?.skipped?.length ?? 0}, nieznane ${r?.unknown?.length ?? 0}.`, 10000);
+      await loadPrices(true); if (typeof loadCatalog === 'function') loadCatalog();
+    } catch (e) { report({}); msg.className = 'form-msg err'; msg.textContent = e.message === 'PC_PRICE_FEED_URL_MISSING' ? 'Brak adresu feedu – ustaw sekret PC_PRICE_FEED_URL w Supabase.' : e.message; }
+    setBusy(feed, false, 'Pobierz ceny z feedu teraz');
+  };
+  return h('div', { class: 'card', style: 'margin-top:18px' }, h('h3', { text: 'Części zestawów PC' }),
+    h('p', { class: 'muted small', text: `Cena zestawu na stronie = suma cen jego części + montaż. Ceny aktualizują się też automatycznie raz dziennie z feedu (funkcja pc-prices).${missing ? ` Bez ceny: ${missing} – do czasu uzupełnienia wszystkich części zestaw pokazuje dotychczasową kwotę.` : ''}` }),
+    h('div', { class: 'scroll-x' }, h('table', { class: 'adm pr-table' },
+      h('thead', {}, h('tr', {}, ['Część', 'Cena', 'Najniższa z 30 dni', 'Sprawdzono'].map((t) => h('th', { text: t })))),
+      h('tbody', {}, pr.parts.map(row)))),
+    h('div', { class: 'cta-row', style: 'margin-top:10px' }, feed, save), msg);
 }
 function addonsCard() {
   const rows = h('div', { class: 'pr-addons' });
@@ -984,19 +1104,28 @@ const br = { list: null, sel: null, loading: false, err: '' };
 async function loadBrief(force) {
   const box = $('#briefOut'); if (!box || br.loading) return;
   if (br.list && !force) { renderBrief(); return; }
-  br.loading = true; if (!br.list) box.replaceChildren(h('p', { class: 'muted', text: 'Ładuję brief…' }));
-  const { data, error } = await sb.from('daily_briefs').select('id,day,data,created_at,updated_at').order('day', { ascending: false }).limit(14);
-  br.loading = false;
+  br.loading = true;
+  // Bez 2FA (aal1) is_admin() w bazie = false: RLS zwracał pustą listę („pojawi się o 9:00”), a RPC – brak uprawnień.
+  if (!(await adminMfaOk(false, '#briefOut'))) { br.loading = false; br.list = null; return; }
+  if (!br.list) box.replaceChildren(h('p', { class: 'muted', text: 'Ładuję brief…' }));
+  let data, error;
+  try { ({ data, error } = await sb.from('daily_briefs').select('id,day,data,created_at,updated_at').order('day', { ascending: false }).limit(14)); }
+  catch (e) { error = { message: String(e?.message || e) }; }
+  finally { br.loading = false; }
   if (error) { br.err = /daily_briefs|schema cache|does not exist/i.test(error.message) ? 'Brief wymaga migracji v27 – uruchom: npx supabase db push --linked' : error.message; renderBrief(); return; }
   br.err = ''; br.list = data || [];
   if (!br.sel || !br.list.some((b) => b.day === br.sel)) br.sel = br.list[0]?.day || null;
   renderBrief();
 }
 async function makeBrief(btn) {
+  if (!(await adminMfaOk(false, '#briefOut'))) return;
   setBusy(btn, true, 'Tworzę…');
   const { error } = await sb.rpc('generate_daily_brief', {});
   setBusy(btn, false);
-  if (error) return toast('err', error.message);
+  if (error) {
+    if (isPermErr(error)) { toast('err', 'Brak uprawnień do briefu – potwierdź kod 2FA. Jeśli kod jest potwierdzony, uruchom migrację v28.', 10000); br.list = null; return loadBrief(true); }
+    return toast('err', error.message);
+  }
   br.sel = todayKey(); toast('ok', 'Brief zaktualizowany.'); loadBrief(true);
 }
 function renderBrief() {
