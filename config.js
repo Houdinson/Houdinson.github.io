@@ -13,6 +13,12 @@ window.STL_CONFIG = {
   DEV_SUPABASE_URL: 'http://127.0.0.1:54321',
   DEV_SUPABASE_KEY: '',
   CONTACT_EMAIL: 'kontakt@striketechlab.pl',
+  /* PROFIL FIRMY GOOGLE (wizytówka) – wpisz po weryfikacji profilu. Puste = przyciski Google się nie pokazują.
+     GOOGLE_PROFILE_URL – link do wizytówki: Profil Firmy w wyszukiwarce → „Udostępnij profil” (np. https://maps.app.goo.gl/…)
+     GOOGLE_REVIEW_URL  – link do wystawienia opinii: Profil Firmy → „Poproś o opinie” (np. https://g.page/r/…/review)
+     Przyjmowane są tylko adresy https z domen Google (google.*, g.page, goo.gl). */
+  GOOGLE_PROFILE_URL: '',
+  GOOGLE_REVIEW_URL: '',
   /* DANE SPRZEDAWCY – obowiązkowe przed publikacją (ustawa o prawach konsumenta art. 12,
      ustawa o świadczeniu usług drogą elektroniczną art. 5). Wpisz dokładnie tak, jak w CEIDG.
      Działalność nierejestrowana: imię i nazwisko + adres; pola, których nie masz (NIP, REGON), zostaw puste. */

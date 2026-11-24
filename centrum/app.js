@@ -99,8 +99,8 @@ function setConn(state) {
     wait: ['wait', 'Łączenie…', ''],
     retry: ['wait', 'Ponawiam…', ''],
     auth: ['bad', 'Sesja wygasła', 'Sesja wygasła – zaloguj się ponownie, żeby zobaczyć aktualne dane.'],
-    net: ['bad', 'Offline', 'Brak internetu – dane mogą być nieaktualne. Ponawiam automatycznie, gdy wróci połączenie.'],
-    bad: ['bad', 'Brak serwera', 'Brak połączenia z serwerem – dane mogą być nieaktualne. Ponawiam automatycznie.'],
+    net: ['bad', 'Brak internetu', 'Brak internetu – dane mogą być nieaktualne. Ponawiam automatycznie, gdy wróci połączenie.'],
+    bad: ['bad', 'Serwer niedostępny', 'Brak połączenia z serwerem – dane mogą być nieaktualne. Ponawiam automatycznie.'],
   }[state];
   $('#conn .dot').className = `dot ${map[0]}`; $('#connTxt').textContent = map[1];
   $('#conn').title = map[2] || (state === 'ok' ? 'Połączono z serwerem' : 'Łączenie z serwerem…');
@@ -112,7 +112,7 @@ async function heartbeat() {
   if (conn.state !== 'ok' && conn.state !== 'retry') setConn('wait');
   const { error, status } = await sb.from('profiles').select('id', { head: true, count: 'exact' }).limit(1).then((r) => r, (e) => ({ error: e }));
   if (!error) { conn.fails = 0; setConn('ok'); }
-  // 401 / wygasły JWT to nie awaria serwera – nie pokazuj „Brak serwera”
+  // 401 / wygasły JWT to nie awaria serwera – nie pokazuj „Serwer niedostępny”
   else if (status === 401 || /jwt|token|PGRST30[0-3]/i.test(`${error.message || ''} ${error.code || ''}`)) { conn.fails = 0; setConn('auth'); sb.auth.refreshSession().catch(() => {}); }
   else { conn.fails++; setConn(conn.fails < 2 ? 'retry' : 'bad'); }   // jeden nieudany ping = „Ponawiam…”, dopiero drugi = komunikat o braku serwera
   conn.timer = setTimeout(heartbeat, error ? (conn.fails < 2 ? 3000 : 8000) : 45000);
@@ -670,7 +670,10 @@ function renderFinance() {
       h('div', {}, h('span', { text: 'Netto' }), h('b', { text: zl(st.period.net) })),
       h('div', {}, h('span', { text: 'Tryb' }), h('b', { text: st.live ? 'LIVE' : 'TESTOWY (sk_test_)' })))
       : h('div', { class: 'card muted small', text: `Stripe niedostępny: ${st.error || 'brak danych'}` }),
-    st.ok && st.payouts?.length ? [h('p', { class: 'sec-title', text: 'Ostatnie wypłaty' }), h('div', { class: 'card kv' }, st.payouts.map((p) => h('div', {}, h('span', { text: fmt(new Date(p.arrival * 1000).toISOString(), { dateStyle: 'medium' }) }), h('b', { text: `${zl(p.amount)} · ${p.status === 'paid' ? 'wypłacone' : p.status}` }))))] : null,
+    st.ok && st.payouts?.length ? [h('p', { class: 'sec-title', text: 'Ostatnie wypłaty' }), h('div', { class: 'card kv' }, st.payouts.map((p) => h('div', {}, h('span', { text: `${fmt(new Date(p.arrival * 1000).toISOString(), { dateStyle: 'medium' })}${p.last4 ? ` · konto •••• ${p.last4}` : ''}` }), h('b', { text: `${zl(p.amount)} · ${p.status === 'paid' ? 'wypłacone' : p.status}` })))),
+      // Wypłaty muszą trafiać na rachunek działalności (IBAN …0994) – inaczej ostrzeżenie
+      st.payouts.some((p) => p.last4 && st.payout_expected_last4 && p.last4 !== st.payout_expected_last4)
+        ? h('div', { class: 'banner err', text: `Uwaga: wypłata na konto •••• ${st.payouts.find((p) => p.last4 !== st.payout_expected_last4).last4}, a rachunek działalności kończy się na ${st.payout_expected_last4}. Zmień konto w Stripe → Settings → Business → Bank accounts and currencies.` }) : null] : null,
     h('p', { class: 'sec-title', text: 'Usługi w tym miesiącu' }),
     s.by_service.length ? h('div', { class: 'card' }, h('ul', { class: 'bars' }, s.by_service.map((x) => h('li', {},
       h('div', {}, h('span', { text: x.name }), h('b', { text: `${zl(x.paid)} · ${x.count}×` })),
@@ -1153,12 +1156,13 @@ $('#clientsBtn').addEventListener('click', () => { vibrate(); clientsSheet(); })
 /* ================================================================== SZABLONY WIADOMOŚCI */
 const TPL_DEFAULT = [
   { id: 'remind', name: 'Przypomnienie o terminie', text: 'Dzień dobry {imie}, przypominam o terminie {termin} – {usluga}. Przy usłudze zdalnej proszę mieć zainstalowany RustDesk (rustdesk.com). Do zobaczenia! Strike Tech Lab' },
-  { id: 'start', name: 'Rozpoczęcie prac', text: 'Dzień dobry {imie}, zaczynamy pracę nad zleceniem {numer}. Postęp widać na bieżąco w Strefie Klienta na striketechlab.com. Strike Tech Lab' },
+  { id: 'start', name: 'Rozpoczęcie prac', text: 'Dzień dobry {imie}, zaczynamy pracę nad zleceniem {numer}. Postęp widać na bieżąco w Strefie Klienta na striketechlab.pl. Strike Tech Lab' },
   { id: 'quote', name: 'Prośba o akceptację wyceny', text: 'Dzień dobry {imie}, przy zleceniu {numer} potrzebna jest dodatkowa praca lub część: [OPIS] – koszt [KWOTA] zł. Czy mogę to wykonać? Bez Pana/Pani zgody nic nie robię. Strike Tech Lab' },
-  { id: 'ready', name: 'Sprzęt gotowy do odbioru', text: 'Dzień dobry {imie}, zlecenie {numer} ({usluga}) jest gotowe do odbioru. Raport z pomiarów jest w Strefie Klienta na striketechlab.com. Kiedy będzie Panu/Pani pasował odbiór? Strike Tech Lab' },
+  { id: 'ready', name: 'Sprzęt gotowy do odbioru', text: 'Dzień dobry {imie}, zlecenie {numer} ({usluga}) jest gotowe do odbioru. Raport z pomiarów jest w Strefie Klienta na striketechlab.pl. Kiedy będzie Panu/Pani pasował odbiór? Strike Tech Lab' },
   { id: 'thanks', name: 'Podziękowanie + polecenia', text: 'Dziękuję za zlecenie {numer}! Jeśli jest Pan/Pani zadowolony/a – znajomi z Pana/Pani kodem polecającym (Strefa Klienta) dostaną 10% rabatu. Strike Tech Lab' },
 ];
-const templates = () => { const t = store.get('stl_tpl'); return Array.isArray(t) && t.length ? t : TPL_DEFAULT; };
+// Zapisane szablony z czasów domeny .com → adres serwisu striketechlab.pl
+const templates = () => { const t = store.get('stl_tpl'); return Array.isArray(t) && t.length ? t.map((x) => ({ ...x, text: String(x.text || '').replace(/striketechlab\.com/gi, 'striketechlab.pl') })) : TPL_DEFAULT; };
 function fillTpl(text, o) {
   const name = (o.customer?.name || o.profiles?.full_name || '').trim().split(/\s+/)[0] || '';
   const slot = o.calendar_slots?.[0];
@@ -1380,7 +1384,7 @@ function buildScenes(p) {
   const s = [];
   if (p.hook) s.push({ kind: 'hook', dur: 2.6, big: p.hook });
   for (const sc of p.script || []) s.push({ kind: 'scene', dur: sceneSeconds(sc.czas), big: sc.napis || '', small: sc.lektor || '' });
-  s.push({ kind: 'end', dur: 3, big: 'STRIKE TECH LAB', small: (p.cta || 'striketechlab.com').replace(/https?:\/\//, '') });
+  s.push({ kind: 'end', dur: 3, big: 'STRIKE TECH LAB', small: (p.cta || 'striketechlab.pl').replace(/https?:\/\//, '') });
   let t = 0; for (const x of s) { x.t0 = t; t += x.dur; }
   return { scenes: s, total: t };
 }

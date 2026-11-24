@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /centrum/
 Disallow: /konto
+Disallow: /tools/
 
 Sitemap: https://striketechlab.pl/sitemap.xml

@@ -5,7 +5,8 @@
   var seen = false; try { seen = sessionStorage.getItem('stl_intro') === '1'; sessionStorage.setItem('stl_intro', '1'); } catch (e) { /* tryb prywatny */ }
   var rm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   var root = document.documentElement, t0 = Date.now();
-  var MIN = rm ? 350 : seen ? 650 : 2400, MAX = seen ? 2500 : 6500;
+  // Ekran nie czeka na serwery rezerwacji: znika, gdy gotowy jest dokument (treść i nawigacja), najpóźniej po 3 s.
+  var MIN = rm ? 350 : seen ? 500 : 1800, MAX = seen ? 1200 : 3000;
   var ready = false, readyAt = 0, done = false, p = 0, last = t0;
   var bar = el.querySelector('.i-bar i'), pct = el.querySelector('.i-pct'), line = el.querySelector('.i-line');
   var LINES = ['Uruchamianie', 'Test podzespołów', 'Kalibracja chłodzenia', 'Wolne terminy', 'Gotowe'];
@@ -32,7 +33,9 @@
   window.stlIntroDone = setReady;
   el.addEventListener('click', finish);
   addEventListener('keydown', function k() { removeEventListener('keydown', k); finish(); });
-  addEventListener('load', function () { setTimeout(setReady, 1800); });
+  if (document.readyState !== 'loading') setReady(); else document.addEventListener('DOMContentLoaded', setReady);
   setTimeout(setReady, MAX);
+  // bez animacji (karta w tle, oszczędzanie energii – requestAnimationFrame wstrzymany) ekran i tak znika
+  setTimeout(finish, MAX + 600);
   requestAnimationFrame(frame);
 })();

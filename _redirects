@@ -8,3 +8,6 @@
 /odstapienie /#odstapienie 301
 /pouczenie-o-odstapieniu /#odstapienie 301
 /zwroty /#zwroty 301
+
+# Skrypty narzędziowe repozytorium (generator podstron) – nie są częścią strony
+/tools/* / 301

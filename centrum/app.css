@@ -286,3 +286,7 @@ details.more summary{cursor:pointer;color:var(--gold);font-weight:700;font-size:
 .switch-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
 .switch-row p{margin:2px 0 0;font-size:.78rem;color:var(--muted)}
 .sheet-body .card h4,.sheet-body .client h4{font-size:.98rem;letter-spacing:-.01em;text-transform:none;color:var(--text);margin:4px 0 3px}
+
+/* Linki do dokumentów prawnych na ekranie logowania */
+.login-legal a { color: var(--muted, inherit); text-decoration: underline; text-underline-offset: 2px; }
+.login-legal a:hover { color: var(--gold, inherit); }
