@@ -16,7 +16,7 @@ a{color:inherit;text-decoration:none}
 button,input,select,textarea{font:inherit;color:inherit}
 h1,h2,h3,h4{line-height:1.15;margin:0 0 .5em;letter-spacing:-.02em;text-wrap:balance}
 h1{font-size:clamp(2.2rem,5.2vw,3.9rem);font-weight:800}
-h2{font-size:clamp(1.65rem,3.4vw,2.45rem);font-weight:800}
+h2,.h2{font-size:clamp(1.65rem,3.4vw,2.45rem);font-weight:800}
 h3{font-size:1.15rem;font-weight:700}
 p{margin:0 0 1em}
 .gold{color:var(--gold)}.muted{color:var(--muted)}.small{font-size:.85rem}
@@ -803,6 +803,12 @@ html.intro-on,html.intro-on body{overflow:hidden}
 .rev-meta b{color:#fff;font-weight:700}
 .rev-reply{border-left:2px solid var(--gold);padding:6px 0 6px 12px;font-size:.85rem;color:var(--text-2)}
 .rev-reply b{display:block;color:var(--gold);font-size:.75rem;margin-bottom:2px}
+.rev-side{display:grid;gap:10px;justify-items:end}
+@media(max-width:640px){.rev-side{justify-items:start}}
+.g-ask{margin-top:10px}
+.conf-card{max-width:720px}
+.conf-spec{margin:0}
+.conf-next{margin:0;padding-left:1.2em;display:grid;gap:6px;color:var(--muted)}
 .rev-stats{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.6rem}
 .rev-stats small{font-size:.8rem;color:var(--muted);font-weight:500}
 .rev-note{margin-top:16px;max-width:760px}

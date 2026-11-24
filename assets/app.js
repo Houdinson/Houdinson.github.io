@@ -30,15 +30,32 @@ const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const TZ = 'Europe/Warsaw';
 const BASE = ('/' + String(CFG.BASE_PATH || '/').replace(/^\/+|\/+$/g, '') + '/').replace('//', '/');
 const SITE_URL = location.origin + BASE;              // np. http://localhost:3000/
+/* [widok, <title>, meta description, kategoria usług, nagłówek H1 podstrony usług]. Tytuły i opisy MUSZĄ być takie same jak w statycznych
+   plikach HTML (to je czyta Google) – generuje je tools/strony.mjs, który sprawdza też zgodność z tą tabelą. */
 const ROUTES = {
-  '/': ['home', 'Strike Tech Lab | Optymalizacja, serwis i składanie PC'],
-  '/uslugi': ['uslugi', 'Usługi i cennik | Strike Tech Lab'],
-  '/zestawy': ['zestawy', 'Dobór i składanie PC | Strike Tech Lab'],
-  '/rezerwacja': ['rezerwacja', 'Rezerwacja terminu | Strike Tech Lab'],
-  '/konto': ['konto', 'Strefa Klienta | Strike Tech Lab'],
-  '/kontakt': ['kontakt', 'Kontakt i FAQ | Strike Tech Lab'],
+  '/': ['home', 'Strike Tech Lab | Optymalizacja, serwis i składanie PC – Łańcut i zdalnie', 'Optymalizacja i tuning PC zdalnie, serwis i składanie komputerów z Twoich części w Łańcucie oraz strony WWW i automatyzacja dla firm. Rezerwacja online, pomiar przed i po.'],
+  '/uslugi': ['uslugi', 'Usługi i cennik – optymalizacja, serwis i montaż PC | Strike Tech Lab', 'Cennik usług: optymalizacja i undervolting PC, input lag, montaż z Twoich części, czyszczenie i diagnostyka, strony WWW. Pomiar przed i po, płatność online.'],
+  '/optymalizacja': ['uslugi', 'Optymalizacja i tuning PC zdalnie – undervolting, input lag | Strike Tech Lab', 'Zdalna optymalizacja komputera w całej Polsce: undervolting CPU i GPU, niższy input lag, strojenie Windows, BIOS-u i RAM. Pomiar przed i po, raport, płatność online.', 'optimization', 'Optymalizacja i tuning PC – zdalnie'],
+  '/serwis': ['uslugi', 'Serwis i montaż PC Łańcut – składanie, czyszczenie, naprawa | Strike Tech Lab', 'Serwis komputerów w Łańcucie – osobiście lub kurierem z całej Polski: montaż z Twoich części, czyszczenie i wymiana past, regeneracja chłodzenia, diagnostyka i naprawa.', 'service', 'Serwis i montaż PC – Łańcut i kurierem'],
+  '/strony-www': ['uslugi', 'Strony WWW i automatyzacja dla firm | Strike Tech Lab', 'Strony internetowe dla małych firm z Podkarpacia i całej Polski: wizytówka, strona firmowa, sklep oraz automatyzacja powtarzalnych zadań. Stała cena, termin i rundy poprawek w umowie.', 'solutions', 'Strony WWW i automatyzacja dla firm'],
+  '/zestawy': ['zestawy', 'Zestawy PC i składanie komputera na zamówienie | Strike Tech Lab', 'Przykładowe zestawy PC od 1080p do 4K i stacja robocza z aktualnymi cenami części. Dobieramy części, kupujesz je Ty, my składamy, testujemy i dajemy raport.'],
+  '/rezerwacja': ['rezerwacja', 'Rezerwacja terminu online | Strike Tech Lab', 'Wybierz usługę i wolny termin (pn–pt, 9:00–18:00), zapłać online kartą, BLIK-iem lub Przelewy24. Status zlecenia śledzisz w Strefie Klienta.'],
+  '/potwierdzenie': ['potwierdzenie', 'Potwierdzenie rezerwacji | Strike Tech Lab', 'Potwierdzenie płatności i rezerwacji terminu w Strike Tech Lab.'],
+  '/konto': ['konto', 'Strefa Klienta | Strike Tech Lab', 'Twoje zlecenia, raporty z pomiarów, rachunki i kod polecający w jednym miejscu.'],
+  '/kontakt': ['kontakt', 'Kontakt i najczęstsze pytania | Strike Tech Lab', 'Napisz do Strike Tech Lab (Łańcut): pytania o optymalizację, serwis, montaż komputera, dobór części albo stronę WWW. Odpowiedzi na najczęstsze pytania.'],
 };
-const LEGACY_HASH = { '#start': '/', '#proces': '/', '#uslugi': '/uslugi', '#zakres': '/uslugi', '#benchmark': '/uslugi', '#zestawy': '/zestawy', '#rezerwacja': '/rezerwacja', '#panel': '/konto', '#kontakt': '/kontakt', '#faq': '/kontakt', '#prawne': '/' };
+const CAT_ROUTE = Object.fromEntries(Object.entries(ROUTES).filter(([, r]) => r[3]).map(([p, r]) => [r[3], p]));
+function setMeta(path) {
+  const [page, title, desc, , h1] = ROUTES[path];
+  if (page === 'uslugi' && $('#svcH1')) $('#svcH1').textContent = h1 || 'Usługi i ceny';
+  const url = `https://striketechlab.pl${path === '/' ? '/' : path}`;
+  document.title = title;
+  const set = (sel, attr, v) => { const el = document.head.querySelector(sel); if (el) el.setAttribute(attr, v); };
+  set('meta[name="description"]', 'content', desc); set('meta[property="og:description"]', 'content', desc);
+  set('meta[property="og:title"]', 'content', title); set('meta[property="og:url"]', 'content', url);
+  set('link[rel="canonical"]', 'href', url);
+}
+const LEGACY_HASH = { '#start': '/', '#proces': '/', '#uslugi': '/uslugi', '#optymalizacja': '/optymalizacja', '#serwis': '/serwis', '#strony-www': '/strony-www', '#zakres': '/uslugi', '#benchmark': '/uslugi', '#zestawy': '/zestawy', '#rezerwacja': '/rezerwacja', '#panel': '/konto', '#kontakt': '/kontakt', '#faq': '/kontakt', '#prawne': '/' };
 function currentRoute() {
   let p = location.pathname;
   if (p.startsWith(BASE)) p = '/' + p.slice(BASE.length);
@@ -55,19 +72,22 @@ function navigate(to, { replace = false, keepScroll = false } = {}) {
 }
 function renderRoute(keepScroll = false) {
   route = currentRoute();
-  const [page, title] = ROUTES[route];
+  const [page, , , rcat] = ROUTES[route];
+  if (rcat) { activeCat = rcat; showCat(rcat); }
   let first = true;
   $$('main [data-page]').forEach((sec) => {
     const show = sec.dataset.page === page; sec.hidden = !show;
     sec.classList.toggle('first', show && first); if (show) first = false;
   });
-  document.title = title;
+  setMeta(route);
   $$('a[data-link]').forEach((a) => {
-    const on = a.getAttribute('href') === route;
+    const href = a.getAttribute('href');
+    const on = href === route || (a.closest('#mainnav') && href === '/uslugi' && page === 'uslugi');
     a.classList.toggle('active', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
   if (!keepScroll) scrollTo({ top: 0, behavior: 'instant' });
   if (page === 'konto') renderPanel();
+  if (page === 'potwierdzenie' && sb) renderConfirm();
   if (page === 'rezerwacja' && B.item && !$('#bDays').childElementCount) onItemChange(true);
   if (page === 'home') findNextFree();
 }
@@ -451,7 +471,9 @@ function setConn(state, info) {
   $('#liveBadge').className = `live-badge ${map[0] === 'ok' ? 'ok' : map[0] === 'bad' ? 'bad' : ''}`;
   const cs = $('#cStatus'); if (cs) { cs.textContent = map[2]; cs.className = map[3]; }
   const bar = $('#offlineBar');
-  if (state === 'offline' || state === 'nonet') { bar.textContent = info || (state === 'nonet' ? 'Brak internetu na tym urządzeniu – ceny i wolne terminy mogą być nieaktualne. Odświeżymy je sami, gdy połączenie wróci.' : 'Brak połączenia z serwerem – ceny i wolne terminy mogą być nieaktualne. Ponawiamy automatycznie; możesz też napisać do nas.'); bar.classList.remove('hidden'); }
+  // pierwsze 8 s po wejściu: tylko kropka w nagłówku – pasek nie zasłania treści, gdy łącze się dopiero rozkręca
+  if ((state === 'offline' || state === 'nonet') && performance.now() < 8000) { clearTimeout(conn.barT); conn.barT = setTimeout(() => setConn(conn.state, info), 8200 - performance.now()); bar.classList.add('hidden'); }
+  else if (state === 'offline' || state === 'nonet') { bar.textContent = info || (state === 'nonet' ? 'Brak internetu na tym urządzeniu – ceny i wolne terminy mogą być nieaktualne. Odświeżymy je sami, gdy połączenie wróci.' : 'Brak połączenia z serwerem – ceny i wolne terminy mogą być nieaktualne. Ponawiamy automatycznie; możesz też napisać do nas.'); bar.classList.remove('hidden'); }
   else bar.classList.add('hidden');
   if (prev !== state) log(`status: ${map[2]}`);
 }
@@ -562,8 +584,11 @@ function priceBlock(s, label) {
     !cat.live ? h('span', { class: 'stale', text: 'Cena orientacyjna – aktualną pokaże formularz po połączeniu.' }) : null);
 }
 let activeCat = new URLSearchParams(location.search).get('kategoria') || 'optimization';
-function showCat(id) {
+function showCat(id, { url = false } = {}) {
   activeCat = id;
+  if (url && CAT_ROUTE[id] && route !== CAT_ROUTE[id] && ROUTES[route]?.[0] === 'uslugi') {
+    route = CAT_ROUTE[id]; history.replaceState(null, '', BASE + route.slice(1)); setMeta(route);
+  }
   $$('#svcCats .cat-tab').forEach((b) => { const on = b.dataset.cat === id; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
   $$('#svcCats .cat').forEach((p) => { p.hidden = p.id !== `kat-${id}`; });
 }
@@ -573,7 +598,7 @@ function renderCatalog() {
   const cats = CATS.filter((c) => inCat(c).length);
   if (!cats.some((c) => c.id === activeCat)) activeCat = cats[0]?.id;
   const tabs = h('div', { class: 'cat-tabs', role: 'tablist', 'aria-label': 'Kategorie usług' }, cats.map((c) =>
-    h('button', { type: 'button', role: 'tab', class: 'cat-tab', id: `cattab-${c.id}`, 'aria-controls': `kat-${c.id}`, tabindex: c.id === activeCat ? '0' : '-1', 'data-cat': c.id, 'aria-selected': String(c.id === activeCat), text: c.name, onclick: () => showCat(c.id) })));
+    h('button', { type: 'button', role: 'tab', class: 'cat-tab', id: `cattab-${c.id}`, 'aria-controls': `kat-${c.id}`, tabindex: c.id === activeCat ? '0' : '-1', 'data-cat': c.id, 'aria-selected': String(c.id === activeCat), text: c.name, onclick: () => showCat(c.id, { url: true }) })));
   box.append(tabs);
   for (const c of cats) {
     const list = inCat(c);
@@ -1108,10 +1133,64 @@ async function submitPc() {
   setBusy(btn, false, 'Wyślij zapytanie o wycenę');
 }
 
+/* ------------------------------------------------------------------ strona potwierdzenia
+   Stripe wraca na /potwierdzenie?session_id=cs_… Dane bierzemy z funkcji checkout-status (działa bez logowania),
+   a gdy jej nie ma (stara wersja serwera) – z tabeli orders dla zalogowanego klienta. */
+let confRun = 0;
+async function renderConfirm() {
+  const run = ++confRun, box = $('#confBox'), title = $('#confTitle'); if (!box) return;
+  const sid = new URLSearchParams(location.search).get('session_id') || '';
+  const links = (primary) => h('div', { class: 'cta-row', style: 'margin-top:18px' },
+    h('a', { class: `btn ${primary ? 'btn-gold' : 'btn-ghost'}`, href: '/konto', 'data-link': '', text: 'Przejdź do Strefy Klienta' }),
+    h('a', { class: 'btn btn-ghost', href: '/', 'data-link': '', text: 'Strona główna' }));
+  const show = (t, ...kids) => { if (run !== confRun) return; title.textContent = t; box.replaceChildren(...kids); };
+  if (!/^cs_(test|live)_[A-Za-z0-9]{10,250}$/.test(sid)) {
+    return show('Brak danych płatności', h('p', { text: 'Ten adres nie zawiera identyfikatora płatności. Status zamówienia i potwierdzenie znajdziesz w Strefie Klienta oraz w mailu od nas.' }), links(true));
+  }
+  if (!sb) return show('Płatność przyjęta', h('p', { text: 'Nie mogę teraz połączyć się z systemem. Potwierdzenie wyślemy mailem, a status zobaczysz w Strefie Klienta.' }), links(true));
+  store.del(draftKey);
+  let d = null;
+  for (let i = 0; i < 30 && run === confRun; i++) {
+    try { d = await callFn('checkout-status', { session_id: sid }); }
+    catch (e) {
+      if (e.status === 404) {   // brak zamówienia albo serwer bez checkout-status – zalogowany klient: odczyt z orders
+        const { data } = session ? await sb.from('orders').select('order_number,status,service_name,express,amount_due_grosze,paid_at').eq('stripe_session_id', sid).maybeSingle() : { data: null };
+        d = data ? { ...data, paid: !!data.paid_at, amount_paid_grosze: data.amount_due_grosze } : { missing: true };
+      }
+      else if (i > 2) return show('Płatność przyjęta', h('p', { text: `${e.message} Potwierdzenie i tak dostaniesz mailem.` }), links(true));
+    }
+    if (d?.missing || d?.order_number || d?.status === 'ANULOWANE' || (d && !d.paid && !d.paid_pending && i > 3)) break;
+    show('Płatność przyjęta – nadaję numer zlecenia…', h('p', { class: 'muted', text: 'Stripe potwierdził płatność. Czekam, aż system zapisze zlecenie (zwykle kilka sekund).' }));
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  if (run !== confRun) return;
+  if (!d || d.missing) return show('Nie znaleźliśmy tej płatności', h('p', { text: 'Jeśli pieniądze zostały pobrane, napisz do nas – podaj datę i kwotę płatności. Status zamówień zobaczysz też w Strefie Klienta.' }), links(true));
+  if (d.status === 'ANULOWANE' && !d.paid) return show('Zamówienie anulowane', h('p', { text: 'Płatność nie została zakończona, a termin wrócił do kalendarza. Możesz zarezerwować go ponownie.' }),
+    h('div', { class: 'cta-row', style: 'margin-top:18px' }, h('a', { class: 'btn btn-gold', href: '/rezerwacja', 'data-link': '', text: 'Wybierz termin' })));
+  if (!d.paid) return show('Płatność nie została potwierdzona', h('p', { text: 'Stripe nie potwierdził jeszcze płatności. Jeśli ją zakończyłeś, status zmieni się sam w Strefie Klienta w ciągu kilku minut.' }), links(true));
+  const row = (k, v) => v ? h('div', { class: 'spec-row' }, h('dt', { text: k }), h('dd', { text: v })) : null;
+  const when = d.starts_at ? `${fmt(d.starts_at, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}${d.ends_at ? `–${fmt(d.ends_at, { hour: '2-digit', minute: '2-digit' })}` : ''}` : '';
+  const next = d.handover === 'courier' ? 'Sprzęt wyślij kurierem – adres i sposób pakowania ustalimy na czacie w Strefie Klienta.'
+    : d.handover === 'personal' ? 'Sprzęt przynieś osobiście w umówionym terminie – szczegóły dostaniesz na czacie w Strefie Klienta.'
+    : 'Przy usłudze zdalnej przed terminem zainstaluj RustDesk (instrukcja w Strefie Klienta). Przy usłudze warsztatowej sposób dostarczenia sprzętu ustalimy na czacie.';
+  show(d.order_number ? 'Dziękujemy! Rezerwacja potwierdzona' : 'Płatność przyjęta',
+    h('dl', { class: 'spec conf-spec' },
+      row('Numer zlecenia', d.order_number || 'nadajemy – zobaczysz go w Strefie Klienta'),
+      row('Usługa', d.service_name ? `${d.service_name}${d.express ? ' + Express' : ''}` : ''),
+      row('Termin', when),
+      row('Zapłacono', d.amount_paid_grosze ? zl(d.amount_paid_grosze) + (d.total_grosze && d.total_grosze > d.amount_paid_grosze ? ` (zaliczka; całość ${zl(d.total_grosze)})` : '') : '')),
+    h('h3', { style: 'margin:20px 0 6px;font-size:1.05rem', text: 'Co dalej?' }),
+    h('ul', { class: 'conf-next' }, h('li', { text: 'Potwierdzenie zamówienia i rachunek wysłaliśmy mailem.' }), h('li', { text: next }),
+      h('li', { text: 'Status zlecenia, raport z pomiarów i czat z nami masz w Strefie Klienta.' })),
+    links(true));
+  if (session) { loadPanelData(); loadSlots(true); }
+}
+
 /* ------------------------------------------------------------------ powrót ze Stripe */
 async function handleStripeReturn() {
   const q = new URLSearchParams(location.search), mode = q.get('checkout');
   const ref = q.get('ref'); if (ref && /^[A-Z0-9_-]{4,40}$/i.test(ref)) { $('#bCode').value = ref.toUpperCase(); saveDraft(); }
+  if (route === '/potwierdzenie') return renderConfirm();
   if (!mode && !ref) return;
   navigate(mode === 'success' ? '/konto' : mode === 'cancel' || ref ? '/rezerwacja' : route, { replace: true });
   if (mode === 'cancel') {
@@ -1121,6 +1200,7 @@ async function handleStripeReturn() {
     banner('#bookBanner', 'info', 'Płatność przerwana – termin wrócił do kalendarza. Możesz wybrać go ponownie albo inny.');
     loadSlots(true); loadPanelData();
   }
+  if (mode === 'success' && /^cs_/.test(q.get('session_id') || '')) { navigate(`/potwierdzenie?session_id=${encodeURIComponent(q.get('session_id'))}`, { replace: true }); return renderConfirm(); }
   if (mode === 'success') {
     const sid = q.get('session_id'); store.del(draftKey);
     banner('#panelBanner', 'info', 'Płatność przyjęta przez Stripe. Czekam na potwierdzenie z systemu…');
@@ -1292,24 +1372,53 @@ function unsubscribeRealtime() { clearTimeout(rtRetry); if (channel && sb) sb.re
 setInterval(() => { if (session && document.visibilityState === 'visible' && conn.state !== 'offline' && !conn.realtime) loadPanelData(); }, 60000);
 setInterval(() => { if (session && document.visibilityState === 'visible' && conn.state !== 'offline') loadPanelData(); }, 180000);
 
+/* ------------------------------------------------------------------ Profil Firmy Google (wizytówka)
+   Linki z config.js. Puste albo spoza Google = przyciski się nie pokazują (bezpieczny fallback). */
+const isGoogleUrl = (u) => { try { const x = new URL(u); return x.protocol === 'https:' && /(^|\.)(google\.[a-z.]+|g\.page|goo\.gl)$/.test(x.hostname); } catch { return false; } };
+const GOOGLE = {
+  profile: isGoogleUrl(CFG.GOOGLE_PROFILE_URL) ? CFG.GOOGLE_PROFILE_URL : '',
+  review: isGoogleUrl(CFG.GOOGLE_REVIEW_URL) ? CFG.GOOGLE_REVIEW_URL : isGoogleUrl(CFG.GOOGLE_PROFILE_URL) ? CFG.GOOGLE_PROFILE_URL : '',
+};
+const gLink = (href, text, cls = 'btn btn-ghost btn-sm') => h('a', { class: cls, href, target: '_blank', rel: 'noopener', text });
+function renderGoogleLinks() {
+  for (const el of $$('[data-google]')) {
+    const href = GOOGLE[el.dataset.google];
+    el.hidden = !href;
+    if (href && el.tagName === 'A') el.href = href;
+  }
+  if (GOOGLE.profile && !document.getElementById('ldSameAs')) {   // powiązanie strony z wizytówką w danych strukturalnych
+    const ld = $('script[type="application/ld+json"]');
+    try { const j = JSON.parse(ld.textContent); j.sameAs = [GOOGLE.profile]; const n = h('script', { type: 'application/ld+json', id: 'ldSameAs' }); n.textContent = JSON.stringify(j); ld.replaceWith(n); } catch { /* zostaw oryginał */ }
+  }
+}
+const googleAsk = () => GOOGLE.review ? h('p', { class: 'muted small g-ask' }, 'Możesz też wystawić opinię w Google – pomaga innym nas znaleźć. ',
+  gLink(GOOGLE.review, 'Oceń nas w Google ↗', 'link')) : null;
+const shortName = (n) => { const p = String(n || '').trim().split(/\s+/); return !p[0] || /@|\d{3,}/.test(n) ? 'Klient' : p[0] + (p[1] ? ` ${p[1][0].toUpperCase()}.` : ''); };
+
 /* ------------------------------------------------------------------ opinie klientów (migracja v18)
    Opinię wystawia tylko klient z zakończonym zleceniem; publikuje administrator. */
 const starsTxt = (n) => [1, 2, 3, 4, 5].map((i) => h('span', { class: i <= n ? '' : 'off', text: '★' }));
 async function loadReviews() {
   if (!sb) return;
-  const [r, st] = await Promise.all([
-    sb.from('reviews').select('id,rating,body,display_name,service_name,reply,published_at').eq('status', 'published').order('published_at', { ascending: false }).limit(12),
-    sb.rpc('review_stats'),
-  ]);
+  // v32: public_reviews() – tylko opinie opublikowane, z zakończonych zamówień, autor jako „Imię N.” (bez danych osobowych)
+  let [r, st] = await Promise.all([sb.rpc('public_reviews', { p_limit: 12 }), sb.rpc('public_review_stats')]);
+  if (r.error) {   // baza bez v32
+    [r, st] = await Promise.all([
+      sb.from('reviews').select('rating,body,display_name,service_name,reply,published_at').eq('status', 'published').order('published_at', { ascending: false }).limit(12),
+      sb.rpc('review_stats'),
+    ]);
+    if (r.data) r.data = r.data.map((x) => ({ ...x, author: shortName(x.display_name) }));
+  }
   const sec = $('#opinie'); if (!sec) return;
-  if (r.error || !r.data?.length) { sec.classList.add('hidden'); return; }
+  renderGoogleLinks();
+  if (r.error || !r.data?.length) { sec.classList.toggle('hidden', !GOOGLE.profile); $('#revList').replaceChildren(GOOGLE.profile ? h('p', { class: 'muted', text: 'Opinie z zakończonych zleceń pokażemy tutaj po moderacji. Do tego czasu zobacz nasz profil w Google.' }) : ''); $('#revStats').replaceChildren(); return; }
   const s0 = Array.isArray(st.data) ? st.data[0] : st.data;
   $('#revStats').replaceChildren(...(s0?.total ? [h('span', { class: 'rev-stars', 'aria-hidden': 'true' }, starsTxt(Math.round(+s0.avg_rating))), h('span', { text: String(s0.avg_rating).replace('.', ',') }), h('small', { text: `/ 5 · ${s0.total} ${s0.total === 1 ? 'opinia' : s0.total < 5 ? 'opinie' : 'opinii'}` })] : []));
   $('#revList').replaceChildren(...r.data.map((x) => h('article', { class: 'rev-card' },
     h('div', { class: 'rev-stars', role: 'img', 'aria-label': `Ocena ${x.rating} na 5` }, starsTxt(x.rating)),
     h('p', { class: 'rev-body', text: x.body }),
     x.reply ? h('div', { class: 'rev-reply' }, h('b', { text: 'Odpowiedź Strike Tech Lab' }), x.reply) : null,
-    h('div', { class: 'rev-meta' }, h('b', { text: x.display_name }), ` · ${x.service_name || 'usługa'} · ${fmt(x.published_at, { month: 'long', year: 'numeric' })}`))));
+    h('div', { class: 'rev-meta' }, h('b', { text: x.author || 'Klient' }), ` · ${x.service_name || 'usługa'} · ${fmt(x.published_at, { month: 'long', year: 'numeric' })}`))));
   sec.classList.remove('hidden');
 }
 let MY_REVIEWS = new Map();
@@ -1325,7 +1434,8 @@ function reviewBox(o) {
     return h('div', { class: 'rev-box' }, h('h4', { text: mine.status === 'published' ? 'Twoja opinia jest opublikowana – dziękujemy!' : 'Twoja opinia nie została opublikowana' }),
       h('div', { class: 'rev-stars', 'aria-hidden': 'true' }, starsTxt(mine.rating)), h('p', { class: 'rev-body', text: mine.body }),
       mine.status === 'rejected' && mine.reject_reason ? h('p', { class: 'muted small', text: `Powód: ${mine.reject_reason}. Napisz do nas na czacie, jeśli chcesz to wyjaśnić.` }) : null,
-      mine.reply ? h('div', { class: 'rev-reply' }, h('b', { text: 'Nasza odpowiedź' }), mine.reply) : null);
+      mine.reply ? h('div', { class: 'rev-reply' }, h('b', { text: 'Nasza odpowiedź' }), mine.reply) : null,
+      googleAsk());
   }
   let rating = mine?.rating || 0;
   const pick = h('div', { class: 'star-pick', role: 'radiogroup', 'aria-label': 'Ocena od 1 do 5' });
@@ -2358,6 +2468,7 @@ const DRAFT_NOTE = COMPANY_OK ? '' : '<p class="note">Wersja robocza: uzupełnij
 function renderCompany() {
   const box = $('#companyInfo'); if (!box) return;
   box.innerHTML = `Sprzedawca: ${SELLER}`;
+  renderGoogleLinks();
 }
 const SETS_TERMS = '<h4>§6 Dobór części i złożenie komputera</h4><p>Nie sprzedajemy części komputerowych ani gotowych komputerów. Konfiguracje pokazane na stronie są przykładowe, a podane przy nich ceny części – orientacyjne, pochodzą ze sklepów internetowych. Na Twoje zapytanie bezpłatnie przygotowujemy listę części dopasowaną do budżetu; nie zobowiązuje Cię ona do niczego. Części kupujesz sam, we własnym imieniu i na własny rachunek, u wybranego sprzedawcy – z dostawą do siebie albo na nasz adres warsztatu. Umowa z nami dotyczy wyłącznie usługi złożenia i testów komputera (oraz wybranych usług dodatkowych) i zawierana jest na zasadach z §3–§5. Za wady części odpowiada wobec Ciebie ich sprzedawca lub producent – pomożemy w zgłoszeniu.</p>';
 const LEGAL = {
@@ -2664,7 +2775,6 @@ async function boot() {
   setMotion(document.documentElement.classList.contains('paused'), false);
   $('#budget')?.addEventListener('input', renderBudget);
   loadMedia();
-  $$('a.tile[data-from]').forEach((a) => a.addEventListener('click', () => { if (a.dataset.from !== 'pc') showCat(a.dataset.from); }));
   staticCatalog(); renderCatalog(); setBookMode(B.mode, { save: false });
   const cfg = resolveConfig();
   if (!cfg) {
