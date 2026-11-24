@@ -989,7 +989,7 @@ function bindBooking() {
 }
 let pendingPay = false;
 const ERR_TARGET = { name: '#bName', phone: '#bPhone', company: '#bCompany', nip: '#bNip', code: '#bCode', handover: 'input[name=handover]', consents: '#kTerms',
-  pcName: '#pcName', pcMail: '#pcMail', pcPhone: '#pcPhone', pcPurpose: 'input[name=pcPurpose]', pcConsent: '#pcConsent' };
+  pcName: '#pcName', pcMail: '#pcMail', pcPhone: '#pcPhone', pcPurpose: 'input[name=pcPurpose]', pcConsent: '#pcConsent', pcPartsAck: '#pcPartsAck' };
 function fieldErrors(fields, form = '#bookForm') {
   $$(`${form} [data-err]`).forEach((el) => { el.textContent = ''; });
   $$(`${form} [aria-invalid]`).forEach((el) => el.removeAttribute('aria-invalid'));
@@ -1076,6 +1076,7 @@ async function submitPc() {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.email)) f.pcMail = 'Podaj poprawny adres e-mail.';
   if (v.phone && v.phone.replace(/\D/g, '').length < 9) f.pcPhone = 'Numer telefonu jest za krótki.';
   if (!$('#pcConsent').checked) f.pcConsent = 'Potwierdź, że znasz Politykę Prywatności.';
+  if (!$('#pcPartsAck').checked) f.pcPartsAck = 'Potwierdź, że części kupujesz sam(-a) – my odpowiadamy za złożenie.';
   fieldErrors(f, '#pcForm'); if (Object.keys(f).length) return;
   const budget = zl(+$('#pcBudget').value * 100);
   const have = $$('input[name=pcHave]:checked').map((x) => PC_HAVE[x.value]);
@@ -1086,6 +1087,7 @@ async function submitPc() {
     have.length ? `Klient ma już: ${have.join(', ')}` : 'Klient ma już: nic z listy',
     adds.length ? `Dodatkowo: ${adds.join('; ')}` : null, P.inspiration ? `Inspiracja: ${P.inspiration}` : null,
     note ? `\nUwagi klienta:\n${note}` : null,
+    `\nKlient potwierdził (${new Date().toISOString()}): części kupuje sam u wybranego sklepu – zwroty i reklamacje części u ich sprzedawcy; Strike Tech Lab odpowiada za złożenie (gwarancja montażu 3 mies.), złożenie zamawiane osobno po akceptacji wyceny.`,
   ].filter(Boolean).join('\n');
   if (!sb) {
     location.href = `mailto:${CFG.CONTACT_EMAIL}?subject=${encodeURIComponent(`Dobór części i złożenie PC – ${budget}`)}&body=${encodeURIComponent(`${message}\n\n${v.name}\n${v.email}${v.phone ? '\n' + v.phone : ''}`)}`;
@@ -1402,10 +1404,43 @@ async function loadPanelData() {
     let r = await sb.from('orders').select(cat.hasV2 ? ORDER_COLS : ORDER_COLS_V1).eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(50);
     if (r.error && /column|relationship/.test(r.error.message)) r = await sb.from('orders').select(ORDER_COLS_V1).eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(50);
     if (r.error) { log(`zamówienia: ${r.error.message}`); return; }
-    orders = r.data; await loadMyReviews(orders); renderOrders();
+    orders = r.data; await Promise.all([loadMyReviews(orders), loadIrreversible(orders)]); renderOrders();
     if (activeTab === 'admin') withAdmin(() => loadAdmin(true));
     if (activeTab === 'refs') loadRefs();
   } finally { panelLoading = false; }
+}
+/* v30: zgody na prace nieodwracalne (BIOS, delid, ciekły metal…) – klient decyduje w Strefie Klienta, baza zapisuje czas i IP. */
+const IRR_KIND = { bios_update: 'Aktualizacja BIOS-u', delid: 'Delid procesora', liquid_metal: 'Ciekły metal', oc_napiecia: 'Podkręcanie z podniesieniem napięć', lutowanie: 'Prace lutownicze', inne: 'Prace nieodwracalne' };
+let irrByOrder = new Map();
+async function loadIrreversible(list) {
+  irrByOrder = new Map();
+  const ids = (list || []).filter((o) => o.paid_at).map((o) => o.id); if (!ids.length || !sb) return;
+  const { data, error } = await sb.from('irreversible_consents').select('id,order_id,kind,risk_text,status,requested_at,decided_at,performed_at').in('order_id', ids).order('requested_at');
+  if (error) return;   // baza bez migracji v30
+  for (const x of data || []) { const a = irrByOrder.get(x.order_id) || []; a.push(x); irrByOrder.set(x.order_id, a); }
+}
+function irreversibleBox(o) {
+  const list = irrByOrder.get(o.id); if (!list?.length) return null;
+  return h('div', { class: 'banner info', style: 'margin-top:12px' }, h('b', { text: 'Prace wymagające Twojej zgody' }),
+    ...list.map((x) => {
+      const msg = h('div', { class: 'form-msg', role: 'status', 'aria-live': 'polite' });
+      const decide = async (accept, btn) => {
+        if (accept && !confirm(`Potwierdzasz zgodę: ${IRR_KIND[x.kind] || x.kind}?\n\nZapiszemy datę, godzinę i adres IP tej zgody.`)) return;
+        setBusy(btn, true);
+        const { error } = await sb.rpc('client_decide_irreversible', { p_id: x.id, p_accept: accept });
+        setBusy(btn, false);
+        if (error) { msg.className = 'form-msg err'; msg.textContent = error.message; return; }
+        toast('ok', accept ? 'Zgoda zapisana. Dziękujemy!' : 'Zapisaliśmy odmowę – nie wykonamy tych prac.'); loadPanelData();
+      };
+      return h('div', { style: 'margin-top:10px' },
+        h('div', {}, h('b', { text: IRR_KIND[x.kind] || x.kind }), h('span', { class: 'muted small', text: ` · prośba z ${fmt(x.requested_at)}` })),
+        h('p', { class: 'small', style: 'white-space:pre-wrap;margin:6px 0', text: x.risk_text }),
+        x.status === 'oczekuje' ? h('div', { class: 'order-actions' },
+          h('button', { class: 'btn btn-gold btn-sm', type: 'button', text: 'Rozumiem ryzyko i wyrażam zgodę', onclick: (e) => decide(true, e.currentTarget) }),
+          h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Nie zgadzam się', onclick: (e) => decide(false, e.currentTarget) }))
+          : h('p', { class: 'small', style: 'margin:0', text: `${x.status === 'zgoda' ? '✓ Zgoda wyrażona' : '✕ Odmowa'} ${x.decided_at ? fmt(x.decided_at) : ''}${x.performed_at ? ` · wykonano ${fmt(x.performed_at)}` : ''}` }),
+        msg);
+    }));
 }
 const STEPS = [['OPLACONE', 'Przyjęte'], ['W_REALIZACJI', 'Realizacja'], ['TESTY', 'Testy i raport'], ['ZAKONCZONE', 'Zakończone']];
 function renderOrders() {
@@ -1430,6 +1465,7 @@ function orderCard(o) {
       o.discount_grosze ? h('div', {}, h('small', { text: 'Rabat' }), `−${zl(o.discount_grosze)} (${o.discount_code || o.referral_code_used || 'kod'})`) : null,
       h('div', {}, h('small', { text: 'Złożone' }), fmt(o.created_at))));
   if (o.slot_conflict) card.append(h('div', { class: 'banner info', text: 'Termin został zajęty w trakcie księgowania płatności. Skontaktujemy się, żeby ustalić nową godzinę.' }));
+  const irr = irreversibleBox(o); if (irr) card.append(irr);
   const spec = Object.entries(o.spec || {}).filter(([k]) => k !== 'Usługa');
   if (spec.length) card.append(h('ul', { class: 'sum-spec' }, spec.map(([k, v]) => h('li', { text: `${k}: ${v}` }))));
   const res = resultsTable(o.order_results || []); if (res) card.append(h('h4', { style: 'margin:14px 0 0;font-size:.95rem', text: 'Raport STRIKE PROOF – pomiary' }), res);
@@ -2337,7 +2373,7 @@ const LEGAL = {
     '<li><b>Płatności</b> – kwota, status i identyfikator płatności. Danych karty ani kodu BLIK nie otrzymujemy – przetwarza je Stripe. Podstawa: art. 6 ust. 1 lit. b i c RODO.</li>' +
     '<li><b>Rachunkowość i podatki</b> – dane z dokumentów sprzedaży. Podstawa: obowiązek prawny (art. 6 ust. 1 lit. c RODO).</li>' +
     '<li><b>Formularz kontaktowy i zapytania o wycenę</b> – imię lub nazwa firmy, e-mail, telefon (opcjonalnie), treść wiadomości. Podstawa: nasz prawnie uzasadniony interes, czyli odpowiedź na Twoją wiadomość (art. 6 ust. 1 lit. f RODO), a gdy pytasz o zawarcie umowy – działania przed jej zawarciem (art. 6 ust. 1 lit. b RODO).</li>' +
-    '<li><b>Ochrona przed nadużyciami i dowód złożenia oświadczeń</b> – skrót (hash) adresu IP przy formularzu kontaktowym, służący do limitu wiadomości i usuwany po 24 godzinach; przy zamówieniu: data złożonych oświadczeń i informacja o przeglądarce. Podstawa: prawnie uzasadniony interes – ochrona przed spamem i możliwość wykazania złożonych oświadczeń (art. 6 ust. 1 lit. f RODO).</li>' +
+    '<li><b>Ochrona przed nadużyciami i dowód złożenia oświadczeń</b> – skrót (hash) adresu IP przy formularzu kontaktowym, służący do limitu wiadomości i usuwany po 24 godzinach; przy zamówieniu i przy zgodzie na prace nieodwracalne (np. aktualizacja BIOS-u): data i godzina złożonych oświadczeń, adres IP, informacja o przeglądarce i wersja zaakceptowanych dokumentów – przechowywane do upływu terminów przedawnienia roszczeń (reklamacje, spory o płatność), a w przypadku sporu – przekazywane operatorowi płatności Stripe jako dowód. Podstawa: prawnie uzasadniony interes – ochrona przed spamem i możliwość wykazania złożonych oświadczeń (art. 6 ust. 1 lit. f RODO).</li>' +
     '<li><b>Program poleceń</b> – Twój kod, informacja, kto skorzystał z kodu, oraz porównanie konta, e-maila i telefonu, żeby nie dało się polecić samego siebie. Podstawa: regulamin programu (art. 6 ust. 1 lit. b RODO) i prawnie uzasadniony interes – zapobieganie nadużyciom (art. 6 ust. 1 lit. f RODO).</li>' +
     '<li><b>Informacje o promocjach e-mailem</b> – tylko jeśli zaznaczysz zgodę (art. 6 ust. 1 lit. a RODO i przepisy Prawa komunikacji elektronicznej). Zgodę wycofasz w każdej chwili w Strefie Klienta lub mailowo; wycofanie nie wpływa na zgodność z prawem wcześniejszej wysyłki.</li>' +
     '<li><b>Dochodzenie roszczeń i obrona przed nimi</b> – dane z zamówień i korespondencji. Podstawa: art. 6 ust. 1 lit. f RODO.</li>' +
