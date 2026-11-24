@@ -146,7 +146,7 @@ const SVC = {
 /* Zestawy PC – treści 1:1 z catalog.json / realizacje.html (ceny i dopłaty w groszach; bazę cen i tak liczy serwer) */
 /* Zestawy poglądowe – części i ceny z list x-kom użytkownika (stan cen: 26.10.2026).
    light l79zudvlk · value r7mxcru54 · pulse ymat5gyun · venom l96rdhr7d · beast zy89qs2zl */
-const PRICES_AT = '26.10.2026';
+let PRICES_AT = '26.10.2026';   // nadpisywane datą ostatniej aktualizacji cen z bazy (v28: get_pc_sets)
 const SOL_GROUPS = [
   { id: 'web', name: 'Strony internetowe', tagline: 'Od wizytówki po sklep. Każda strona jest szybka, działa na telefonie i należy do Ciebie: domena i hosting są na Twoim koncie.' },
   { id: 'auto', name: 'Automatyzacje', tagline: 'Łączymy narzędzia, których już używasz, żeby powtarzalne zadania działy się same.' },
@@ -174,7 +174,7 @@ function askQuote(id) {
   const msg = $('#cMsg'); if (msg && (!msg.value.trim() || msg.dataset.quote)) { msg.value = (QUOTE_TEXT[d.group] || QUOTE_TEXT.web)(s.name); msg.dataset.quote = '1'; }
   setTimeout(() => { $('#cName')?.focus(); }, 60);
 }
-const ASSEMBLY_GROSZE = 19900;   // STRIKE Custom Assembly – złożenie i testy (od)
+let ASSEMBLY_GROSZE = 19900;   // STRIKE Custom Assembly – złożenie i testy (od); z bazy: services.strike-custom-assembly
 const SETS = [
  {
   "id": "strike-light",
@@ -398,7 +398,7 @@ const SETS = [
 const FORGE = { id: 'strike-forge', num: '06', name: 'STRIKE Forge', badge: 'Stacja robocza', kicker: 'Do pracy twórczej',
   desc: 'Stacja robocza do renderowania 3D, montażu wideo i obliczeń na GPU – konfigurowana pod Twoje programy.', priceFrom: 1350000,
   parts: [['CPU', 'AMD Ryzen 9 9950X'], ['GPU', 'NVIDIA GeForce RTX 5080 16 GB lub RTX 5090 32 GB'], ['RAM', '64–128 GB DDR5'], ['Dysk', '1 TB PCIe Gen5 + 4 TB PCIe Gen4']] };
-const SET_NOTE = `Zestawy są poglądowe – pokazują, co zwykle mieści się w danym budżecie. Ostateczny dobór części ustalamy po rozmowie z Tobą, a ceny sprawdzamy w dniu wyceny (podane: x-kom, ${PRICES_AT}). Części kupujesz sam, u wybranego sklepu i na swoje nazwisko – nie sprzedajemy części ani gotowych komputerów. Płacisz nam tylko za usługę: złożenie i testy (od 199 zł) oraz ewentualne dodatki. Wartość części nie obejmuje systemu operacyjnego, monitora ani peryferiów.`;
+const setNote = () => `Zestawy są poglądowe – pokazują, co zwykle mieści się w danym budżecie. Ostateczny dobór części ustalamy po rozmowie z Tobą, a ceny sprawdzamy w dniu wyceny (podane: x-kom, ${PRICES_AT}). Części kupujesz sam, u wybranego sklepu i na swoje nazwisko – nie sprzedajemy części ani gotowych komputerów. Płacisz nam tylko za usługę: złożenie i testy (od 199 zł) oraz ewentualne dodatki. Wartość części nie obejmuje systemu operacyjnego, monitora ani peryferiów.`;
 const isHiddenService = (s) => s.id === 'strike-ai-local-deploy' || /\bAI\b/.test(s.name || '');
 
 const STATUS = {
@@ -440,6 +440,8 @@ function setConn(state, info) {
     online: ['ok', 'Online', 'ONLINE', 'ok', 'Serwery online'],
     slow: ['wait', 'Wolne łącze', 'DEGRADED', 'wait', 'Serwery online · wolne łącze'],
     connecting: ['wait', 'Łączenie…', 'ŁĄCZENIE', 'wait', 'Łączenie z serwerami…'],
+    retry: ['wait', 'Ponawiam…', 'PONAWIANIE', 'wait', 'Serwer nie odpowiedział – ponawiam połączenie…'],
+    nonet: ['bad', 'Brak internetu', 'BRAK INTERNETU', 'bad', 'Brak internetu na tym urządzeniu'],
     offline: ['bad', 'Serwery niedostępne', 'OFFLINE', 'bad', 'Serwery chwilowo niedostępne'],
     config: ['bad', 'Tryb katalogu', 'BRAK KONFIGURACJI', 'bad', 'Rezerwacje online wyłączone (brak konfiguracji)'],
   }[state];
@@ -449,7 +451,7 @@ function setConn(state, info) {
   $('#liveBadge').className = `live-badge ${map[0] === 'ok' ? 'ok' : map[0] === 'bad' ? 'bad' : ''}`;
   const cs = $('#cStatus'); if (cs) { cs.textContent = map[2]; cs.className = map[3]; }
   const bar = $('#offlineBar');
-  if (state === 'offline') { bar.textContent = info || 'Kalendarz rezerwacji jest chwilowo niedostępny. Spróbujemy ponownie automatycznie – możesz też napisać do nas.'; bar.classList.remove('hidden'); }
+  if (state === 'offline' || state === 'nonet') { bar.textContent = info || (state === 'nonet' ? 'Brak internetu na tym urządzeniu – ceny i wolne terminy mogą być nieaktualne. Odświeżymy je sami, gdy połączenie wróci.' : 'Brak połączenia z serwerem – ceny i wolne terminy mogą być nieaktualne. Ponawiamy automatycznie; możesz też napisać do nas.'); bar.classList.remove('hidden'); }
   else bar.classList.add('hidden');
   if (prev !== state) log(`status: ${map[2]}`);
 }
@@ -466,7 +468,8 @@ function renderConsole() {
 async function heartbeat() {
   clearTimeout(conn.timer);
   if (!sb) return;
-  if (!navigator.onLine) { setConn('offline', 'Brak internetu na tym urządzeniu. Rezerwacja wróci, gdy połączenie się przywróci.'); conn.hist.push(-1); renderConsole(); return schedule(10000); }
+  if (!navigator.onLine) { conn.wasDown = true; setConn('nonet'); conn.hist.push(-1); renderConsole(); return schedule(10000); }
+  if (conn.state === 'init') setConn('connecting');
   const t0 = performance.now();
   let ok = false;
   try {
@@ -485,7 +488,7 @@ async function heartbeat() {
   } else {
     conn.fails++; conn.hist.push(-1); conn.ping = null; conn.wasDown = true;
     const wait = [3, 6, 12, 24, 45][Math.min(conn.fails - 1, 4)] * 1000;
-    setConn('offline');
+    setConn(conn.fails < 2 ? 'retry' : 'offline');   // pojedynczy nieudany ping nie straszy „Serwery niedostępne”
     schedule(wait);
   }
   renderConsole();
@@ -498,7 +501,7 @@ async function resync() {
   findNextFree();
 }
 addEventListener('online', () => { log('internet wrócił'); heartbeat(); });
-addEventListener('offline', () => { conn.wasDown = true; setConn('offline', 'Brak internetu na tym urządzeniu. Rezerwacja wróci, gdy połączenie się przywróci.'); });
+addEventListener('offline', () => { conn.wasDown = true; setConn('nonet'); });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && sb) { heartbeat(); if (B.day) loadSlots(true); if (session) loadPanelData(); }
 });
@@ -543,6 +546,8 @@ async function loadCatalog() {
   }
   for (const r of p.data || []) cat.info.set(r.service_id, r);
   cat.live = true;
+  const asm = s.data.find((x) => x.id === 'strike-custom-assembly'); if (asm?.price_grosze) ASSEMBLY_GROSZE = asm.price_grosze;
+  await loadPcSets();
   if (cat.hasV2) { const a = await sb.from('price_addons').select('label,price_text').order('sort'); if (!a.error && a.data?.length) SOL_ADDONS = a.data.map((x) => [x.label, x.price_text]); }   // „Dodatki i opieka” z panelu Cennik (v23)
   renderCatalog();
 }
@@ -704,6 +709,24 @@ document.addEventListener('click', (e) => { if (e.target.closest?.('#motionBtn')
 try { if (localStorage.getItem('stl_motion') === 'off') document.documentElement.classList.add('paused'); } catch { /* */ }
 
 /* ------------------------------------------------------------------ zestawy poglądowe */
+/* v28: części i ceny zestawów z bazy (get_pc_sets). Cena zestawu = suma aktualnych cen części – liczy ją baza,
+   tu niczego nie wpisujemy ręcznie. Bez migracji / bez sieci zostają dane wbudowane powyżej (SETS). */
+async function loadPcSets() {
+  if (!sb) return;
+  const { data, error } = await sb.rpc('get_pc_sets');
+  if (error) { if (!/get_pc_sets|schema cache|does not exist/i.test(error.message)) log(`zestawy: ${error.message}`); return; }
+  const list = (Array.isArray(data) ? data : []).filter((m) => m.parts_grosze > 0 && m.parts?.length);
+  if (!list.length) return;
+  SETS.splice(0, SETS.length, ...list.map((m) => ({ ...m, featured: !!m.featured, ribbon: m.ribbon || undefined })));
+  if (list[0].assembly_grosze) ASSEMBLY_GROSZE = list[0].assembly_grosze;
+  const at = list.map((m) => m.prices_at).filter(Boolean).sort().pop();
+  if (at) PRICES_AT = new Date(at).toLocaleDateString('pl-PL');
+}
+/* Budżet do zapytania liczy serwer z aktualnego cennika (pc_set_quote); lokalne wyliczenie tylko awaryjnie. */
+async function setQuoteBudget(m) {
+  if (sb) { const { data, error } = await sb.rpc('pc_set_quote', { p_set_id: m.id }); if (!error && data?.budget_zl) return +data.budget_zl; }
+  return Math.ceil(setTotal(m) / 25000) * 250;
+}
 const setTotal = (m) => m.parts_grosze + ASSEMBLY_GROSZE;
 function partsList(parts, main = 4) {
   const row = ([k, v]) => h('div', { class: 'spec-row' }, h('dt', { text: k }), h('dd', { text: v }));
@@ -722,11 +745,11 @@ function renderSets() {
   grid.replaceChildren(
     ...SETS.map((m) => card(m,
       h('div', { class: 'set-price' }, h('small', { text: 'Wartość części (kupujesz sam)' }), h('b', { text: zl(m.parts_grosze) }), h('span', { text: `+ złożenie i testy od ${zl(ASSEMBLY_GROSZE)}` })),
-      h('button', { class: `btn ${m.featured || m.ribbon ? 'btn-gold' : 'btn-ghost'} btn-block`, type: 'button', text: 'Chcę podobny – dobierz części', 'aria-label': `Chcę podobny – dobierz części: ${m.name}`, onclick: () => pcRequest({ budget: Math.ceil(setTotal(m) / 25000) * 250, inspiration: m.name }) }))),
+      h('button', { class: `btn ${m.featured || m.ribbon ? 'btn-gold' : 'btn-ghost'} btn-block`, type: 'button', text: 'Chcę podobny – dobierz części', 'aria-label': `Chcę podobny – dobierz części: ${m.name}`, onclick: async (e) => { const b = e.currentTarget; b.disabled = true; try { pcRequest({ budget: await setQuoteBudget(m), inspiration: m.name }); } finally { b.disabled = false; } } }))),
     card(FORGE,
       h('div', { class: 'set-price' }, h('small', { text: 'Wartość części (kupujesz sam)' }), h('b', { class: 'custom', text: 'Dobór indywidualny' }), h('span', { text: `od ~${zl(FORGE.priceFrom)}` })),
       h('button', { class: 'btn btn-ghost btn-block', type: 'button', text: 'Zapytaj o dobór Forge', onclick: () => pcRequest({ budget: FORGE.priceFrom / 100, inspiration: FORGE.name, purpose: 'creative' }) })));
-  $('#setsNote').textContent = SET_NOTE;
+  $('#setsNote').textContent = setNote();
   renderBudget(); applyMedia(grid);
 }
 /* Dobór do budżetu: najdroższy zestaw poglądowy, który mieści się w budżecie */
@@ -1206,7 +1229,7 @@ async function applySession(s) {
   const was = session?.user?.id; session = s;
   $('#acctTxt').textContent = s ? 'Moje konto' : 'Zaloguj';
   if (!s) { profile = null; isAdmin = false; unsubscribeRealtime(); renderPanel(); refreshSummary(); renderConsole(); chatOnSession(); if (authKnown && route === '/rezerwacja') navigate('/', { replace: true }); return; }
-  if (was === s.user.id && profile) return;
+  if (was === s.user.id && profile && !profile._err) return;   // _err: profil się nie wczytał – spróbuj ponownie przy kolejnym zdarzeniu sesji
   await loadProfile();
   if (isAdmin) adminReady().catch(() => {});   // panel administratora w tle, zanim go otworzysz
   if (s.user.user_metadata?.marketing_consent_at && profile && cat.hasV2) {   // zgoda z formularza rejestracji – zapisz raz, potem usuń znacznik
@@ -1241,7 +1264,11 @@ async function loadProfile() {
   if (!session) return;
   let r = await sb.from('profiles').select('id,email,full_name,phone,referral_code,is_admin,marketing').eq('id', session.user.id).maybeSingle();
   if (r.error && /column/.test(r.error.message)) r = await sb.from('profiles').select('id,email,full_name,phone,referral_code,is_admin').eq('id', session.user.id).maybeSingle();
-  profile = r.data || { email: session.user.email }; isAdmin = !!profile.is_admin;
+  if (r.error) {   // chwilowy błąd sieci/serwera: bez ponowienia admin tracił zakładki (Brief, Cennik…) aż do przeładowania strony
+    log(`profil: ${r.error.message} – ponawiam`); await new Promise((ok) => setTimeout(ok, 1500));
+    r = await sb.from('profiles').select('id,email,full_name,phone,referral_code,is_admin').eq('id', session.user.id).maybeSingle();
+  }
+  profile = r.data || { email: session.user.email, _err: !!r.error }; isAdmin = !!profile.is_admin;
 }
 
 /* ------------------------------------------------------------------ realtime */

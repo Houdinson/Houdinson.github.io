@@ -1,2 +1,10 @@
 # Usunięte zdjęcia zespołu – nie serwujemy ich, nawet ze starej pamięci podręcznej
 /media/zespol/* / 301
+
+# Stałe adresy dokumentów prawnych (linki w mailach, potwierdzeniach i wyszukiwarce) → okno dokumentu na stronie
+/regulamin /#regulamin 301
+/polityka-prywatnosci /#polityka-prywatnosci 301
+/polityka-cookies /#cookies 301
+/odstapienie /#odstapienie 301
+/pouczenie-o-odstapieniu /#odstapienie 301
+/zwroty /#zwroty 301
