@@ -1128,6 +1128,18 @@ async function makeBrief(btn) {
   }
   br.sel = todayKey(); toast('ok', 'Brief zaktualizowany.'); loadBrief(true);
 }
+// Dlaczego briefu nie ma: brak zadania o 9:00, wyłączony pg_cron albo błąd ostatniego uruchomienia (migracja v33).
+async function briefHealth(el) {
+  let r;
+  try { r = await sb.rpc('admin_brief_health'); } catch (e) { r = { error: e }; }
+  if (r.error) { el.textContent = /admin_brief_health|schema cache|does not exist/i.test(r.error.message || '') ? 'Automatyczny brief o 9:00 wymaga migracji v33 (supabase/do-sql-editora/v33.sql).' : ''; return; }
+  const d = r.data || {};
+  el.textContent = !d.table || !d.function ? 'Brak tabeli lub funkcji briefu (migracja v27).'
+    : !d.cron_extension ? 'Automat o 9:00 nie działa: włącz rozszerzenie pg_cron (Supabase → Database → Extensions) i uruchom migrację v33.'
+      : !d.job ? 'Brak zadania „stl-brief-dnia” – uruchom migrację v33.'
+        : d.last_run && d.last_run.status !== 'succeeded' ? `Ostatnie automatyczne uruchomienie (${fmt(d.last_run.at, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}) – błąd: ${d.last_run.message || d.last_run.status}`
+          : `Automat aktywny (pg_cron ${d.job.schedule} UTC = 9:00 w Polsce)${d.last_run ? `, ostatnio ${fmt(d.last_run.at, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}.`;
+}
 function renderBrief() {
   const box = $('#briefOut'); if (!box) return;
   if (br.err) { box.replaceChildren(h('div', { class: 'banner err', text: br.err })); return; }
@@ -1141,7 +1153,12 @@ function renderBrief() {
     h('div', {}, h('h3', { style: 'margin:0', text: b ? `Brief: ${fmt(`${b.day}T12:00:00Z`, { weekday: 'long', day: 'numeric', month: 'long' })}` : 'Brief dnia' }),
       h('p', { class: 'muted small', style: 'margin:4px 0 0', text: b ? `Dane z ${fmt(b.updated_at, { hour: '2-digit', minute: '2-digit' })} · nowy brief codziennie o 9:00` : 'Nowy brief pojawia się codziennie o 9:00.' })),
     refresh);
-  if (!b) { box.replaceChildren(head, h('div', { class: 'empty', text: 'Brief na dziś pojawi się o 9:00. Możesz go też utworzyć teraz przyciskiem powyżej.' })); return; }
+  if (!b) {
+    const diag = h('p', { class: 'note', style: 'margin:12px 0 0' });
+    box.replaceChildren(head, h('div', { class: 'empty', text: 'Brief na dziś pojawi się o 9:00. Możesz go też utworzyć teraz przyciskiem powyżej.' }), diag);
+    briefHealth(diag);
+    return;
+  }
   const d = b.data || {}, y = d.yesterday || {}, t = d.todo || {}, q = d.quarter || {};
   const stat = (v, l, gold) => h('div', { class: 'bf-stat' }, h('b', { class: gold ? 'gold' : '', text: String(v) }), h('span', { text: l }));
   const todo = [

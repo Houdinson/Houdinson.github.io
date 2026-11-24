@@ -769,7 +769,9 @@ function renderSets() {
     ...partsList(m.parts), price, btn);
   grid.replaceChildren(
     ...SETS.map((m) => card(m,
-      h('div', { class: 'set-price' }, h('small', { text: 'Wartość części (kupujesz sam)' }), h('b', { text: zl(m.parts_grosze) }), h('span', { text: `+ złożenie i testy od ${zl(ASSEMBLY_GROSZE)}` })),
+      h('div', { class: 'set-price' }, h('small', { text: 'Wartość części (kupujesz sam)' }), h('b', { text: zl(m.parts_grosze) }), h('span', { text: `+ złożenie i testy od ${zl(ASSEMBLY_GROSZE)}` }),
+        // Omnibus (v33): przy obniżce – najniższa wartość części z 30 dni przed obniżką
+        m.reduction && m.before_reduction_lowest30_grosze ? h('span', { class: 'omni', text: `Najniższa cena z 30 dni przed obniżką: ${zl(m.before_reduction_lowest30_grosze)}` }) : null),
       h('button', { class: `btn ${m.featured || m.ribbon ? 'btn-gold' : 'btn-ghost'} btn-block`, type: 'button', text: 'Chcę podobny – dobierz części', 'aria-label': `Chcę podobny – dobierz części: ${m.name}`, onclick: async (e) => { const b = e.currentTarget; b.disabled = true; try { pcRequest({ budget: await setQuoteBudget(m), inspiration: m.name }); } finally { b.disabled = false; } } }))),
     card(FORGE,
       h('div', { class: 'set-price' }, h('small', { text: 'Wartość części (kupujesz sam)' }), h('b', { class: 'custom', text: 'Dobór indywidualny' }), h('span', { text: `od ~${zl(FORGE.priceFrom)}` })),
