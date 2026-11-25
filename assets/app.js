@@ -459,7 +459,7 @@ function setConn(state, info) {
   const map = {
     online: ['ok', 'Online', 'ONLINE', 'ok', 'Serwery online'],
     slow: ['wait', 'Wolne łącze', 'DEGRADED', 'wait', 'Serwery online · wolne łącze'],
-    connecting: ['wait', 'Łączenie…', 'ŁĄCZENIE', 'wait', 'Łączenie z serwerami…'],
+    connecting: ['wait', 'Rezerwacje', 'ŁĄCZENIE', 'wait', 'Rezerwacja online · pn–sb 10:00–20:00'],
     retry: ['wait', 'Ponawiam…', 'PONAWIANIE', 'wait', 'Serwer nie odpowiedział – ponawiam połączenie…'],
     nonet: ['bad', 'Brak internetu', 'BRAK INTERNETU', 'bad', 'Brak internetu na tym urządzeniu'],
     offline: ['bad', 'Serwery niedostępne', 'OFFLINE', 'bad', 'Serwery chwilowo niedostępne'],
