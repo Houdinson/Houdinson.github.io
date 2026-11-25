@@ -28,6 +28,10 @@ async function loadSupabaseLib() {
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const TZ = 'Europe/Warsaw';
+/* Wersja plików (?v=… w index.html): po każdej zmianie JS/CSS podnieś ją w index.html i uruchom node tools/strony.mjs,
+   żeby przeglądarki i Cloudflare nie podawały starej kopii. Te same ?v= dostają admin.js i stl-report.js. */
+const ASSET_V = (() => { try { return new URL(document.currentScript.src).searchParams.get('v') || ''; } catch { return ''; } })();
+const VQ = ASSET_V ? `?v=${ASSET_V}` : '';
 const BASE = ('/' + String(CFG.BASE_PATH || '/').replace(/^\/+|\/+$/g, '') + '/').replace('//', '/');
 const SITE_URL = location.origin + BASE;              // np. http://localhost:3000/
 /* [widok, <title>, meta description, kategoria usług, nagłówek H1 podstrony usług]. Tytuły i opisy MUSZĄ być takie same jak w statycznych
@@ -1259,7 +1263,7 @@ function reviewBox(o) {
 let ADMIN_LOAD = null;
 function adminReady() {
   return (ADMIN_LOAD ||= new Promise((ok, no) => {
-    const el = document.createElement('script'); el.src = BASE + 'assets/admin.js'; el.async = true;
+    const el = document.createElement('script'); el.src = BASE + 'assets/admin.js' + VQ; el.async = true;
     el.onload = () => ok(); el.onerror = () => { ADMIN_LOAD = null; el.remove(); no(new Error('Nie udało się wczytać panelu administratora. Odśwież stronę.')); };
     document.head.append(el);
   }));
@@ -2190,7 +2194,7 @@ function clientContact(userId) {
 
 /* ------------------------------------------------------------------ raport STRIKE PROOF w panelu admina (szablon usługi → PDF) */
 let REPmod = null, REPload = null;
-const repModule = () => (REPload ||= import(BASE + 'stl-report.js').then((m) => (REPmod = m)).catch((e) => { REPload = null; throw e; }));
+const repModule = () => (REPload ||= import(BASE + 'stl-report.js' + VQ).then((m) => (REPmod = m)).catch((e) => { REPload = null; throw e; }));
 function downloadBlob(blob, name) { const u = URL.createObjectURL(blob); const a = h('a', { href: u, download: name }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
 /* ------------------------------------------------------------------ kontakt */
 function renderContactTopics() {
