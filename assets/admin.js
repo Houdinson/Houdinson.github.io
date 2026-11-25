@@ -936,12 +936,10 @@ async function loadPrices(force) {
   pr.loading = true;
   if (!(await adminMfaOk(false, '#pricesOut'))) { pr.loading = false; return; }
   if (!pr.list) box.replaceChildren(h('p', { class: 'muted', text: 'Ładuję cennik…' }));
-  let l, a = { error: true }, pc;
-  try { [l, a, pc] = await Promise.all([sb.rpc('admin_price_list'), sb.from('price_addons').select('label,price_text').order('sort'), sb.rpc('admin_pc_parts')]); }
+  let l, a = { error: true };
+  try { [l, a] = await Promise.all([sb.rpc('admin_price_list'), sb.from('price_addons').select('label,price_text').order('sort')]); }
   catch (e) { l = { error: { message: String(e?.message || e) } }; }
   finally { pr.loading = false; }
-  pr.parts = pc && !pc.error ? (pc.data || []) : null;
-  pr.partsErr = pc?.error ? (/admin_pc_parts|schema cache|does not exist/i.test(pc.error.message) ? 'Ceny części wymagają migracji v28 (20261124120000_v28_cennik_zestawow_brief.sql).' : pc.error.message) : '';
   if (l.error) { pr.err = /admin_price_list|schema cache|does not exist/i.test(l.error.message) ? 'Edycja cennika wymaga migracji v23 – uruchom: npx supabase db push --linked' : l.error.message; renderPrices(); return; }
   pr.err = ''; pr.list = l.data || []; pr.addons = a.error ? SOL_ADDONS.map(([label, price_text]) => ({ label, price_text })) : (a.data || []);
   pr.draft.clear(); renderPrices();
@@ -988,8 +986,8 @@ function renderPrices() {
       h('div', { class: 'scroll-x' }, h('table', { class: 'adm pr-table' },
         h('thead', {}, h('tr', {}, ['Usługa', 'Cena', 'Na stronie', 'Ostatnia zmiana'].map((t) => h('th', { text: t })))),
         h('tbody', {}, g.items.map(row)))))),
-    bar, addonsCard(), partsCard(),
-    h('p', { class: 'note', style: 'margin-top:14px', text: 'Dopłata Express (+50 zł) jest liczona w bazie. Ceny zestawów PC na stronie liczą się same z cen części powyżej.' }));
+    bar, addonsCard(),
+    h('p', { class: 'note', style: 'margin-top:14px', text: 'Dopłata Express (+50 zł) jest liczona w bazie. Zestawy PC na stronie to portfolio bez cen – nie sprzedajemy sprzętu.' }));
   refreshBar();
 }
 async function savePrices(btn) {
@@ -1008,67 +1006,6 @@ async function savePrices(btn) {
   if (errs.length) toast('err', errs.join(' · '), 12000);
   await loadPrices(true);
   if (typeof loadCatalog === 'function') loadCatalog();     // odśwież ceny na stronie w tej karcie
-}
-/* v28: ceny części zestawów PC. Zapis → baza dopisuje historię i przelicza wszystkie zestawy z tą częścią. */
-function partsCard() {
-  if (pr.partsErr) return h('div', { class: 'card', style: 'margin-top:18px' }, h('h3', { text: 'Części zestawów PC' }), h('div', { class: 'banner err', text: pr.partsErr }));
-  if (!pr.parts) return null;
-  const draft = new Map(), msg = h('p', { class: 'form-msg', role: 'status', 'aria-live': 'polite' });
-  const save = h('button', { class: 'btn btn-gold btn-sm', type: 'button', disabled: true, text: 'Zapisz ceny części' });
-  const feed = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Pobierz ceny z feedu teraz' });
-  const missing = pr.parts.filter((p) => p.active && !p.price_grosze).length;
-  const sync = () => { const bad = [...draft.values()].some((d) => d.bad); save.disabled = !draft.size || bad; save.textContent = bad ? 'Popraw błędną cenę' : draft.size ? `Zapisz ceny części (${draft.size})` : 'Zapisz ceny części'; };
-  const row = (p) => {
-    const inp = h('input', { class: 'input pr-in', inputmode: 'decimal', value: p.price_grosze ? zlInput(p.price_grosze) : '', placeholder: 'brak', 'aria-label': `Cena części: ${p.name}` });
-    const err = h('span', { class: 'err' });
-    inp.addEventListener('input', () => {
-      const v = inp.value.trim(), g = parseZl(v), ok = g >= 100 && g <= 10000000;
-      err.textContent = !v || ok ? '' : 'Od 1 do 100 000 zł'; inp.setAttribute('aria-invalid', String(!!v && !ok));
-      if (!v || g === p.price_grosze) draft.delete(p.id); else draft.set(p.id, { id: p.id, price_grosze: ok ? g : null, bad: !ok });
-      sync();
-    });
-    return h('tr', { class: p.active ? '' : 'pr-off' },
-      h('td', {}, h('b', { text: p.name }), h('br'), h('span', { class: 'muted small', text: `${p.category} · ${(p.sets || []).join(', ') || 'w żadnym zestawie'}` })),
-      h('td', {}, h('div', { class: 'pr-cell' }, inp, h('span', { class: 'muted', text: 'zł' })), err),
-      h('td', { class: 'muted small', text: p.lowest30_grosze ? zl(p.lowest30_grosze) : '–' }),
-      h('td', { class: 'muted small', text: p.price_checked_at ? fmt(p.price_checked_at, { dateStyle: 'medium' }) : '–' }));
-  };
-  const report = (r) => {
-    const sk = r?.skipped || [], un = r?.unknown || [];
-    msg.className = `form-msg ${sk.length || un.length ? 'err' : 'ok'}`;
-    msg.textContent = `Zmienione: ${r?.updated ?? 0}, bez zmian: ${r?.unchanged ?? 0}` + (sk.length ? ` · pominięte: ${sk.map((x) => `${x.id} (${x.reason})`).join(', ')}` : '') + (un.length ? ` · nieznane id: ${un.join(', ')}` : '');
-  };
-  save.onclick = async () => {
-    const items = [...draft.values()].map(({ id, price_grosze }) => ({ id, price_grosze }));
-    setBusy(save, true, 'Zapisuję…');
-    let { data, error } = await sb.rpc('admin_apply_part_prices', { p_items: items, p_force: false });
-    if (!error && data?.skipped?.length && confirm(`Duża zmiana ceny (ponad 40%):\n${data.skipped.map((x) => `• ${x.id}: ${x.reason}`).join('\n')}\n\nZapisać mimo to?`)) {
-      const again = items.filter((it) => data.skipped.some((x) => x.id === it.id));
-      const r2 = await sb.rpc('admin_apply_part_prices', { p_items: again, p_force: true });
-      if (r2.error) error = r2.error; else data = { ...data, updated: data.updated + r2.data.updated, skipped: r2.data.skipped };
-    }
-    setBusy(save, false, 'Zapisz ceny części');
-    if (error) { if (isPermErr(error)) return adminMfaOk(false, '#pricesOut'); msg.className = 'form-msg err'; msg.textContent = error.message; return; }
-    toast('ok', 'Ceny części zapisane – zestawy przeliczone.');
-    await loadPrices(true);
-    if (typeof loadCatalog === 'function') loadCatalog();
-    if (data?.skipped?.length || data?.unknown?.length) toast('err', `Pominięte: ${data.skipped.map((x) => x.id).join(', ')}`, 10000);
-  };
-  feed.onclick = async () => {
-    setBusy(feed, true, 'Pobieram…');
-    try {
-      const r = await callFn('pc-prices', {});
-      toast(r?.skipped?.length || r?.unknown?.length ? 'err' : 'ok', `Feed: zmienione ${r?.updated ?? 0}, bez zmian ${r?.unchanged ?? 0}, pominięte ${r?.skipped?.length ?? 0}, nieznane ${r?.unknown?.length ?? 0}.`, 10000);
-      await loadPrices(true); if (typeof loadCatalog === 'function') loadCatalog();
-    } catch (e) { report({}); msg.className = 'form-msg err'; msg.textContent = e.message === 'PC_PRICE_FEED_URL_MISSING' ? 'Brak adresu feedu – ustaw sekret PC_PRICE_FEED_URL w Supabase.' : e.message; }
-    setBusy(feed, false, 'Pobierz ceny z feedu teraz');
-  };
-  return h('div', { class: 'card', style: 'margin-top:18px' }, h('h3', { text: 'Części zestawów PC' }),
-    h('p', { class: 'muted small', text: `Cena zestawu na stronie = suma cen jego części + montaż. Ceny aktualizują się też automatycznie raz dziennie z feedu (funkcja pc-prices).${missing ? ` Bez ceny: ${missing} – do czasu uzupełnienia wszystkich części zestaw pokazuje dotychczasową kwotę.` : ''}` }),
-    h('div', { class: 'scroll-x' }, h('table', { class: 'adm pr-table' },
-      h('thead', {}, h('tr', {}, ['Część', 'Cena', 'Najniższa z 30 dni', 'Sprawdzono'].map((t) => h('th', { text: t })))),
-      h('tbody', {}, pr.parts.map(row)))),
-    h('div', { class: 'cta-row', style: 'margin-top:10px' }, feed, save), msg);
 }
 function addonsCard() {
   const rows = h('div', { class: 'pr-addons' });

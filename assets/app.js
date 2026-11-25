@@ -38,7 +38,7 @@ const ROUTES = {
   '/optymalizacja': ['uslugi', 'Optymalizacja i tuning PC zdalnie – undervolting, input lag | Strike Tech Lab', 'Zdalna optymalizacja komputera w całej Polsce: undervolting CPU i GPU, niższy input lag, strojenie Windows, BIOS-u i RAM. Pomiar przed i po, raport, płatność online.', 'optimization', 'Optymalizacja i tuning PC – zdalnie'],
   '/serwis': ['uslugi', 'Serwis i montaż PC Łańcut – składanie, czyszczenie, naprawa | Strike Tech Lab', 'Serwis komputerów w Łańcucie – osobiście lub kurierem z całej Polski: montaż z Twoich części, czyszczenie i wymiana past, regeneracja chłodzenia, diagnostyka i naprawa.', 'service', 'Serwis i montaż PC – Łańcut i kurierem'],
   '/strony-www': ['uslugi', 'Strony WWW i automatyzacja dla firm | Strike Tech Lab', 'Strony internetowe dla małych firm z Podkarpacia i całej Polski: wizytówka, strona firmowa, sklep oraz automatyzacja powtarzalnych zadań. Stała cena, termin i rundy poprawek w umowie.', 'solutions', 'Strony WWW i automatyzacja dla firm'],
-  '/zestawy': ['zestawy', 'Zestawy PC i składanie komputera na zamówienie | Strike Tech Lab', 'Przykładowe zestawy PC od 1080p do 4K i stacja robocza z aktualnymi cenami części. Dobieramy części, kupujesz je Ty, my składamy, testujemy i dajemy raport.'],
+  '/zestawy': ['zestawy', 'Zestawy PC – portfolio zoptymalizowanych konfiguracji | Strike Tech Lab', 'Portfolio zoptymalizowanych zestawów PC z wynikami FPS przed i po optymalizacji. Doradzamy przy doborze podzespołów, konfigurujemy i optymalizujemy – zapytaj o podobny zestaw.'],
   '/rezerwacja': ['rezerwacja', 'Rezerwacja terminu online | Strike Tech Lab', 'Wybierz usługę i wolny termin (pn–pt, 9:00–18:00), zapłać online kartą, BLIK-iem lub Przelewy24. Status zlecenia śledzisz w Strefie Klienta.'],
   '/potwierdzenie': ['potwierdzenie', 'Potwierdzenie rezerwacji | Strike Tech Lab', 'Potwierdzenie płatności i rezerwacji terminu w Strike Tech Lab.'],
   '/konto': ['konto', 'Strefa Klienta | Strike Tech Lab', 'Twoje zlecenia, raporty z pomiarów, rachunki i kod polecający w jednym miejscu.'],
@@ -163,10 +163,6 @@ const SVC = {
   'strike-auto-flow': { cat: 'solutions', group: 'auto', mode: 'project', dur: 60, price: 169000, pct: 100, label: 'Pakiet procesów', popular: true, term: '1–2 tygodnie', rev: '30 dni poprawek po wdrożeniu', forWho: 'Dla firm, które chcą zautomatyzować obsługę klienta od zapytania do płatności.', summary: 'Do 3 powiązanych przepływów z logiką warunkową.', includes: ['Analiza procesu i mapa: co dzieje się ręcznie, co można przejąć', 'Do 3 przepływów, np. zapytanie → oferta → przypomnienie → faktura', 'Warunki i rozgałęzienia (np. inna ścieżka dla firm i osób prywatnych)', 'Automatyczne raporty dzienne lub tygodniowe na e-mail', 'Powiadomienia o błędach i dokumentacja przepływów'], note: 'Najpierw bezpłatna analiza procesu i wycena na piśmie. Płatność 100% z góry, po akceptacji zakresu. Abonamenty narzędzi (jeśli są potrzebne) opłacasz bezpośrednio u dostawcy.' },
   'strike-auto-system': { cat: 'solutions', group: 'auto', mode: 'project', dur: 60, price: 399000, pct: 100, label: 'System i integracje', term: '3–5 tygodni', rev: '60 dni poprawek po wdrożeniu', forWho: 'Dla firm, w których dane krążą między sklepem, CRM, magazynem i księgowością.', summary: 'Do 8 przepływów, integracje przez API i panel z raportami.', includes: ['Audyt narzędzi i plan integracji etapami', 'Do 8 przepływów, integracje przez API (sklep, CRM, BaseLinker, fakturowanie)', 'Własny serwer n8n na Twoim koncie (bez opłat za liczbę operacji)', 'Panel lub arkusz z raportami i wskaźnikami', 'Monitoring, kopie zapasowe przepływów i szkolenie zespołu'], note: 'Najpierw bezpłatna analiza procesu i wycena na piśmie. Płatność 100% z góry, po akceptacji zakresu. Abonamenty narzędzi (jeśli są potrzebne) opłacasz bezpośrednio u dostawcy.' },
 };
-/* Zestawy PC – treści 1:1 z catalog.json / realizacje.html (ceny i dopłaty w groszach; bazę cen i tak liczy serwer) */
-/* Zestawy poglądowe – części i ceny z list x-kom użytkownika (stan cen: 26.10.2026).
-   light l79zudvlk · value r7mxcru54 · pulse ymat5gyun · venom l96rdhr7d · beast zy89qs2zl */
-let PRICES_AT = '26.10.2026';   // nadpisywane datą ostatniej aktualizacji cen z bazy (v28: get_pc_sets)
 const SOL_GROUPS = [
   { id: 'web', name: 'Strony internetowe', tagline: 'Od wizytówki po sklep. Każda strona jest szybka, działa na telefonie i należy do Ciebie: domena i hosting są na Twoim koncie.' },
   { id: 'auto', name: 'Automatyzacje', tagline: 'Łączymy narzędzia, których już używasz, żeby powtarzalne zadania działy się same.' },
@@ -195,230 +191,21 @@ function askQuote(id) {
   setTimeout(() => { $('#cName')?.focus(); }, 60);
 }
 let ASSEMBLY_GROSZE = 19900;   // STRIKE Custom Assembly – złożenie i testy (od); z bazy: services.strike-custom-assembly
-const SETS = [
- {
-  "id": "strike-light",
-  "num": "01",
-  "name": "STRIKE Light",
-  "badge": "Start 1080p",
-  "kicker": "Tani PC / 1080p",
-  "desc": "Przystępny zestaw do gier e-sportowych i grania w 1080p.",
-  "parts": [
-   [
-    "CPU",
-    "AMD Ryzen 5 5600"
-   ],
-   [
-    "GPU",
-    "INNO3D GeForce RTX 5060 Twin X2 8 GB"
-   ],
-   [
-    "RAM",
-    "G.Skill Ripjaws V 16 GB (2×8 GB) DDR4-3600 CL18"
-   ],
-   [
-    "Dysk",
-    "Lexar NM620 1 TB NVMe"
-   ],
-   [
-    "Płyta",
-    "Gigabyte B550 Gaming X V2"
-   ],
-   [
-    "Zasilacz",
-    "Endorfy Vero L6 550 W 80+ Bronze"
-   ],
-   [
-    "Chłodzenie",
-    "Thermalright Assassin X 120 Refined SE"
-   ],
-   [
-    "Obudowa",
-    "Deepcool CC560 ARGB"
-   ]
-  ],
-  "parts_grosze": 552400
- },
- {
-  "id": "strike-value-champion",
-  "num": "02",
-  "name": "STRIKE Value Champion",
-  "badge": "AM5",
-  "kicker": "Platforma z możliwością rozbudowy",
-  "ribbon": "Nasz wybór",
-  "featured": true,
-  "desc": "Zestaw na platformie AM5, którą łatwo rozbudować w przyszłości.",
-  "parts": [
-   [
-    "CPU",
-    "AMD Ryzen 5 7500F"
-   ],
-   [
-    "GPU",
-    "Gigabyte Radeon RX 9070 GRE Gaming OC 12 GB"
-   ],
-   [
-    "RAM",
-    "Goodram IRDM 16 GB (1×16 GB) DDR5-6000 CL30"
-   ],
-   [
-    "Dysk",
-    "Kingston KC3000 1 TB NVMe PCIe 4.0"
-   ],
-   [
-    "Płyta",
-    "ASRock B650M-H/M.2+"
-   ],
-   [
-    "Zasilacz",
-    "SMX Okame G3 650 W 80+ Gold, ATX 3.1"
-   ],
-   [
-    "Chłodzenie",
-    "Endorfy Fera 5 120 mm"
-   ],
-   [
-    "Obudowa",
-    "SMX Coffer"
-   ]
-  ],
-  "parts_grosze": 689200
- },
- {
-  "id": "strike-pulse",
-  "num": "03",
-  "name": "STRIKE Pulse",
-  "badge": "1440p i cisza",
-  "kicker": "E-sport i cicha praca",
-  "desc": "Do gier w 1440p i e-sportu, z naciskiem na cichą pracę.",
-  "parts": [
-   [
-    "CPU",
-    "AMD Ryzen 7 7700"
-   ],
-   [
-    "GPU",
-    "ASRock Radeon RX 9060 XT Challenger OC 16 GB"
-   ],
-   [
-    "RAM",
-    "Goodram IRDM 32 GB (2×16 GB) DDR5-6400 CL32"
-   ],
-   [
-    "Dysk",
-    "Kingston KC3000 1 TB NVMe PCIe 4.0"
-   ],
-   [
-    "Płyta",
-    "ASRock B650M-H/M.2+"
-   ],
-   [
-    "Zasilacz",
-    "be quiet! Pure Power 12 750 W 80+ Gold"
-   ],
-   [
-    "Chłodzenie",
-    "Endorfy Fera 5 120 mm"
-   ],
-   [
-    "Obudowa",
-    "SMX Coffer"
-   ]
-  ],
-  "parts_grosze": 801200
- },
- {
-  "id": "strike-venom",
-  "num": "04",
-  "name": "STRIKE Venom",
-  "badge": "E-sport turniejowy",
-  "kicker": "Do gier e-sportowych",
-  "desc": "Zestaw z procesorem 3D V-Cache do gier e-sportowych na monitorach o wysokim odświeżaniu.",
-  "parts": [
-   [
-    "CPU",
-    "AMD Ryzen 7 7800X3D"
-   ],
-   [
-    "GPU",
-    "Gigabyte Radeon RX 9070 XT Gaming OC 16 GB"
-   ],
-   [
-    "RAM",
-    "Goodram IRDM 32 GB (2×16 GB) DDR5-6400 CL32"
-   ],
-   [
-    "Dysk",
-    "Kingston NV3 1 TB NVMe PCIe 4.0"
-   ],
-   [
-    "Płyta",
-    "ASUS B650E MAX Gaming WiFi"
-   ],
-   [
-    "Zasilacz",
-    "be quiet! Pure Power 12 850 W 80+ Gold"
-   ],
-   [
-    "Chłodzenie",
-    "Endorfy Navis F360 ARGB (AIO 360 mm)"
-   ],
-   [
-    "Obudowa",
-    "Thermalright A70 FAN"
-   ]
-  ],
-  "parts_grosze": 1042200
- },
- {
-  "id": "strike-esport-beast",
-  "num": "05",
-  "name": "STRIKE eSport Beast",
-  "badge": "4K i e-sport",
-  "kicker": "Najmocniejszy w ofercie",
-  "ribbon": "Najmocniejszy",
-  "desc": "Najmocniejsza konfiguracja w naszej ofercie – do gier w 4K i e-sportu.",
-  "parts": [
-   [
-    "CPU",
-    "AMD Ryzen 7 9800X3D"
-   ],
-   [
-    "GPU",
-    "Gainward GeForce RTX 5080 Phoenix V1 16 GB"
-   ],
-   [
-    "RAM",
-    "Goodram IRDM 32 GB (2×16 GB) DDR5-6400 CL32"
-   ],
-   [
-    "Dysk",
-    "Kingston KC3000 2 TB NVMe PCIe 4.0"
-   ],
-   [
-    "Płyta",
-    "Gigabyte B650 Gaming X AX V2"
-   ],
-   [
-    "Zasilacz",
-    "be quiet! Pure Power 13 M 1000 W 80+ Gold"
-   ],
-   [
-    "Chłodzenie",
-    "Endorfy Navis F360 (AIO 360 mm)"
-   ],
-   [
-    "Obudowa",
-    "Endorfy Signum 300 Air"
-   ]
-  ],
-  "parts_grosze": 1613200
- }
-];
-const FORGE = { id: 'strike-forge', num: '06', name: 'STRIKE Forge', badge: 'Stacja robocza', kicker: 'Do pracy twórczej',
-  desc: 'Stacja robocza do renderowania 3D, montażu wideo i obliczeń na GPU – konfigurowana pod Twoje programy.', priceFrom: 1350000,
-  parts: [['CPU', 'AMD Ryzen 9 9950X'], ['GPU', 'NVIDIA GeForce RTX 5080 16 GB lub RTX 5090 32 GB'], ['RAM', '64–128 GB DDR5'], ['Dysk', '1 TB PCIe Gen5 + 4 TB PCIe Gen4']] };
-const setNote = () => `Zestawy są poglądowe – pokazują, co zwykle mieści się w danym budżecie. Ostateczny dobór części ustalamy po rozmowie z Tobą, a ceny sprawdzamy w dniu wyceny (podane: x-kom, ${PRICES_AT}). Części kupujesz sam, u wybranego sklepu i na swoje nazwisko – nie sprzedajemy części ani gotowych komputerów. Płacisz nam tylko za usługę: złożenie i testy (od 199 zł) oraz ewentualne dodatki. Wartość części nie obejmuje systemu operacyjnego, monitora ani peryferiów.`;
+/* Zestawy PC – portfolio zoptymalizowanych konfiguracji (bez cen; nie sprzedajemy sprzętu).
+   Wyniki: średni FPS i 1% low (P1) przed i po optymalizacji STRIKE: [przed, po, przyrost %]. */
+const BUILDS = [
+  { id: 'zestaw-1', case: 'be quiet! Light Base 600 LX ARGB', mobo: 'Gigabyte X870E AORUS ELITE', cpu: '9800X3D', gpu: 'RTX 5080', ram: '6000MHz 64GB CL28', avg: [830, 1043, 26], p1: [318, 378, 19] },
+  { id: 'zestaw-2', case: 'be quiet! Light Base 600 LX ARGB', mobo: 'MSI B850 GAMING PLUS WIFI', cpu: '9800X3D', gpu: 'RTX 5070 TI', ram: '32GB 6000MHz CL30', avg: [871, 1068, 23], p1: [294, 370, 26] },
+  { id: 'zestaw-3', case: 'Modecom Volcano Stellar 5F ARGB', mobo: 'ASUS TUF GAMING B650-E', cpu: '7700X', gpu: 'RTX 5070', ram: '32GB 6000MHz CL30', avg: [673, 898, 33], p1: [208, 281, 35] },
+  { id: 'zestaw-4', case: 'Corsair iCUE 6500X RGB', mobo: 'Gigabyte X870E AORUS PRO ICE', cpu: '9800X3D', gpu: 'RTX 5090', ram: '64GB 6000MHz CL30', avg: [999, 1161, 16], p1: [342, 403, 18] },
+  { id: 'zestaw-5', case: 'Krux Exo RGB', mobo: 'Gigabyte X870E AORUS ELITE', cpu: '9800X3D', gpu: 'RTX 5080', ram: '32GB 6000MHz CL30', avg: [802, 1011, 26], p1: [298, 362, 21] },
+  { id: 'zestaw-6', case: 'Krux Empero ARGB', mobo: 'Gigabyte X870E AORUS ELITE X3D', cpu: '9800X3D', gpu: 'RTX 5080', ram: '6000MHz 32GB CL30', avg: [824, 1096, 33], p1: [307, 380, 24] },
+  { id: 'zestaw-7', case: 'be quiet! Light Base 600 LX ARGB', mobo: 'Gigabyte X870E AORUS ELITE', cpu: '9800X3D', gpu: 'RTX 5080', ram: '6000MHz 64GB CL26', avg: [862, 1184, 37], p1: [330, 394, 20] },
+  { id: 'zestaw-8', case: 'NZXT H9 FLOW RGB+', mobo: 'ASUS TUF GAMING X870E-PLUS', cpu: '9800X3D', gpu: 'RTX 5080', ram: '6000MHz 32GB CL30', avg: [794, 1062, 34], p1: [290, 368, 27] },
+].map((b, i) => ({ ...b, num: i + 1, name: `Zestaw ${i + 1}` }));
+const BUILD_SPEC = [['case', 'Obudowa'], ['mobo', 'Płyta główna'], ['cpu', 'Procesor'], ['gpu', 'Karta graficzna'], ['ram', 'RAM']];
+const gainPct = ([a, b, pct]) => pct ?? Math.round((b - a) / a * 100);   // przyrost % jak w pomiarze (podany ręcznie)
+const buildSummary = (b) => `${b.cpu} + ${b.gpu} + ${b.mobo} + ${b.ram} + ${b.case}`;
 const isHiddenService = (s) => s.id === 'strike-ai-local-deploy' || /\bAI\b/.test(s.name || '');
 
 const STATUS = {
@@ -482,7 +269,7 @@ function renderConsole() {
   $('#cPing').textContent = conn.ping === null ? '–' : `${conn.ping} ms`;
   $('#cPing').className = conn.ping === null ? '' : conn.ping < 400 ? 'ok' : conn.ping < 1500 ? 'wait' : 'bad';
   const spark = $('#cSpark'); spark.replaceChildren(...conn.hist.slice(-28).map((p) => h('i', { class: p < 0 ? 'fail' : '', style: `height:${p < 0 ? 100 : Math.max(8, Math.min(100, p / 8))}%` })));
-  $('#cItems').textContent = cat.services.size ? `${[...cat.services.values()].filter((s) => s.kind === 'USLUGA').length} usług · ${SETS.length + 1} zestawów poglądowych` : '–';
+  $('#cItems').textContent = cat.services.size ? `${[...cat.services.values()].filter((s) => s.kind === 'USLUGA').length} usług · ${BUILDS.length} zestawów w portfolio` : '–';
   const rt = $('#cRealtime');
   rt.textContent = !session ? 'po zalogowaniu' : conn.realtime ? 'AKTYWNE' : 'odświeżanie co 60 s';
   rt.className = session && conn.realtime ? 'ok' : '';
@@ -598,7 +385,6 @@ async function loadCatalog() {
   for (const r of p.data || []) cat.info.set(r.service_id, r);
   cat.live = true;
   const asm = s.data.find((x) => x.id === 'strike-custom-assembly'); if (asm?.price_grosze) ASSEMBLY_GROSZE = asm.price_grosze;
-  await loadPcSets();
   if (cat.hasV2) { const a = await sb.from('price_addons').select('label,price_text').order('sort'); if (!a.error && a.data?.length) SOL_ADDONS = a.data.map((x) => [x.label, x.price_text]); }   // „Dodatki i opieka” z panelu Cennik (v23)
   renderCatalog();
 }
@@ -635,7 +421,7 @@ function renderCatalog() {
       h('div', { class: 'cat-head' }, h('h3', { text: c.name }), h('p', { text: c.tagline })),
       ...(c.id === 'solutions' ? solBlocks(list) : [h('div', { class: 'grid g3' }, list.map(svcCard))])));
   }
-  renderSets(); renderItemSelect(); renderContactTopics(); renderConsole(); renderTiles(); initAdvisor();
+  renderSets(); renderItemSelect(); renderContactTopics(); applyBuildParam(); renderConsole(); renderTiles(); initAdvisor();
 }
 function svcCard(s) {
   const d = SVC[s.id] || {}, proj = s.mode === 'project', cta = proj ? 'Zapytaj o wycenę' : 'Zarezerwuj termin';
@@ -762,66 +548,46 @@ function setMotion(paused, save = true) {
 document.addEventListener('click', (e) => { if (e.target.closest?.('#motionBtn')) setMotion(!document.documentElement.classList.contains('paused')); });
 try { if (localStorage.getItem('stl_motion') === 'off') document.documentElement.classList.add('paused'); } catch { /* */ }
 
-/* ------------------------------------------------------------------ zestawy poglądowe */
-/* v28: części i ceny zestawów z bazy (get_pc_sets). Cena zestawu = suma aktualnych cen części – liczy ją baza,
-   tu niczego nie wpisujemy ręcznie. Bez migracji / bez sieci zostają dane wbudowane powyżej (SETS). */
-async function loadPcSets() {
-  if (!sb) return;
-  const { data, error } = await sb.rpc('get_pc_sets');
-  if (error) { if (!/get_pc_sets|schema cache|does not exist/i.test(error.message)) log(`zestawy: ${error.message}`); return; }
-  const list = (Array.isArray(data) ? data : []).filter((m) => m.parts_grosze > 0 && m.parts?.length);
-  if (!list.length) return;
-  SETS.splice(0, SETS.length, ...list.map((m) => ({ ...m, featured: !!m.featured, ribbon: m.ribbon || undefined })));
-  if (list[0].assembly_grosze) ASSEMBLY_GROSZE = list[0].assembly_grosze;
-  const at = list.map((m) => m.prices_at).filter(Boolean).sort().pop();
-  if (at) PRICES_AT = new Date(at).toLocaleDateString('pl-PL');
-}
-/* Budżet do zapytania liczy serwer z aktualnego cennika (pc_set_quote); lokalne wyliczenie tylko awaryjnie. */
-async function setQuoteBudget(m) {
-  if (sb) { const { data, error } = await sb.rpc('pc_set_quote', { p_set_id: m.id }); if (!error && data?.budget_zl) return +data.budget_zl; }
-  return Math.ceil(setTotal(m) / 25000) * 250;
-}
-const setTotal = (m) => m.parts_grosze + ASSEMBLY_GROSZE;
-function partsList(parts, main = 4) {
-  const row = ([k, v]) => h('div', { class: 'spec-row' }, h('dt', { text: k }), h('dd', { text: v }));
-  const top = h('dl', { class: 'spec-list' }, parts.slice(0, main).map(row));
-  if (parts.length <= main) return [top];
-  return [top, h('details', { class: 'parts-more' }, h('summary', { text: `Pełna lista części (${parts.length})` }), h('dl', { class: 'spec-list' }, parts.slice(main).map(row)))];
+/* ------------------------------------------------------------------ zestawy: portfolio konfiguracji (bez cen) */
+function buildCard(b) {
+  const fx = (label, v) => h('div', { class: 'fx-row' },
+    h('span', { class: 'fx-k', text: label }),
+    h('span', { class: 'fx-v' }, h('span', { class: 'fx-before', text: String(v[0]) }), h('span', { class: 'fx-arrow', 'aria-label': 'po optymalizacji', text: '→' }), h('b', { class: 'fx-after', text: String(v[1]) })),
+    h('span', { class: 'fx-gain', text: `+${gainPct(v)}%` }));
+  return h('article', { class: 'card hud set', id: b.id },
+    h('div', { class: 'set-top' }, h('span', { class: 'set-num', text: String(b.num).padStart(2, '0') }), h('span', { class: 'pill', text: 'Zoptymalizowany' })),
+    h('h3', { class: 'set-name', text: b.name }),
+    h('h4', { class: 'set-sub', text: 'Specyfikacja' }),
+    h('dl', { class: 'spec-list' }, BUILD_SPEC.map(([k, l]) => h('div', { class: 'spec-row' }, h('dt', { text: l }), h('dd', { text: b[k] })))),
+    h('h4', { class: 'set-sub', text: 'Efekty optymalizacji' }),
+    h('div', { class: 'set-fx' }, fx('Average FPS', b.avg), fx('P1 (1% low)', b.p1)),
+    h('button', { class: 'btn btn-gold btn-block', type: 'button', text: 'Zamów podobny zestaw', 'aria-label': `Zamów podobny zestaw: ${b.name}`, onclick: () => orderSimilar(b) }));
 }
 function renderSets() {
   const grid = $('#setsGrid'); if (!grid) return;
-  const card = (m, price, btn) => h('article', { class: `card hud set${m.featured ? ' featured' : ''}`, id: m.id },
-    m.ribbon ? h('span', { class: 'ribbon', text: m.ribbon }) : null,
-    h('figure', { class: 'media set-media', dataset: { media: `zestawy.${m.id}`, alt: `Ilustracja poglądowa komputera ${m.name}` } }),
-    h('div', { class: 'set-top' }, h('span', { class: 'set-num', text: m.num }), h('span', { class: 'pill', text: m.badge })),
-    h('h3', { class: 'set-name', text: m.name }), h('span', { class: 'set-kicker', text: m.kicker }), h('p', { class: 'set-desc', text: m.desc }),
-    ...partsList(m.parts), price, btn);
-  grid.replaceChildren(
-    ...SETS.map((m) => card(m,
-      h('div', { class: 'set-price' }, h('small', { text: 'Wartość części (kupujesz sam)' }), h('b', { text: zl(m.parts_grosze) }), h('span', { text: `+ złożenie i testy od ${zl(ASSEMBLY_GROSZE)}` }),
-        // Omnibus (v33): przy obniżce – najniższa wartość części z 30 dni przed obniżką
-        m.reduction && m.before_reduction_lowest30_grosze ? h('span', { class: 'omni', text: `Najniższa cena z 30 dni przed obniżką: ${zl(m.before_reduction_lowest30_grosze)}` }) : null),
-      h('button', { class: `btn ${m.featured || m.ribbon ? 'btn-gold' : 'btn-ghost'} btn-block`, type: 'button', text: 'Chcę podobny – dobierz części', 'aria-label': `Chcę podobny – dobierz części: ${m.name}`, onclick: async (e) => { const b = e.currentTarget; b.disabled = true; try { pcRequest({ budget: await setQuoteBudget(m), inspiration: m.name }); } finally { b.disabled = false; } } }))),
-    card(FORGE,
-      h('div', { class: 'set-price' }, h('small', { text: 'Wartość części (kupujesz sam)' }), h('b', { class: 'custom', text: 'Dobór indywidualny' }), h('span', { text: `od ~${zl(FORGE.priceFrom)}` })),
-      h('button', { class: 'btn btn-ghost btn-block', type: 'button', text: 'Zapytaj o dobór Forge', onclick: () => pcRequest({ budget: FORGE.priceFrom / 100, inspiration: FORGE.name, purpose: 'creative' }) })));
-  $('#setsNote').textContent = setNote();
-  renderBudget(); applyMedia(grid);
+  grid.replaceChildren(...BUILDS.map(buildCard));
 }
-/* Dobór do budżetu: najdroższy zestaw poglądowy, który mieści się w budżecie */
-function pickSet(grosze) { let pick = SETS[0]; for (const m of SETS) if (setTotal(m) <= grosze) pick = m; return pick; }
-function fillRange(sl) { const p = (sl.value - sl.min) / (sl.max - sl.min) * 100; sl.style.background = `linear-gradient(90deg,#FFBB00 ${p}%,rgba(255,255,255,.15) ${p}%)`; }
-function renderBudget() {
-  const sl = $('#budget'); if (!sl) return;
-  const v = +sl.value * 100, pick = pickSet(v);
-  $('#bval').textContent = zl(v) + (+sl.value >= +sl.max ? '+' : '');
-  $('#tierName').textContent = pick.badge; $('#tierTxt').textContent = pick.desc;
-  $('#rSet').textContent = pick.name;
-  $('#rParts').textContent = pick.parts.slice(0, 2).map((p) => p[1]).join(' + ');
-  $('#rPrice').textContent = `części ${zl(pick.parts_grosze)}${v < setTotal(pick) ? ' · najtańszy wariant' : ''}`;
-  $('#rGo').onclick = () => pcRequest({ budget: +sl.value, inspiration: pick.name });
-  $('#rJump').onclick = () => { const el = document.getElementById(pick.id); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); } };
-  fillRange(sl);
+/** „Zamów podobny zestaw” → formularz kontaktowy (/kontakt?zestaw=N) z tematem i specyfikacją w wiadomości. */
+const BUILD_TOPIC = 'Zapytanie o podobny zestaw';
+function orderSimilar(b) {
+  navigate(`/kontakt?zestaw=${b.num}`);
+  fillBuildInquiry(b);
+}
+function fillBuildInquiry(b) {
+  const sel = $('#cTopic');
+  if (sel) { if (![...sel.options].some((o) => o.text === BUILD_TOPIC)) sel.append(h('option', { text: BUILD_TOPIC })); sel.value = BUILD_TOPIC; }
+  const msg = $('#cMsg');
+  if (msg) {
+    msg.value = `Zapytanie o podobny zestaw: ${buildSummary(b)} (${b.name} z portfolio).\n\nBudżet: \nGry / programy: \nCzy masz już część podzespołów: `;
+    msg.dataset.quote = '1'; msg.dataset.build = String(b.num);
+  }
+  setTimeout(() => { $('#cName')?.focus(); }, 60);
+}
+/** Wejście z linku /kontakt?zestaw=N (np. z social mediów) – wypełnia formularz tak samo jak przycisk. */
+function applyBuildParam() {
+  const k = +new URLSearchParams(location.search).get('zestaw');
+  const b = BUILDS.find((x) => x.num === k);
+  if (b && currentRoute() === '/kontakt' && $('#cMsg')?.dataset.build !== String(k)) fillBuildInquiry(b);
 }
 
 /* ------------------------------------------------------------------ rezerwacja */
@@ -1118,10 +884,7 @@ function renderPcSummary() {
   const insp = $('#pcInsp');
   insp.classList.toggle('hidden', !P.inspiration);
   insp.replaceChildren(h('span', { text: `Inspiracja: ${P.inspiration}` }), h('button', { type: 'button', class: 'chip-x', 'aria-label': 'Usuń inspirację', text: '×', onclick: () => { P.inspiration = ''; renderPcSummary(); saveDraft(); } }));
-  const fit = SETS.filter((m) => setTotal(m) <= v * 100).pop();
-  $('#pcHint').textContent = fit
-    ? `W tym budżecie mieści się np. ${fit.name}: ${fit.parts[0][1]} + ${fit.parts[1][1]}. Dobierzemy części pod Twoje gry i programy.`
-    : 'Poniżej naszych zestawów poglądowych – napisz, czego potrzebujesz, a zaproponujemy najlepsze, co się zmieści.';
+  $('#pcHint').textContent = 'Dobierzemy podzespoły pod Twoje gry i programy, a po złożeniu zoptymalizujemy komputer pod maksymalną wydajność i stabilność.';
 }
 async function submitPc() {
   const v = { name: $('#pcName').value.trim(), email: $('#pcMail').value.trim(), phone: $('#pcPhone').value.trim() };
@@ -1850,9 +1613,8 @@ const ADV_INTENTS = [
     a: () => [advP('Masz już części? ', h('b', { text: advName('strike-custom-assembly') }), ` – ${advPrice('strike-custom-assembly')}: sprawdzenie kompatybilności, montaż, BIOS, cable management i testy stabilności, plus 3 miesiące gwarancji na montaż.`),
       advP('Nie masz części? Dobierzemy je do Twojego budżetu – zobacz przykładowe ', advLink('konfiguracje →', '/zestawy'), ' albo napisz, ile chcesz wydać, np. „komputer za 6000”. Części kupujesz sam, my je składamy.')] },
   { id: 'sets', k: ['zestaw', 'zestawy', 'komputer do gier', 'pc do gier', 'jaki komputer', 'nowy komputer', 'kupic komputer', 'gaming', 'gamingowy', 'konfiguracja', 'polecasz komputer'], o: ['build', 'pay', 'contact'],
-    a: () => [advP('Nie sprzedajemy gotowych komputerów – dobieramy części w Twoim budżecie, Ty je kupujesz, a my składamy i testujemy (złożenie od ' + zl(ASSEMBLY_GROSZE) + '). Przykładowe konfiguracje (wartość części):'),
-      advUl(...SETS.map((m) => h('li', {}, h('b', { text: m.name }), ` – ${m.kicker}, ok. ${zl(m.parts_grosze)}`))),
-      advP('Napisz swój budżet, np. „komputer za 7000”, albo ', advLink('zobacz konfiguracje →', '/zestawy'))] },
+    a: () => [advP('Nie sprzedajemy sprzętu – doradzamy przy doborze podzespołów, konfigurujemy i optymalizujemy komputer. Części kupujesz sam, u wybranego sklepu.'),
+      advP('Zobacz nasze zoptymalizowane konfiguracje z wynikami FPS przed i po: ', advLink('portfolio zestawów →', '/zestawy'), '. Przy każdej możesz kliknąć „Zamów podobny zestaw”.')] },
   { id: 'web', k: ['strona', 'strony', 'www', 'witryna', 'sklep internetowy', 'automatyzacja', 'automatyzacje', 'firma', 'firmy', 'crm', 'arkusz', 'n8n', 'make'], o: ['prices', 'contact'],
     a: () => [advP('Dla firm:'), advUl(advSvcLi('strike-web-start', 'Wizytówka na jednej stronie'), advSvcLi('strike-web-business', 'Strona firmowa do 6 podstron'), advSvcLi('strike-web-shop', 'Sklep internetowy'), advSvcLi('strike-auto-start', 'Jedna automatyzacja'), advSvcLi('strike-auto-flow', 'Pakiet do 3 procesów')), advP('Najpierw bezpłatna wycena na piśmie, potem płatność z góry. ', advLink('Zobacz wszystkie pakiety →', '/uslugi?kategoria=solutions'))] },
   { id: 'remote', k: ['zdalnie', 'zdalna', 'zdalnej', 'anydesk', 'sesja', 'jak to wyglada', 'przygotowac', 'przygotowanie', 'programy', 'na odleglosc'], o: ['optim', 'when', 'pay'],
@@ -1878,19 +1640,15 @@ const ADV_INTENTS = [
 ];
 const ADV_FALLBACK = { id: 'fallback', o: ADV_MAIN, a: () => [advP('Nie jestem pewien, czy dobrze rozumiem. Spróbuj krócej, np. „FPS”, „głośny komputer”, „cena”, „komputer za 6000” – albo wybierz temat poniżej.'), advP('Możesz też ', advLink('napisać do nas →', '/kontakt'))] };
 
-/* „komputer za 7000”, „budżet 6k”, „mam 5 tys” → najbliższy zestaw poglądowy */
+/* „komputer za 7000”, „budżet 6k”, „mam 5 tys” → zapytanie o dobór (bez cen zestawów) */
 function advBudget(t) {
   if (!/(komputer|zestaw|pc|budzet|wydac|mam)/.test(t)) return null;
   const m = t.match(/(\d{1,2})\s?(k|tys)\b|(\d[\d ]{2,6})/); if (!m) return null;
   const zlv = m[1] ? +m[1] * 1000 : +m[3].replace(/\s/g, '');
   if (!(zlv >= 1000 && zlv <= 100000)) return null;
-  return { id: 'budget', o: ['sets', 'pay', 'contact'], a: () => {
-    const fit = SETS.filter((s) => setTotal(s) <= zlv * 100).pop();
-    if (!fit) return [advP(`Za ${zl(zlv * 100)} trudno o nowy zestaw z naszych przykładów – najtańszy, ${SETS[0].name}, to ok. ${zl(setTotal(SETS[0]))} razem ze złożeniem. Napisz, czego potrzebujesz, a zaproponujemy najlepsze, co się zmieści (np. używane części).`), advP(advLink('Bezpłatna wycena →', '/rezerwacja'))];
-    return [advP(`W budżecie ${zl(zlv * 100)} mieści się np. `, h('b', { text: fit.name }), ` (${fit.kicker}) – części ok. ${zl(fit.parts_grosze)} + złożenie od ${zl(ASSEMBLY_GROSZE)}.`),
-      advUl(...fit.parts.slice(0, 4).map(([k, v]) => h('li', { text: `${k}: ${v}` }))),
-      advP('To przykład – ostateczny dobór części ustalamy z Tobą. Wycena jest bezpłatna i niczego nie wymaga. ', h('button', { type: 'button', class: 'link', text: 'Poproś o wycenę →', onclick: () => { pcRequest({ budget: zlv, inspiration: fit.name }); if (matchMedia('(max-width: 640px)').matches) advClose(); } }))];
-  } };
+  return { id: 'budget', o: ['sets', 'pay', 'contact'], a: () => [
+    advP(`Budżet ${zl(zlv * 100)} – dobierzemy podzespoły pod Twoje gry i programy. Doradztwo jest bezpłatne i niczego nie wymaga; części kupujesz sam.`),
+    advP('Inspiracje znajdziesz w ', advLink('portfolio zestawów →', '/zestawy'), ' ', h('button', { type: 'button', class: 'link', text: 'Poproś o dobór →', onclick: () => { pcRequest({ budget: zlv }); if (matchMedia('(max-width: 640px)').matches) advClose(); } }))] };
 }
 function advDetect(text) {
   const t = advNorm(text);
@@ -2437,7 +2195,7 @@ function downloadBlob(blob, name) { const u = URL.createObjectURL(blob); const a
 /* ------------------------------------------------------------------ kontakt */
 function renderContactTopics() {
   const sel = $('#cTopic'), cur = sel.value;
-  sel.replaceChildren(h('option', { text: 'Pytanie ogólne' }), ...[...cat.services.values()].map((s) => h('option', { text: s.name })), h('option', { text: 'Dobór części i złożenie PC' }), h('option', { text: 'Inne' }));
+  sel.replaceChildren(h('option', { text: 'Pytanie ogólne' }), ...[...cat.services.values()].map((s) => h('option', { text: s.name })), h('option', { text: 'Dobór części i złożenie PC' }), h('option', { text: BUILD_TOPIC }), h('option', { text: 'Inne' }));
   if (cur) sel.value = cur;
 }
 async function submitContact(e) {
@@ -2460,8 +2218,9 @@ async function submitContact(e) {
   }
   setBusy(btn, true, 'Wysyłam…'); out.className = 'form-msg';
   try {
-    await callFn('inquiry', { kind: /Komputer|Wycena/.test(v.topic) ? 'quote' : 'contact', ...v, phone: v.phone || undefined, item_id: /Komputer/.test(v.topic) ? 'pc-custom' : undefined, consent: true, hp: $('#cHp').value });
-    e.target.reset(); renderContactTopics(); out.className = 'form-msg ok'; out.textContent = 'Dziękujemy! Wiadomość wysłana – potwierdzenie przyszło na Twój e-mail.';
+    const build = v.topic === BUILD_TOPIC ? $('#cMsg').dataset.build : '';
+    await callFn('inquiry', { kind: /Komputer|Wycena|zestaw/.test(v.topic) ? 'quote' : 'contact', ...v, phone: v.phone || undefined, item_id: build ? `zestaw-${build}` : /Komputer|Dobór części/.test(v.topic) ? 'pc-custom' : undefined, consent: true, hp: $('#cHp').value });
+    e.target.reset(); delete $('#cMsg').dataset.build; delete $('#cMsg').dataset.quote; renderContactTopics(); out.className = 'form-msg ok'; out.textContent = 'Dziękujemy! Wiadomość wysłana – potwierdzenie przyszło na Twój e-mail.';
   } catch (err) {
     out.className = 'form-msg err'; out.textContent = `${err.message} Możesz też napisać bezpośrednio: ${CFG.CONTACT_EMAIL}`;
     for (const [k, m] of Object.entries(err.fields || {})) { const el = $(`[data-cerr=${k}]`); if (el) el.textContent = m; }
@@ -2501,7 +2260,7 @@ function renderCompany() {
   box.innerHTML = `Sprzedawca: ${SELLER}`;
   renderGoogleLinks();
 }
-const SETS_TERMS = '<h4>§6 Dobór części i złożenie komputera</h4><p>Nie sprzedajemy części komputerowych ani gotowych komputerów. Konfiguracje pokazane na stronie są przykładowe, a podane przy nich ceny części – orientacyjne, pochodzą ze sklepów internetowych. Na Twoje zapytanie bezpłatnie przygotowujemy listę części dopasowaną do budżetu; nie zobowiązuje Cię ona do niczego. Części kupujesz sam, we własnym imieniu i na własny rachunek, u wybranego sprzedawcy – z dostawą do siebie albo na nasz adres warsztatu. Umowa z nami dotyczy wyłącznie usługi złożenia i testów komputera (oraz wybranych usług dodatkowych) i zawierana jest na zasadach z §3–§5. Za wady części odpowiada wobec Ciebie ich sprzedawca lub producent – pomożemy w zgłoszeniu.</p>';
+const SETS_TERMS = '<h4>§6 Doradztwo, dobór podzespołów, konfiguracja i optymalizacja komputera</h4><p>Nie sprzedajemy części komputerowych ani gotowych komputerów. Konfiguracje pokazane na stronie to portfolio zrealizowanych i zoptymalizowanych komputerów – nie są ofertą sprzedaży i nie mają ceny. Zapytanie o podobny zestaw jest bezpłatne i do niczego nie zobowiązuje: w odpowiedzi doradzamy przy doborze podzespołów do Twojego budżetu i potrzeb. Części kupujesz sam, we własnym imieniu i na własny rachunek, u wybranego sprzedawcy – z dostawą do siebie albo na nasz adres warsztatu. Umowa z nami dotyczy wyłącznie usług: doradztwa i doboru podzespołów, złożenia i konfiguracji komputera oraz jego optymalizacji (i wybranych usług dodatkowych) i zawierana jest na zasadach z §3–§5. Wyniki optymalizacji pokazane w portfolio dotyczą konkretnych komputerów i nie są gwarancją identycznego wyniku. Za wady części odpowiada wobec Ciebie ich sprzedawca lub producent – pomożemy w zgłoszeniu.</p>';
 const LEGAL = {
   privacy: { t: 'Polityka Prywatności', h: DRAFT_NOTE +
     `<p class="note">Wersja z ${LEGAL_VERSION}.</p>` +
@@ -2573,7 +2332,7 @@ const LEGAL = {
   referral: { t: 'Program poleceń', h:
     '<ul><li>Każde konto ma swój kod polecający (Strefa Klienta → Polecenia i kody).</li><li>Nowy klient (bez wcześniejszego opłaconego zamówienia) dostaje <b>10% rabatu</b> (maks. 300 zł) po wpisaniu kodu polecającego.</li><li>Polecający dostaje jednorazowy kod <b>5% rabatu</b> (maks. 300 zł, ważny 12 miesięcy) po zakończeniu zlecenia poleconego klienta i upływie 14 dni na ewentualne odstąpienie. Kod przychodzi mailem i jest widoczny w Strefie Klienta.</li><li>Nie można polecać samego siebie (to samo konto, ten sam adres e-mail lub jego aliasy, ten sam numer telefonu).</li><li>Kody się nie łączą: jedno zamówienie – jeden kod. Rabat obejmuje cenę usługi, nie opcję Express.</li><li>Kod nie podlega wymianie na gotówkę. Gdy zamówienie zostanie anulowane lub zwrócone, nagroda polecającego przepada.</li><li>Link polecający udostępniaj tylko osobom, które się na to zgadzają – nie wysyłaj go masowo ani jako spamu.</li></ul>' },
   prices: { t: 'Ceny i Omnibus', h:
-    '<p>Ceny są cenami końcowymi w złotych polskich. Cena „od” oznacza cenę minimalną dla zakresu podstawowego opisanego przy usłudze; dodatkowe prace lub materiały (np. pady termiczne, pasta premium, naprawa po diagnostyce) wyceniamy i wykonujemy dopiero po Twojej akceptacji. Ceny części w przykładowych konfiguracjach są orientacyjne i pochodzą ze sklepów – części kupujesz bezpośrednio u sprzedawcy, nie u nas. Ostateczną kwotę zamówienia wylicza system na podstawie aktualnego cennika i widzisz ją przed płatnością.</p>' +
+    '<p>Ceny są cenami końcowymi w złotych polskich. Cena „od” oznacza cenę minimalną dla zakresu podstawowego opisanego przy usłudze; dodatkowe prace lub materiały (np. pady termiczne, pasta premium, naprawa po diagnostyce) wyceniamy i wykonujemy dopiero po Twojej akceptacji. Nie sprzedajemy sprzętu – konfiguracje w portfolio zestawów nie mają ceny, a części kupujesz bezpośrednio u wybranego sprzedawcy. Ostateczną kwotę zamówienia wylicza system na podstawie aktualnego cennika i widzisz ją przed płatnością.</p>' +
     '<p>Gdy obniżamy cenę, obok podajemy najniższą cenę obowiązującą w ciągu 30 dni przed obniżką.</p>' },
 };
 /** Adres każdego dokumentu: /#regulamin itd. – działa też bez JavaScriptu w linkach i w mailach. */
@@ -2594,7 +2353,7 @@ function initBenchmark() {
 }
 
 /* ------------------------------------------------------------------ efekty: pojawianie się przy przewijaniu, liczniki, scena benchmarku */
-const REVEAL_SEL = '[data-page] .section-head, .kpi, .tile, .set, .svc, .gal-strip, .bench > *, .budget-bar, .areas > *, .steps-grid > *, .cat-tabs';
+const REVEAL_SEL = '[data-page] .section-head, .kpi, .tile, .set, .svc, .gal-strip, .bench > *, .areas > *, .steps-grid > *, .cat-tabs';
 let revealIO = null;
 function reveal(root = document) {
   if (!revealIO) return;
@@ -2804,7 +2563,6 @@ async function boot() {
   bindGate();
   initChrome(); initBenchmark(); initEffects(); bindBooking(); restoreDraft();
   setMotion(document.documentElement.classList.contains('paused'), false);
-  $('#budget')?.addEventListener('input', renderBudget);
   loadMedia();
   staticCatalog(); renderCatalog(); setBookMode(B.mode, { save: false });
   const cfg = resolveConfig();
