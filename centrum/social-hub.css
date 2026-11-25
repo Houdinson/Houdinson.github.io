@@ -1,5 +1,5 @@
 /* STL Centrum – Social Hub (v7): opublikowane posty, kalendarz postów, konta. Uzupełnia app.css. */
-.hub-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;margin:0 0 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.hub-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:4px;margin:0 0 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
 .hub-tabs button{min-height:44px;padding:6px 3px;border:0;border-radius:10px;background:transparent;color:var(--text-2);font-weight:700;font-size:.8rem;cursor:pointer;line-height:1.15;-webkit-tap-highlight-color:transparent}
 .hub-tabs button[aria-selected=true]{background:var(--gold);color:#000;box-shadow:var(--glow)}
 
@@ -86,3 +86,24 @@ i.ring{background:transparent!important;box-shadow:inset 0 0 0 1.5px var(--gold)
 .note-card p{margin:4px 0 0;font-size:.82rem;color:var(--muted)}
 
 @media (min-width:700px){.fp{grid-template-columns:96px 1fr}.fp-thumb{width:96px;height:120px}.cal-cell{min-height:72px}}
+
+/* ---------------------------------------------------------------- Treści (tresci.js) */
+.tr-bar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.tr-bar p{margin:4px 0 0}
+.tr-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:thin}
+.tr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.tr-item{margin:0;padding:8px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+.tr-item img,.tr-item video{display:block;width:100%;border-radius:8px;background:#000}
+.tr-item figcaption{margin-top:6px;font-size:.78rem;word-break:break-all}
+.tr-capbox{margin-top:14px}
+.tr-caphead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.tr-cap{min-height:260px}
+.tr-del{margin-top:12px;justify-content:flex-end}
+.tr-plan h3,.tr-plan h4,.tr-plan h5{margin:14px 0 8px}
+.tr-plan p,.tr-plan li{color:var(--text-2);line-height:1.5}
+.tr-table{overflow-x:auto;margin:10px 0}
+.tr-table table{border-collapse:collapse;width:100%;font-size:.86rem}
+.tr-table th,.tr-table td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+.tr-table th{color:var(--gold);background:var(--surface)}
+.tr-plan code{font-family:var(--mono);font-size:.8em;background:var(--surface-2);padding:1px 5px;border-radius:6px}
+@media (max-width:560px){.hub-tabs button{font-size:.72rem}.tr-bar{flex-direction:column;align-items:stretch}.tr-grid{grid-template-columns:repeat(2,1fr)}}
