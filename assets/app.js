@@ -493,14 +493,22 @@ async function heartbeat() {
   if (!navigator.onLine) { conn.wasDown = true; setConn('nonet'); conn.hist.push(-1); renderConsole(); return schedule(10000); }
   if (conn.state === 'init') setConn('connecting');
   const t0 = performance.now();
-  let ok = false;
+  let ok = false, authErr = false;
   try {
     const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 10000);
-    const { error } = await sb.from('services').select('id', { head: true, count: 'exact' }).limit(1).abortSignal(ctl.signal);
+    const { error, status } = await sb.from('services').select('id', { head: true, count: 'exact' }).limit(1).abortSignal(ctl.signal);
     clearTimeout(to);
     ok = !error;
-    if (error) log(`ping błąd: ${error.message}`);
+    authErr = !!error && isAuthErr(error, status);
+    if (error) log(`ping błąd: ${error.message || status}`);
   } catch (e) { log(`ping: ${e.message}`); }
+  // Wygasły token (np. po uśpieniu laptopa) to nie awaria serwera: odśwież sesję i ponów ping, zamiast pokazywać „Serwery niedostępne”.
+  if (authErr && !conn.authRetry) {
+    conn.authRetry = true;
+    await recoverSession();
+    conn.authRetry = false;
+    return heartbeat();
+  }
   const ms = Math.round(performance.now() - t0);
   if (ok) {
     conn.ping = ms; conn.hist.push(ms); conn.fails = 0;
@@ -516,6 +524,27 @@ async function heartbeat() {
   renderConsole();
 }
 function schedule(ms) { clearTimeout(conn.timer); conn.timer = setTimeout(heartbeat, ms); }
+/** 401 / wygasły albo nieważny JWT z PostgREST (PGRST301–303) – serwer odpowiada, problem jest w sesji. */
+const isAuthErr = (e, status) => status === 401 || /jwt|PGRST30[0-3]/i.test(`${e?.message || ''} ${e?.code || ''}`);
+/** Odświeża sesję; gdy się nie da (token odwołany / wylogowano na innym urządzeniu), kończy ją lokalnie,
+ *  żeby kolejne zapytania szły jako gość, a nie były w kółko odrzucane. */
+async function recoverSession() {
+  if (!sb) return false;
+  try {
+    const { data, error } = await sb.auth.refreshSession();
+    if (!error && data?.session) { log('sesja odświeżona'); return true; }
+  } catch { /* odświeżenie nieudane */ }
+  const hadSession = !!session;
+  try { await sb.auth.signOut({ scope: 'local' }); } catch { /* sesja i tak usunięta z pamięci */ }
+  if (hadSession) toast('info', 'Sesja wygasła – zaloguj się ponownie, żeby zobaczyć swoje zlecenia.', 8000);
+  return false;
+}
+/** Po powrocie do karty supabase-js odświeża token asynchronicznie – getSession() czeka na to,
+ *  dzięki czemu kolejne zapytania nie wychodzą z wygasłym tokenem (wcześniej: 401 → „Serwery niedostępne”, puste panele). */
+async function freshAuth() {
+  if (!sb) return;
+  try { await sb.auth.getSession(); } catch { /* sieć – obsłuży heartbeat */ }
+}
 async function resync() {
   await loadCatalog();
   if (B.day) loadSlots(true);
@@ -525,7 +554,7 @@ async function resync() {
 addEventListener('online', () => { log('internet wrócił'); heartbeat(); });
 addEventListener('offline', () => { conn.wasDown = true; setConn('nonet'); });
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && sb) { heartbeat(); if (B.day) loadSlots(true); if (session) loadPanelData(); }
+  if (document.visibilityState === 'visible' && sb) freshAuth().then(() => { heartbeat(); if (B.day) loadSlots(true); if (session) loadPanelData(); });
 });
 
 async function callFn(name, body) {
