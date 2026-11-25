@@ -9,6 +9,8 @@
    tylko czyta dane (RLS: wyłącznie admin) i woła funkcje social-connect / social-sync.
    Teksty z platform wstawiane są przez textContent (bez innerHTML).
    ===================================================================== */
+import { initTresci, loadTresci } from './tresci.js';
+
 const CFG = window.STL_CENTRUM || {};
 const TZ = 'Europe/Warsaw';
 const AUTH_KEY = 'stl-centrum-auth';
@@ -105,7 +107,7 @@ const H = {
   month: todayKey().slice(0, 8) + '01', sel: todayKey(), plan: { feed: [], ai: [] },
   loaded: new Set(), syncing: false,
 };
-const VIEWS = ['queue', 'feed', 'plan', 'accounts'];
+const VIEWS = ['queue', 'feed', 'plan', 'content', 'accounts'];
 
 /* ------------------------------------------------------------------ przełączanie widoków */
 function setView(v, { load = true } = {}) {
@@ -119,7 +121,7 @@ function setView(v, { load = true } = {}) {
 const socialVisible = () => { const s = $('section[data-view="social"]'); return s && !s.hidden; };
 function reload() {
   if (!token()) return;
-  ({ feed: loadFeed, plan: loadPlan, accounts: loadAccounts })[H.view]?.().catch((e) => toast('err', e.message));
+  ({ feed: loadFeed, plan: loadPlan, content: loadTresci, accounts: loadAccounts })[H.view]?.().catch((e) => toast('err', e.message));
 }
 
 function platformChips(box, onChange, counts = {}) {
@@ -471,6 +473,7 @@ function handleReturn() {
 }
 function boot() {
   const tabs = $('#hubTabs'); if (!tabs) return;
+  initTresci({ $, h, put, sb, toast, busy, vibrate });
   tabs.addEventListener('click', (e) => { const b = e.target.closest('[data-hub]'); if (!b) return; vibrate(); setView(b.dataset.hub); });
   // odświeżanie (przycisk ↻ w nagłówku zakładki Social)
   $('[data-refresh="social"]')?.addEventListener('click', () => { if (H.view !== 'queue') { H.loaded.delete(H.view); setView(H.view); } });
