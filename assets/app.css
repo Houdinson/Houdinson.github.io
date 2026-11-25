@@ -888,3 +888,24 @@ html.intro-on,html.intro-on body{overflow:hidden}
 .fx-after{color:var(--text);font-size:1.45rem;font-weight:800;line-height:1.1}
 .fx-gain{grid-area:gain;align-self:center;padding:2px 9px;border-radius:999px;font-size:.8rem;font-weight:800;color:var(--ok);background:rgba(61,220,132,.1);border:1px solid rgba(61,220,132,.4)}
 .set .btn-block{margin-top:auto}
+
+/* Zestawy – nota metodologiczna, zdjęcia kart, podgląd STRIKE PROOF */
+.method{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center;padding:18px 22px;margin:0 0 30px;border-color:rgba(255,187,0,.28);background:linear-gradient(90deg,rgba(255,187,0,.06),transparent 60%),var(--surface)}
+.method-ico{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;color:var(--gold);background:var(--gold-soft);border:1px solid rgba(255,187,0,.35)}
+.method-ico svg{width:22px;height:22px}
+.method-txt h3{margin:0 0 4px;font-size:1rem}
+.method-txt p{margin:0;color:var(--text-2);font-size:.88rem;line-height:1.55}
+.method .btn{white-space:normal;text-align:center;max-width:260px}
+@media(max-width:900px){.method{grid-template-columns:auto minmax(0,1fr)}.method .btn{grid-column:1/-1;max-width:none}}
+.set-photo{position:relative;aspect-ratio:16/9;margin:-8px -6px 18px;border-radius:12px;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,rgba(255,187,0,.12),transparent 60%),linear-gradient(160deg,#141416,#0a0a0b);border:1px solid var(--line)}
+.set-photo img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.05) contrast(1.03)}
+.set-photo::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(8,8,8,0) 45%,rgba(8,8,8,.78) 100%)}
+.set-photo.empty::before{content:"";position:absolute;inset:0;margin:auto;width:46px;height:46px;opacity:.55;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFBB00' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='6' y='2' width='12' height='20' rx='2'/%3E%3Ccircle cx='12' cy='14' r='3'/%3E%3Cpath d='M9 6h6'/%3E%3C/svg%3E")}
+.set-photo-cap{position:absolute;left:12px;bottom:10px;z-index:1;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2)}
+.set-photo.real .set-photo-cap{color:var(--gold)}
+.set-photo.real .set-photo-cap::before{content:"✓ "}
+dialog.proof-modal{width:min(1040px,calc(100% - 32px))}
+.proof-fig{margin:0}
+.proof-fig img{width:100%;height:auto;border-radius:12px;border:1px solid var(--line);background:#000}
+.proof-fig figcaption{margin:10px 0 0}
+.proof-empty{display:grid;gap:6px;place-items:center;align-content:center;text-align:center;aspect-ratio:16/9;border-radius:12px;border:1px dashed var(--line-2);padding:20px;background:rgba(255,255,255,.02)}

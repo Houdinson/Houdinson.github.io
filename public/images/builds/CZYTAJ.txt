@@ -1,0 +1,9 @@
+Zdjęcia zestawów na stronie /zestawy
+
+Wrzuć tu pliki i wyślij zmiany – strona sama je pokaże (bez zmian w kodzie):
+  zestaw-01.webp … zestaw-08.webp   zdjęcie konkretnego zestawu (podpis: „Zweryfikowano w STRIKE PROOF”)
+  default-build.webp                wspólne zdjęcie dla zestawów bez własnego pliku (podpis: „Podgląd konfiguracji”)
+Bez żadnego pliku karta pokazuje ciemną ramkę z ikoną komputera.
+
+Format: .webp, proporcje 16:9 (np. 1280×720), do ok. 200 KB na zdjęcie.
+Przykładowy raport STRIKE PROOF (przycisk nad kartami): public/images/strike-proof-sample.webp (zrzut z CapFrameX, przed i po).
