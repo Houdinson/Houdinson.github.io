@@ -209,6 +209,44 @@ const BUILDS = [
 ].map((b, i) => ({ ...b, num: i + 1, name: `Zestaw ${i + 1}` }));
 const BUILD_SPEC = [['case', 'Obudowa'], ['mobo', 'Płyta główna'], ['cpu', 'Procesor'], ['gpu', 'Karta graficzna'], ['ram', 'RAM']];
 const gainPct = ([a, b, pct]) => pct ?? Math.round((b - a) / a * 100);   // przyrost % jak w pomiarze (podany ręcznie)
+/* Zdjęcia zestawów: public/images/builds/zestaw-01.webp … zestaw-08.webp; brak pliku → default-build.webp → ramka zastępcza.
+   Wystarczy wrzucić pliki do folderu – strona sama je pokaże. */
+const BUILD_IMG_DIR = BASE + 'public/images/builds/';
+const PROOF_SAMPLE = BASE + 'public/images/strike-proof-sample.webp';
+function buildPhoto(b) {
+  const nn = String(b.num).padStart(2, '0');
+  const cap = h('figcaption', { class: 'set-photo-cap', text: 'Podgląd konfiguracji' });
+  const fig = h('figure', { class: 'set-photo empty' }, cap);
+  const img = h('img', { alt: `${b.name}: ${b.case}, ${b.cpu}, ${b.gpu}`, loading: 'lazy', decoding: 'async', width: '640', height: '360' });
+  const own = `${BUILD_IMG_DIR}zestaw-${nn}.webp`;
+  img.onload = () => {
+    fig.classList.remove('empty');
+    if (img.src.endsWith(`zestaw-${nn}.webp`)) { fig.classList.add('real'); cap.textContent = 'Zweryfikowano w STRIKE PROOF'; }
+  };
+  // brak własnego zdjęcia → wspólne (sprawdzane raz dla wszystkich kart) → ramka zastępcza bez ikony błędu
+  img.onerror = () => { img.onerror = null; defaultBuildPhoto().then((ok) => { if (ok) img.src = ok; else img.remove(); }); };
+  img.src = own;
+  fig.prepend(img);
+  return fig;
+}
+let DEFAULT_PHOTO = null;
+function defaultBuildPhoto() {
+  return (DEFAULT_PHOTO ||= new Promise((res) => {
+    const src = `${BUILD_IMG_DIR}default-build.webp`, t = new Image();
+    t.onload = () => res(src); t.onerror = () => res(''); t.src = src;
+  }));
+}
+function openProof() {
+  const fig = $('#proofFig');
+  if (!fig.querySelector('img, .proof-empty')) {
+    const img = h('img', { alt: 'Przykładowy pomiar STRIKE PROOF w CapFrameX: wykres klatek przed i po optymalizacji', decoding: 'async' });
+    img.onerror = () => img.replaceWith(h('div', { class: 'proof-empty' }, h('b', { text: 'Przykładowy raport pojawi się tu wkrótce.' }), h('span', { class: 'muted', text: 'Raport STRIKE PROOF z Twojego komputera dostajesz w Strefie Klienta po każdej optymalizacji.' })));
+    img.src = PROOF_SAMPLE + VQ;
+    fig.prepend(img);
+  }
+  const m = $('#proofModal'); if (!m.open) m.showModal();
+}
+document.addEventListener('click', (e) => { if (e.target.closest?.('#proofBtn')) openProof(); });
 const buildSummary = (b) => `${b.cpu} + ${b.gpu} + ${b.mobo} + ${b.ram} + ${b.case}`;
 const isHiddenService = (s) => s.id === 'strike-ai-local-deploy' || /\bAI\b/.test(s.name || '');
 
@@ -559,6 +597,7 @@ function buildCard(b) {
     h('span', { class: 'fx-v' }, h('span', { class: 'fx-before', text: String(v[0]) }), h('span', { class: 'fx-arrow', 'aria-label': 'po optymalizacji', text: '→' }), h('b', { class: 'fx-after', text: String(v[1]) })),
     h('span', { class: 'fx-gain', text: `+${gainPct(v)}%` }));
   return h('article', { class: 'card hud set', id: b.id },
+    buildPhoto(b),
     h('div', { class: 'set-top' }, h('span', { class: 'set-num', text: String(b.num).padStart(2, '0') }), h('span', { class: 'pill', text: 'Zoptymalizowany' })),
     h('h3', { class: 'set-name', text: b.name }),
     h('h4', { class: 'set-sub', text: 'Specyfikacja' }),

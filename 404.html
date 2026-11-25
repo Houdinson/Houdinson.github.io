@@ -23,9 +23,9 @@
  "openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"09:00","closes":"18:00"}]}
 </script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22255 190 750 750%22%3E%3Cdefs%3E%3Cmask id=%22m%22%3E%3Crect x=%22255%22 y=%22190%22 width=%22750%22 height=%22750%22 fill=%22%23fff%22/%3E%3Cpolygon points=%22778,212 474,624 655,583 472,918 778,512 612,546%22 fill=%22%23000%22 stroke=%22%23000%22 stroke-width=%2244%22 stroke-linejoin=%22round%22/%3E%3C/mask%3E%3C/defs%3E%3Cpolygon points=%22627,303 853,417 853,697 627,872 400,697 400,417%22 fill=%22none%22 stroke=%22%23FFBB00%22 stroke-width=%2252%22 mask=%22url%28%23m%29%22/%3E%3Cpolygon points=%22778,212 474,624 655,583 472,918 778,512 612,546%22 fill=%22%23FFBB00%22/%3E%3C/svg%3E">
-<script src="/config.js?v=20261125a"></script>
-<link rel="stylesheet" href="/assets/app.css?v=20261125a">
-<script defer src="/assets/app.js?v=20261125a"></script>
+<script src="/config.js?v=20261125b"></script>
+<link rel="stylesheet" href="/assets/app.css?v=20261125b">
+<script defer src="/assets/app.js?v=20261125b"></script>
 </head>
 <body>
 <div id="intro" aria-hidden="true">
@@ -43,7 +43,7 @@
   </div>
   <div class="i-hint">Kliknij, aby wejść</div>
 </div>
-<script src="/assets/intro.js?v=20261125a"></script>
+<script src="/assets/intro.js?v=20261125b"></script>
 <a class="skip" href="#main">Przejdź do treści</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="logo" viewBox="360 190 540 750">
@@ -225,6 +225,14 @@
         <h2>Zestawy <span class="gold">zoptymalizowane przez STRIKE</span></h2>
         <p class="lead">Każdy komputer jest profesjonalnie optymalizowany pod maksymalną wydajność i pełną stabilność. Ciesz się najwyższą płynnością gry i najniższym opóźnieniem.</p>
       </div>
+      <aside class="card hud method" aria-labelledby="methodTitle">
+        <div class="method-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></div>
+        <div class="method-txt">
+          <h3 id="methodTitle">Jak mierzymy wyniki</h3>
+          <p>Pomiary w <b>CapFrameX</b> w tytułach e-sportowych, w <b>1080p na ustawieniach Competitive</b> – ta sama scena przed i po pełnej optymalizacji BIOS-u, systemu i sterowników. Podajemy średni FPS i <b>1% low (P1)</b>, czyli płynność w najcięższych momentach. Realne przyrosty zależą od konkretnej konfiguracji, wersji gry i sterowników.</p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="proofBtn">Zobacz przykładowy pomiar STRIKE PROOF (CapFrameX)</button>
+      </aside>
       <div class="ladder" id="setsGrid"></div>
       <p class="note" style="margin-top:22px">Nie sprzedajemy sprzętu. Pokazujemy zrealizowane konfiguracje i wyniki pomiarów przed i po optymalizacji. Zapytanie o podobny zestaw jest bezpłatne – doradzimy przy doborze podzespołów, a części kupujesz sam, u wybranego sklepu.</p>
     </div>
@@ -574,6 +582,12 @@
   </div>
 </dialog>
 
+<dialog class="modal proof-modal" id="proofModal" aria-labelledby="proofTitle">
+  <div class="modal-head"><h3 id="proofTitle">Przykładowy pomiar STRIKE PROOF</h3><form method="dialog"><button class="modal-x" aria-label="Zamknij podgląd">×</button></form></div>
+  <div class="modal-body">
+    <figure class="proof-fig" id="proofFig"><figcaption class="note">Zrzut z CapFrameX: ten sam test przed i po optymalizacji – średni FPS i 1% low (P1).</figcaption></figure>
+  </div>
+</dialog>
 <dialog class="modal legal-doc" id="legalModal" aria-labelledby="legalTitle">
   <div class="modal-head"><h3 id="legalTitle"></h3><form method="dialog"><button class="modal-x" aria-label="Zamknij dokument">×</button></form></div>
   <div class="modal-body" id="legalBody"></div>
