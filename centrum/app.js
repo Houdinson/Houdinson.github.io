@@ -113,13 +113,20 @@ async function heartbeat() {
   const { error, status } = await sb.from('profiles').select('id', { head: true, count: 'exact' }).limit(1).then((r) => r, (e) => ({ error: e }));
   if (!error) { conn.fails = 0; setConn('ok'); }
   // 401 / wygasły JWT to nie awaria serwera – nie pokazuj „Serwer niedostępny”
-  else if (status === 401 || /jwt|token|PGRST30[0-3]/i.test(`${error.message || ''} ${error.code || ''}`)) { conn.fails = 0; setConn('auth'); sb.auth.refreshSession().catch(() => {}); }
+  else if (status === 401 || /jwt|token|PGRST30[0-3]/i.test(`${error.message || ''} ${error.code || ''}`)) {
+    conn.fails = 0; setConn('auth');
+    // Czekamy na wynik: wcześniej przy odwołanym tokenie Centrum w kółko pokazywało „Sesja wygasła” co 3 s, bez ekranu logowania.
+    const r = await sb.auth.refreshSession().catch((e) => ({ error: e }));
+    if (r.error || !r.data?.session) { await sb.auth.signOut({ scope: 'local' }).catch(() => {}); session = null; S.loaded.clear(); showLoginOrApp(); return; }
+    conn.timer = setTimeout(heartbeat, 300); return;   // token odświeżony – ponów ping od razu
+  }
   else { conn.fails++; setConn(conn.fails < 2 ? 'retry' : 'bad'); }   // jeden nieudany ping = „Ponawiam…”, dopiero drugi = komunikat o braku serwera
   conn.timer = setTimeout(heartbeat, error ? (conn.fails < 2 ? 3000 : 8000) : 45000);
 }
 addEventListener('online', () => { heartbeat(); reloadActive(); });
 addEventListener('offline', () => setConn('net'));
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && session) { heartbeat(); reloadActive(); refreshBadges(); } });
+// getSession() czeka, aż supabase-js odświeży token po powrocie do aplikacji – inaczej zapytania szły z wygasłym JWT (401).
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && session) sb.auth.getSession().catch(() => {}).then(() => { heartbeat(); reloadActive(); refreshBadges(); }); });
 
 /* ------------------------------------------------------------------ logowanie */
 function showLoginStep(step) {
