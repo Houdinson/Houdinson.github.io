@@ -491,24 +491,47 @@ function parsePosts(text) {
       caption: noAI(p.caption || p.opis, 2100), hashtags: tags, cta: noAI(p.cta, 300) || null,
       // termin z paczki (np. "2026-11-03T18:00:00+01:00") – tylko przyszły; publikacja i tak dopiero po Twoim zatwierdzeniu
       scheduled_for: (() => { const d = new Date(p.scheduled_for || p.termin || ''); return !isNaN(d) && d > Date.now() ? d.toISOString() : null; })(),
+      // nazwa pliku z paczki (np. "rolka-otwarcie.mp4") – dopasowywana do plików wybranych w oknie; nie trafia do bazy
+      _file: String(p.media_file || p.plik || '').split(/[\\/]/).pop().trim().toLowerCase() || null,
     };
   });
 }
 function pasteSheet() {
   const area = h('textarea', { class: 'textarea', style: 'min-height:220px;font-family:var(--mono);font-size:13px', placeholder: 'Wklej tu całą odpowiedź z czatu (blok JSON).' });
   const out = h('p', { class: 'form-msg' });
+  const files = h('input', { type: 'file', multiple: true, accept: 'video/mp4,video/quicktime,video/webm,image/jpeg,image/png,application/json,.json' });
+  const fileNote = h('span', { class: 'muted small', text: 'Opcjonalnie: zaznacz cały folder paczki (Ctrl+A) – filmy trafią do postów po nazwie pliku, a plik .json wczyta się zamiast wklejania.' });
+  const fail = (msg) => { out.className = 'form-msg err'; out.textContent = msg; };
   openSheet('Wklej propozycje z czatu',
     h('p', { class: 'small muted', style: 'margin-top:0', text: 'Wszystkie trafią do zakładki „Do akceptacji”. Nic nie zostanie opublikowane bez Twojego zatwierdzenia.' }),
     h('label', { class: 'field' }, area),
+    h('label', { class: 'field' }, h('span', { text: '📁 Pliki do postów' }), files, fileNote),
     h('button', { class: 'btn btn-gold btn-block', type: 'button', text: 'Dodaj do akceptacji', onclick: async (e) => {
       let rows; out.className = 'form-msg';
-      try { rows = parsePosts(area.value); } catch (err) { out.className = 'form-msg err'; out.textContent = `Nie mogę odczytać: ${err.message}`; return; }
-      if (!rows.length) { out.className = 'form-msg err'; out.textContent = 'Brak postów w wklejonym tekście.'; return; }
+      const picked = Array.from(files.files);
+      const json = picked.find((f) => /\.json$/i.test(f.name));
+      if (!area.value.trim() && json) area.value = await json.text();
+      try { rows = parsePosts(area.value); } catch (err) { return fail(`Nie mogę odczytać: ${err.message}`); }
+      if (!rows.length) return fail('Brak postów w wklejonym tekście.');
+      // dopasowanie plików przed zapisem – żeby nie zostały posty bez filmu
+      const byName = new Map(picked.filter((f) => f !== json).map((f) => [f.name.toLowerCase(), f]));
+      const missing = [...new Set(rows.map((r) => r._file).filter((n) => n && !byName.has(n)))];
+      if (byName.size && missing.length) return fail(`Brakuje plików: ${missing.join(', ')}. Zaznacz je razem z pozostałymi.`);
+      for (const f of byName.values()) { const bad = mediaProblem(f); if (bad) return fail(`${f.name}: ${bad}`); }
+      const plan = rows.map(({ _file, ...row }) => ({ row, file: byName.get(_file) || null }));
       const b = e.currentTarget; busy(b, true, 'Dodaję…');
-      const { error } = await sb.from('ai_posts').insert(rows);
+      const { data: added, error } = await sb.from('ai_posts').insert(plan.map((x) => x.row)).select('id');
+      if (error) { busy(b, false, 'Dodaj do akceptacji'); return fail(postErr(error)); }
+      let done = 0; const errs = [];
+      for (let i = 0; i < plan.length; i++) {
+        if (!plan[i].file || !added?.[i]) continue;
+        busy(b, true, `Wysyłam pliki ${done + 1}/${plan.filter((x) => x.file).length}…`);
+        const err = await putMedia(added[i].id, plan[i].file);
+        if (err) errs.push(`${plan[i].file.name}: ${err}`); else done++;
+      }
       busy(b, false, 'Dodaj do akceptacji');
-      if (error) { out.className = 'form-msg err'; out.textContent = postErr(error); return; }
-      sheet.close(); toast('ok', `Dodano ${rows.length} propozycji do akceptacji.`); vibrate(20);
+      sheet.close(); vibrate(20);
+      toast(errs.length ? 'err' : 'ok', `Dodano ${rows.length} propozycji${done ? `, plików: ${done}` : ''}.${errs.length ? ` Nie wgrano: ${errs.join('; ')} – dodaj je ręcznie w poście.` : ''}`, errs.length ? 0 : 5000);
       S.socFilter = 'review'; loadSocial(); refreshBadges();
     } }), out);
   setTimeout(() => area.focus(), 50);
@@ -598,20 +621,31 @@ async function uploadMedia(p, input) {
   const f = input.files[0]; if (!f) return;
   return attachMedia(p, f);
 }
-async function attachMedia(p, f) {
-  const type = String(f.type || '').split(';')[0];
-  const ok = ['video/mp4', 'video/quicktime', 'video/webm', 'image/jpeg', 'image/png'];
-  if (!ok.includes(type)) return toast('err', 'Dozwolone: MP4, MOV, WEBM, JPG, PNG.');
-  if (f.size > 50 * 1024 * 1024) return toast('err', 'Plik większy niż 50 MB – skompresuj go (np. 1080p, 30 kl./s).');
-  toast('info', 'Wysyłam plik…', 3000);
-  const ext = { 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm', 'image/jpeg': 'jpg', 'image/png': 'png' }[type];
-  const path = `${p.id}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+const MEDIA_EXT = { 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm', 'image/jpeg': 'jpg', 'image/png': 'png' };
+const mediaType = (f) => String(f.type || '').split(';')[0];
+/** null = plik w porządku, inaczej komunikat dla użytkownika */
+function mediaProblem(f) {
+  if (!MEDIA_EXT[mediaType(f)]) return 'Dozwolone: MP4, MOV, WEBM, JPG, PNG.';
+  if (f.size > 50 * 1024 * 1024) return 'Plik większy niż 50 MB – skompresuj go (np. 1080p, 30 kl./s).';
+  return null;
+}
+/** Wgrywa plik do posta (każdy post ma własną kopię – usunięcie posta nie rusza innych). Zwraca błąd albo null. */
+async function putMedia(postId, f, oldPath = null) {
+  const type = mediaType(f);
+  const path = `${postId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${MEDIA_EXT[type]}`;
   const { error } = await sb.storage.from('social-media').upload(path, f, { contentType: type, upsert: false });
-  if (error) return toast('err', `Nie udało się wgrać: ${error.message}`);
+  if (error) return `Nie udało się wgrać: ${error.message}`;
   const { data: pub } = sb.storage.from('social-media').getPublicUrl(path);
-  const { error: e2 } = await sb.from('ai_posts').update({ media_path: path, media_url: pub.publicUrl, media_type: type.startsWith('video') ? 'video' : 'image' }).eq('id', p.id);
-  if (e2) { await sb.storage.from('social-media').remove([path]); return toast('err', postErr(e2)); }
-  if (p.media_path) sb.storage.from('social-media').remove([p.media_path]);
+  const { error: e2 } = await sb.from('ai_posts').update({ media_path: path, media_url: pub.publicUrl, media_type: type.startsWith('video') ? 'video' : 'image' }).eq('id', postId);
+  if (e2) { await sb.storage.from('social-media').remove([path]); return postErr(e2); }
+  if (oldPath) sb.storage.from('social-media').remove([oldPath]);
+  return null;
+}
+async function attachMedia(p, f) {
+  const bad = mediaProblem(f); if (bad) return toast('err', bad);
+  toast('info', 'Wysyłam plik…', 3000);
+  const err = await putMedia(p.id, f, p.media_path);
+  if (err) return toast('err', err);
   toast('ok', 'Plik dodany.'); vibrate(20); loadSocial();
 }
 function rejectSheet(p) {
