@@ -2,7 +2,7 @@
    STL Centrum – Social → „Treści” (v1)
    Biblioteka gotowych materiałów: każda zakładka = pakiet (rolki, grafiki, story, slajdy)
    z podpisem do skopiowania; pierwsza zakładka = plan publikacji.
-   Dane: tabela content_packs (migracja v34), pliki: bucket social-media/tresci/<slug>/…
+   Dane: tabela content_packs (migracja v35), pliki: bucket social-media/tresci/<slug>/…
    Wgrywanie: zaznacz cały folder z eksportu (tresci.json + pliki) → „Wgraj treści”.
    Moduł nie zna sesji – dostaje klienta Supabase i pomocniki z social-hub.js (initTresci).
    Teksty wstawiane przez textContent (bez innerHTML).
@@ -69,7 +69,7 @@ export async function loadTresci() {
   const { data, error } = await c.from('content_packs').select('*').order('sort').order('created_at');
   if (error) {
     box.replaceChildren(h('div', { class: 'empty', text: /content_packs/.test(error.message)
-      ? 'Brak tabeli content_packs – uruchom w Supabase SQL Editor plik supabase/do-sql-editora/v34.sql.'
+      ? 'Brak tabeli content_packs – uruchom w Supabase SQL Editor plik supabase/do-sql-editora/v35.sql.'
       : `Błąd: ${error.message}` }), uploadBar());
     return;
   }
